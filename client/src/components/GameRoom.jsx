@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import ControlPanel from './ControlPanel';
 import PlayerGrid from './PlayerGrid';
+import AvatarCard from './AvatarCard';
 
 export default function GameRoom({ roomId, myId, onExit }) {
     const [gameState, setGameState] = useState({
@@ -115,19 +116,6 @@ export default function GameRoom({ roomId, myId, onExit }) {
         socket.emit('player_ready', { roomId });
     };
 
-    const handleSheriffHandover = (val) => {
-        let targetId = val;
-        if (val === 'USE_SELECTED') {
-            if (!selectedTarget) {
-                 alert("Select a player on the grid first!");
-                 return;
-            }
-            targetId = selectedTarget;
-        }
-        // targetId null = Tear
-        socket.emit('sheriff_handover', { roomId, targetId });
-    };
-
     const handleResolvePhase = () => {
         socket.emit('resolve_phase', { roomId });
     };
@@ -150,8 +138,28 @@ export default function GameRoom({ roomId, myId, onExit }) {
         return () => socket.off('voice_cue', onVoiceCue);
     }, [gameState.hostId, myId]);
 
+    const handleSheriffHandover = (targetId) => {
+        // If targetId is explicitly 'USE_SELECTED' or null/undefined, use state
+        const finalTarget = (targetId === 'USE_SELECTED' || !targetId) ? selectedTarget : targetId;
+        
+        // Allow passing explicit null for "Tear Badge"
+        if (targetId === null) {
+             socket.emit('sheriff_handover', { roomId, targetId: null });
+             return;
+        }
+
+        if (finalTarget) {
+            socket.emit('sheriff_handover', { roomId, targetId: finalTarget });
+            setSelectedTarget(null); // Reset selection
+        } else {
+            alert("Please select a player first!");
+        }
+    };
+
     const mePlayer = gameState.players[myId] || { ...gameState.me, name: 'YOU', id: myId, avatar: 1 };
     const otherPlayers = Object.values(gameState.players).filter(p => p.id !== myId);
+
+    const amISheriff = gameState.players[myId]?.isSheriff || false;
 
     // ControlPanel props object for reuse
     const ControlPanelProps = {
@@ -159,18 +167,53 @@ export default function GameRoom({ roomId, myId, onExit }) {
         role: gameState.me?.role, myStatus: gameState.me?.status, election: gameState.election,
         isReady: gameState.players[myId]?.isReady || false,
         speaking: gameState.speaking, // Pass speaking state
+        executedId: gameState.executedId, // Pass executed ID
         myId, // Pass my ID
+        amISheriff, // Pass explicit Sheriff status
         players: gameState.players, 
         isHost: gameState.hostId === myId,
         actions: {
-            onStartGame: handleStartGame,
-            onPlayerReady: handlePlayerReady,
-            onNightAction: handleNightAction,
-            onWitchAction: handleWitchAction,
-            onDayVote: handleDayVote,
-            onElectionNominate: handleElectionNominate,
-            onElectionPass: handleElectionPass,
-            onSheriffHandover: handleSheriffHandover,
+            onStartGame: () => socket.emit('start_game', { roomId }),
+            onPlayerReady: () => socket.emit('player_ready', { roomId }),
+            onNightAction: () => {
+                if (selectedTarget) {
+                    // For Wolf/Seer, type is implied by role, but passing 'kill'/'check' doesn't hurt if backend checks it.
+                    // Actually, backend might rely on type.
+                    // Wolf -> kill, Seer -> check.
+                    // Let's deduce type or send generic and let backend switch? 
+                    // Current Server `NightManager` checks `action.type`.
+                    // So we MUST send `type`.
+                    // Since this callback is used for "Primary Action", let's depend on Role?
+                    // But we don't have role explicitly inside closure easily (it's in props).
+                    // Actually we do: `gameState.me.role`.
+                    
+                    const role = gameState.me?.role;
+                    let type = 'kill'; // default
+                    if (role === 'SEER') type = 'check';
+                    // Witch doesn't use this generic handler usually, uses onWitchAction.
+                     
+                    socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
+                    setSelectedTarget(null);
+                } else {
+                    alert("Select a target first!");
+                }
+            },
+            onWitchAction: (type) => { // type: 'save' | 'poison' | 'skip'
+                 if (type === 'poison' && !selectedTarget) {
+                     alert("Select a target to poison!");
+                     return;
+                 }
+                 socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
+                 setSelectedTarget(null);
+            },
+            onDayVote: () => {
+                if(selectedTarget) {
+                    socket.emit('day_vote', { roomId, targetId: selectedTarget });
+                    setSelectedTarget(null);
+                } else {
+                    alert("Select a player to vote for!");
+                }
+            },
             onResolvePhase: handleResolvePhase,
             onSkipTurn: () => setSelectedTarget(null),
             onEndSpeech: () => socket.emit('end_speech', { roomId })
@@ -229,36 +272,33 @@ export default function GameRoom({ roomId, myId, onExit }) {
                             onSelect={setSelectedTarget}
                             phase={gameState.phase}
                             hostId={gameState.hostId}
-                            candidates={gameState.election?.candidates} // Pass candidates
+                            hostId={gameState.hostId}
                         />
                      </div>
                 </section>
 
                 {/* 3. LOGS (Middle Band) */}
                 <section className="h-[80px] w-full z-10">
-                    <ControlPanel {...ControlPanelProps} actions={{...ControlPanelProps.actions, onlyLogs: true}} />
+                    <ControlPanel {...ControlPanelProps} onlyLogs={true} />
                 </section>
 
                 {/* 4. FOOTER (Me + Actions) */}
                 <footer className="h-[160px] grid grid-cols-[120px_1fr] gap-2.5 z-10">
                     {/* User Avatar (Me) */}
-                    <div className="bg-accent text-black border-2 border-black p-2 flex flex-col justify-between relative overflow-hidden">
-                         <div className="font-mono text-2xl font-bold leading-none">YOU</div>
-                         <div className="text-4xl text-center my-auto">
-                            {/* Simple Avatar or Role Icon */}
-                            {mePlayer.role === 'WOLF' ? '🐺' : 
-                             mePlayer.role === 'WITCH' ? '🧪' : 
-                             mePlayer.role === 'SEER' ? '🔮' : '👤'}
-                         </div>
-                         <div className="font-mono text-[10px] uppercase border-t border-black pt-1 flex justify-between">
-                            <span>{mePlayer.role || '???'}</span>
-                            <span>{mePlayer.status === 'dead' ? 'DEAD' : 'ALIVE'}</span>
-                         </div>
+                    <div className="h-full">
+                         <AvatarCard
+                             player={mePlayer}
+                             myId={myId}
+                             phase={gameState.phase}
+                             hostId={gameState.hostId}
+                             // Disable interaction for self
+                             onSelect={null} 
+                         />
                     </div>
 
                     {/* Action Area */}
                     <div className="h-full">
-                        <ControlPanel {...ControlPanelProps} actions={{...ControlPanelProps.actions, onlyActions: true}} />
+                        <ControlPanel {...ControlPanelProps} onlyActions={true} />
                     </div>
                 </footer>
             </div>

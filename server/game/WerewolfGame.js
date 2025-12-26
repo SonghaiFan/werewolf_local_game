@@ -62,6 +62,7 @@ class WerewolfGame {
             logs: this.logs,
             election: electionData,
             speaking: speakingData,
+            executedId: this.executedPlayerId, // Expose executed player ID
             hostId: this.hostId
         };
     }
@@ -72,6 +73,11 @@ class WerewolfGame {
         
         if (me) {
             let info = { ...me };
+            
+            // Explicitly set my role in the players list so PlayerGrid sees it
+            if (publicState.players[playerId]) {
+                publicState.players[playerId].role = me.role;
+            }
             
             // Add Voting Data
             if (this.phase === PHASES.DAY_VOTE) {
@@ -164,24 +170,48 @@ class WerewolfGame {
         
         // Role Distribution
         let rolesToDistribute = [];
-        if (count < 5) {
-            rolesToDistribute = [ROLES.WOLF, ROLES.SEER];
-            while (rolesToDistribute.length < count) rolesToDistribute.push(ROLES.VILLAGER);
-        } else {
-            rolesToDistribute = [ROLES.WOLF, ROLES.WOLF, ROLES.SEER, ROLES.WITCH];
-            while (rolesToDistribute.length < count) rolesToDistribute.push(ROLES.VILLAGER);
-        }
-
-        rolesToDistribute.sort(() => Math.random() - 0.5);
-
-        playerIds.forEach((id, index) => {
-            this.players[id].role = rolesToDistribute[index];
-            this.players[id].status = 'alive';
+        // 3. Assign Roles - Simplified
+        // 1/3 wolves, includes 1 seer, 1 witch, rest villagers.
+        const roles = [ROLES.SEER, ROLES.WITCH];
+        const numWolves = Math.max(1, Math.floor(count / 3));
+        for (let i = 0; i < numWolves; i++) roles.push(ROLES.WOLF);
+        
+        // Fill rest with Villagers
+        while (roles.length < count) roles.push(ROLES.VILLAGER);
+        
+        // Shuffle
+        roles.sort(() => Math.random() - 0.5);
+        
+        playerIds.forEach((pid, idx) => {
+            this.players[pid].role = roles[idx];
+            this.players[pid].status = 'alive';
         });
+        
+        this.addLog("JUDGE: Game Starting... Roles assigned.");
+        
+        // New Sequence: 
+        // 1. Roles assigned -> Notify clients (handled by game update loop? we need to trigger update explicitly or let next tick handle it)
+        // 2. Audio "Confirm Identity" -> Wait 5s
+        // 3. Audio "Close Eyes" -> Wait -> Night
+        
+        const confirmText = "Confirm your identity. You have 5 seconds.";
+        this.addLog(`JUDGE: ${confirmText}`);
+        this.triggerVoice(confirmText);
+        
+        // Ensure initial state is sent so players can see "Tap to Reveal"
+        if(this.onGameUpdate) this.onGameUpdate(this);
 
-        this.round = 1;
-        this.addLog("SYSTEM: Roles assigned. Game initializing.");
-        this.advancePhase(PHASES.NIGHT_WOLVES); 
+        setTimeout(() => {
+             const closeText = "Everyone, close your eyes.";
+             this.triggerVoice(closeText);
+             this.addLog(`JUDGE: ${closeText}`);
+             
+             setTimeout(() => {
+                 this.round = 1;
+                 this.advancePhase(PHASES.NIGHT_WOLVES);
+             }, 4000); // 4s for closing eyes effect
+             
+        }, 5000); // 5s to check role
     }
 
     // --- Phase Transition ---

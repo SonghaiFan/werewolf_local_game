@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function ControlPanel(props) {
-    const { roomId, serverIP, logs, phase, role, myStatus, election, isReady, players, isHost, actions, speaking, myId } = props;
+    const { roomId, serverIP, logs, phase, role, myStatus, election, isReady, players, isHost, actions, speaking, myId, executedId, amISheriff } = props;
     const logsEndRef = useRef(null);
     const [showQRCode, setShowQRCode] = useState(false);
     
@@ -208,23 +208,6 @@ export default function ControlPanel(props) {
 
         // ELECTION NOMINATION
         if (phase === 'DAY_ELECTION_NOMINATION') {
-             // We need to know if I have acted.
-             // election.participants is array of IDs.
-             // We need my ID. ControlPanel doesn't have `myId` prop directly... wait, GameRoom passes it?
-             // Checking GameRoom: <ControlPanel ... />. It passes `roomId`, `serverIP`, `logs`, `phase`, `role`, `myStatus`, `election`, `actions`.
-             // It does NOT pass `myId`. 
-             // BAD: I need my ID to know if I have voted.
-             // QUICK FIX: Pass `myId` to ControlPanel in GameRoom. (Will do in next step).
-             // For now assuming we have `myId` in props (I will add it).
-             
-             // Wait, let's verify if GameRoom passes myId.
-             // Step 380: `ControlPanel` usage: `<ControlPanel ... />` no `myId`.
-             
-             // I will assume `actions` prop can pass the check, or I just render buttons and let Server ignore?
-             // Use UI state to hide after click? Optimistic UI?
-             // Better: Show "WAITING FOR OTHERS" if I clicked.
-             
-             // We don't have ME. So we use local state `hasVoted`.
 
              return (
                  <div className="mt-auto">
@@ -273,17 +256,40 @@ export default function ControlPanel(props) {
 
         // LEAVE SPEECH (LAST WORDS)
         if (phase === 'DAY_LEAVE_SPEECH') {
+             const isMeDying = executedId === myId;
+             const victimName = executedId && players && players[executedId] ? players[executedId].name : 'Victim';
+             
              return (
                  <div className="mt-auto">
                      <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
                         &gt;&gt; LAST WORDS
                      </div>
-                      <button 
-                        className="btn-brutal w-full mt-2.5"
-                        onClick={actions.onResolvePhase}
-                     >
-                        [ADMIN] END SPEECH
-                     </button>
+                     <div className="text-xs text-[#666] mb-2.5 text-center">
+                        {isMeDying ? "You have been executed. Leave your last words." : `${victimName} is leaving their last words.`}
+                     </div>
+
+                     {isMeDying ? (
+                        <button 
+                            className="btn-brutal w-full mt-2.5 bg-accent text-black"
+                            onClick={actions.onEndSpeech}
+                        >
+                            END MY SPEECH
+                        </button>
+                     ) : (
+                         <div className="text-[10px] text-[#444] text-center border border-[#333] p-1">
+                             LISTENING...
+                         </div>
+                     )}
+                     
+                     {/* Admin Override if stuck */}
+                     {isHost && !isMeDying && (
+                         <button 
+                             className="text-[9px] text-[#444] mt-2 underline block mx-auto hover:text-white"
+                             onClick={actions.onEndSpeech}
+                         >
+                             (Admin Force Skip)
+                         </button>
+                     )}
                  </div>
              );
         }
@@ -353,21 +359,20 @@ export default function ControlPanel(props) {
         }
 
         // SHERIFF HANDOVER
+        // SHERIFF HANDOVER
         if (phase === 'DAY_SHERIFF_HANDOVER') {
-             // We need to know if I am the sheriff (dead or alive, but effectively dead)
-             // ControlPanel props don't explicitly have isSheriff. 
-             // IMPORTANT: We need access to `selectedTarget` (which is in GameRoom) OR we can use built-in selector?
-             // GameRoom passes `gameState.me.isSheriff`. Wait, `gameState.me` in `getPlayerState` has `isSheriff`?
-             // Let's check logic: `getPublicState` adds `isSheriff` to public players. `getPlayerState` wraps `me`. 
-             // We need access to "Am I Sheriff?" here. 
-             // Since `myStatus` is passed, but `isSheriff` is not passed as a direct prop to ControlPanel in GameRoom (except inside `role` maybe?).
-             // `GameRoom.jsx` passes: `role={gameState.me?.role}`. 
-             // We need `isSheriff`. 
-             
-             // WORKAROUND: For now, show buttons for EVERYONE but they will only work if backend validates. 
-             // UI polish: We should really hide it.
-             // We can assume user will only click if they are sheriff.
-             
+             // Only show controls for the dying Sheriff
+             if (!amISheriff) {
+                 return (
+                     <div className="mt-auto">
+                        <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
+                            &gt;&gt; SHERIFF DIED
+                        </div>
+                        <p className="text-xs text-[#666]">Waiting for Sheriff to decide...</p>
+                     </div>
+                 );
+             }
+
             return (
                  <div className="mt-auto">
                      <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
@@ -377,21 +382,7 @@ export default function ControlPanel(props) {
                      
                      <div className="flex flex-col gap-2.5">
                         <button className="btn-brutal bg-accent text-black" onClick={() => actions.onSheriffHandover(null)}>TEAR BADGE</button>
-                        <button className="btn-brutal" onClick={() => {
-                             // This relies on GameRoom having a selectedTarget state that we can't see here easily?
-                             // Actually ControlPanel DOES NOT have access to `selectedTarget` from GameRoom.
-                             // We need to change GameRoom to pass `selectedTarget` OR ControlPanel to `request` handover.
-                             // But wait, `actions.onSheriffHandover` in `GameRoom` calls `socket.emit` with `roomId`. 
-                             // It doesn't use `selectedTarget` from GameRoom state in the wrapper I wrote earlier?
-                             // Correction: Step 315 code: `const handleSheriffHandover = (targetId) => ...`.
-                             // So ControlPanel needs to Provide the ID. But ControlPanel doesn't know who is selected on Grid.
-                             
-                             // FIX: Simple "Pass to..." requires UI to pick. 
-                             // Alternative: "PASS TO SELECTED" button where GameRoom handles the ID?
-                             // We should update GameRoom wrapper to use its `selectedTarget` if no arg provided?
-                             // Let's assume we update ControlPanel to call `actions.onSheriffHandover('SELECTED_TARGET')` and GameRoom handles it.
-                             actions.onSheriffHandover('USE_SELECTED');
-                        }}>PASS TO SELECTED</button>
+                        <button className="btn-brutal" onClick={() => actions.onSheriffHandover('USE_SELECTED')}>PASS TO SELECTED</button>
                      </div>
                  </div>
              );
@@ -419,7 +410,7 @@ export default function ControlPanel(props) {
     const [showLogsMobile, setShowLogsMobile] = React.useState(false);
 
     // If onlyActions is true, we ONLY render the action buttons (no container styles, no logs)
-    if (actions.onlyActions) {
+    if (props.onlyActions) {
          return (
              <div className="flex flex-col h-full justify-end bg-black border-t-2 border-ink p-2.5">
                   {renderActions()}
@@ -428,10 +419,7 @@ export default function ControlPanel(props) {
     }
     
     // If onlyLogs is true, we ONLY render the logs
-    if (actions.onlyLogs) { 
-        // Note: passing flags via 'actions' prop is a hack, but keeps signature same. 
-        // Better to destructure from props but ControlPanel signature is fixed in GameRoom usage.
-        // Actually I can just add props to ControlPanel function signature.
+    if (props.onlyLogs) { 
         return (
             <div className={`
                 flex-grow font-mono text-[13px] list-none overflow-y-auto border-y-2 border-[#333] bg-[#111] p-2.5 h-full

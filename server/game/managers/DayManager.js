@@ -49,6 +49,15 @@ class DayManager {
     }
 
     handleEndSpeech(game, playerId) {
+        // Special case for Last Words
+        if (game.phase === PHASES.DAY_LEAVE_SPEECH) {
+             if (playerId === game.executedPlayerId || playerId === game.hostId) {
+                  game.addLog("JUDGE: Last words concluded.");
+                  setTimeout(() => game.startNightOrEnd(), 1000);
+             }
+             return;
+        }
+
         if (this.speakingOrder.length === 0) return; // Not in discussion or empty
 
         const currentSpeaker = this.speakingOrder[this.currentSpeakerIndex];

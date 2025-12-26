@@ -77,8 +77,11 @@ class NightManager {
         if (game.phase === PHASES.NIGHT_SEER && player.role === ROLES.SEER && action.type === 'check') {
             this.actions.seerTarget = action.targetId;
             const target = game.players[action.targetId];
+            // Format result clearly: 'WOLF' or 'GOOD'
             const result = target ? (target.role === ROLES.WOLF ? 'WOLF' : 'GOOD') : 'UNKNOWN';
             
+            this.actions.seerResult = { targetId: action.targetId, status: result };
+
             game.addLog("JUDGE: The Seer has acted.");
             setTimeout(() => game.resolveNight(), 1500);
             return result;

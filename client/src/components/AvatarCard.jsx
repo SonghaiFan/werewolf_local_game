@@ -1,0 +1,171 @@
+import React, { useMemo } from 'react';
+
+// Role SVGs (Neo-Brutalist / Geometric)
+const RoleIcons = {
+    WOLF: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <path d="M20 80 L30 40 L50 70 L70 40 L80 80 Z" />
+            <circle cx="35" cy="55" r="3" fill="var(--color-bg)" />
+            <circle cx="65" cy="55" r="3" fill="var(--color-bg)" />
+        </svg>
+    ),
+    VILLAGER: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <rect x="30" y="40" width="40" height="40" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path d="M25 40 L50 15 L75 40" stroke="currentColor" strokeWidth="4" fill="none" />
+            <rect x="45" y="60" width="10" height="20" fill="currentColor" />
+        </svg>
+    ),
+    SEER: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <circle cx="50" cy="50" r="30" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="50" cy="50" r="10" fill="currentColor" />
+            <path d="M50 20 L50 80 M20 50 L80 50" stroke="currentColor" strokeWidth="1" />
+        </svg>
+    ),
+    WITCH: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <path d="M20 70 Q50 90 80 70" fill="none" stroke="currentColor" strokeWidth="4" />
+            <path d="M30 70 L50 20 L70 70 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="50" cy="60" r="5" fill="currentColor" />
+            <path d="M40 30 L60 30" stroke="currentColor" strokeWidth="2" />
+        </svg>
+    ),
+    UNKNOWN: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current opacity-20">
+            <rect x="30" y="30" width="40" height="40" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="4" />
+            <path d="M30 30 L70 70 M70 30 L30 70" stroke="currentColor" strokeWidth="1" />
+        </svg>
+    )
+};
+
+export default function AvatarCard({ 
+    player, 
+    myId, 
+    isSelected = false, 
+    onSelect, 
+    phase, 
+    hostId, 
+    candidates,
+    className = "" 
+}) {
+    if (!player) return null;
+    const [isRevealed, setIsRevealed] = React.useState(false);
+
+    const isMe = player.id === myId;
+    const isDead = player.status === 'dead';
+    
+    // Logic: 
+    // Show 'Front' (Role) if:
+    // 1. It's ME and I have clicked Reveal
+    // 2. It's ME and I am DEAD
+    // 3. It's NOT ME and they are DEAD (everyone sees roles of dead)
+    // 4. Special cases (Wolf sees Wolf) - implemented via role transparency if backend sends it.
+    // NOTE: Backend typically only sends 'WOLF' role to wolves. So if player.role is present, show it?
+    // BUT we want to hide it initially for self.
+    
+    // Effectively: Show Front if (isMe && isRevealed) OR (isDead) OR (player.role && !isMe)
+    // Actually, backend only sends role if authorized. So if we have a role, we can show it, EXCEPT for self initial hide.
+    
+    const hasRoleInfo = !!player.role && player.role !== 'scanned'; // 'scanned' might be temp? No, usually generic.
+    const showFront = (isMe && isRevealed) || isDead || (hasRoleInfo && !isMe); 
+    
+    const roleIcon = RoleIcons[player.role] || RoleIcons.UNKNOWN;
+
+    // Election Logic
+    const isElectionVote = phase === 'DAY_ELECTION_VOTE';
+    const isCandidate = candidates && candidates.includes(player.id);
+    const isSelectable = !isDead && (!isElectionVote || isCandidate); 
+    const canInteract = onSelect && isSelectable;
+
+    return (
+        <div 
+            className={`
+                relative bg-[#151515] border-2 h-full min-h-[140px] 
+                transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col
+                ${canInteract ? 'cursor-pointer hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_var(--accent)] hover:bg-[#1a1a1a] hover:border-ink' : ''}
+                ${!canInteract && !isMe ? 'opacity-90' : ''}
+                ${!isSelectable && !isMe ? 'opacity-50 grayscale cursor-not-allowed' : ''}
+                ${isSelected ? 'bg-accent text-black border-black -rotate-1 -translate-x-1 -translate-y-1 shadow-[8px_8px_0px_#fff]' : 'border-[#333] text-ink'}
+                ${isDead ? 'opacity-40 grayscale blur-[0.5px] pointer-events-none border-dashed' : ''}
+                ${isCandidate && isElectionVote ? 'ring-4 ring-offset-2 ring-danger animate-pulse border-danger' : ''} 
+                ${className}
+            `}
+            onClick={() => canInteract && onSelect(player.id)}
+        >
+            {/* Top Bar: Player Name & Status */}
+            <div className={`p-2 border-b border-current flex justify-between items-center text-[10px] font-mono tracking-wider ${isSelected ? 'border-black' : 'border-[#333]'}`}>
+                <span className="truncate max-w-[80px] font-bold">{player.name} {isMe && '(YOU)'}</span>
+                 {/* Ready Status */}
+                 {phase === 'WAITING' && (
+                    <span className={player.isReady ? 'text-accent' : 'text-[#444]'}>
+                        {player.isReady ? 'RDY' : '...'}
+                    </span>
+                )}
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 relative flex items-center justify-center p-2">
+                {showFront ? (
+                    // --- FRONT (Role Revealed) ---
+                    <div className="w-full h-full flex flex-col items-center justify-center animate-in fade-in duration-300">
+                        <div className="w-16 h-16 mb-2">
+                            {roleIcon}
+                        </div>
+                        <div className="text-xl font-bold uppercase tracking-widest leading-none">
+                            {player.role || '???'}
+                        </div>
+                         {isDead && <div className="text-danger font-mono text-[10px] bg-black px-1 mt-1">DECEASED</div>}
+                    </div>
+                ) : (
+                    // --- BACK (Hidden / Number) ---
+                    <div className="w-full h-full flex items-center justify-center relative">
+                        {/* Player Number (Avatar ID as visual identifier) */}
+                        <div className="font-mono text-6xl font-bold opacity-20 select-none">
+                            {String(player.avatar || '00').padStart(2, '0')}
+                        </div>
+                        
+                        {/* Tap to Reveal Overlay for Self */}
+                        {isMe && !isDead && (
+                             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer"
+                                 onClick={(e) => { e.stopPropagation(); setIsRevealed(true); }}
+                             >
+                                <div className="bg-[#222] border border-[#444] px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
+                                     <span>👁️</span>
+                                     <span className="text-[10px] font-mono tracking-wider">REVEAL</span>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {/* Badges / Overlays */}
+            {/* Candidate Badge */}
+            {isCandidate && isElectionVote && <div className="absolute top-0 right-0 bg-danger text-white text-[9px] font-bold px-1 z-20">RUNNING</div>}
+            
+            {/* Sheriff Badge - Bottom Left */}
+            {player.isSheriff && (
+                <div className="absolute bottom-2 left-2 text-2xl filter drop-shadow-[0_0_2px_rgba(255,215,0,0.8)] z-20" title="Sheriff">
+                    🌟
+                </div>
+            )}
+            
+            {/* Host Badge - Bottom Right */}
+            {player.id === hostId && (
+                 <div className="absolute bottom-2 right-2 bg-accent text-black text-[8px] px-1 font-bold border border-black z-20">
+                     HOST
+                 </div>
+            )}
+
+             {/* Voting Indicator */}
+             {player.isVoting && phase === 'DAY_VOTE' && (
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
+                     <div className="bg-black text-white text-[10px] font-bold px-2 py-1 border border-white -rotate-12 shadow-[4px_4px_0px_var(--color-danger)]">
+                        VOTED
+                     </div>
+                </div>
+            )}
+        </div>
+    );
+}

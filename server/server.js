@@ -135,7 +135,10 @@ io.on('connection', (socket) => {
         const game = games.get(roomId);
         if (!game) return;
         
-        game.handleNightAction(socket.id, action);
+        const result = game.handleNightAction(socket.id, action);
+        if (result && typeof result === 'string') {
+            socket.emit('seer_result', { role: result });
+        }
         broadcastState(game);
     });
 
@@ -148,26 +151,7 @@ io.on('connection', (socket) => {
     });
 
     // --- Election Events ---
-    socket.on('election_nominate', ({ roomId }) => {
-        const game = games.get(roomId);
-        if(!game) return;
-        game.handleElectionNominate(socket.id);
-        broadcastState(game);
-    });
-
-    socket.on('election_pass', ({ roomId }) => {
-        const game = games.get(roomId);
-        if(!game) return;
-        game.handleElectionPass(socket.id);
-        broadcastState(game);
-    });
-
-    socket.on('election_vote', ({ roomId, targetId }) => {
-        const game = games.get(roomId);
-        if(!game) return;
-        game.handleElectionVote(socket.id, targetId);
-        broadcastState(game);
-    });
+    // (Removed)
 
     socket.on('end_speech', ({ roomId }) => {
         const game = games.get(roomId);
@@ -177,13 +161,6 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('sheriff_handover', ({ roomId, targetId }) => {
-        const game = games.get(roomId);
-        if(!game) return;
-        // targetId can be null (tear) or a playerId
-        game.handleSheriffHandover(socket.id, targetId);
-        broadcastState(game);
-    });
 
     socket.on('day_vote', ({ roomId, targetId }) => {
         const game = games.get(roomId);
