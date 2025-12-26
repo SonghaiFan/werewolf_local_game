@@ -29,16 +29,15 @@ export default function GameRoom({ roomId, myId, onExit }) {
                 ...prev,
                 ...state
             }));
-            // Clear inspections on new game (round 0 or 1 restart?)
-            // Simple check: if round changes to 0 or 1 from high number? 
-            // Better: reset on start_game event or clean manual reset?
-            // For now, let's just keep valid. User usually refreshes or we can clear on 'FINISHED' -> 'WAITING' transition?
-            // Let's listen to game over or reset explicitly if possible or just let it be for now.
+
+            // Auto-clear local state when game resets
+            if (state.phase === 'WAITING' || state.round === 0) {
+                 setInspectedPlayers({});
+            }
         }
 
         function onNotification(msg) {
-             // You could add this to logs locally if not from server logs
-             // But server adds logs to game state usually
+             console.log('[Notification]', msg);
         }
 
         function onSeerResult({ targetId, role }) {
@@ -171,35 +170,32 @@ export default function GameRoom({ roomId, myId, onExit }) {
                 </svg>
             </div>
             
-            <div className="photostat-root relative w-full h-[100dvh] p-2 grid grid-rows-[100px_1fr_80px_160px] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333] overflow-hidden">
+            <div className="photostat-root relative w-full h-[100dvh] p-2 grid grid-rows-[50px_1fr_80px_160px] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333] overflow-hidden">
                 <div className="scanline"></div>
                 <div className="photocopy-texture"></div>
 
                 {/* 1. HEADER */}
-                <header className="game-header z-10 flex justify-between items-start h-[100px]">
-                    <div className="bg-accent text-black p-2 font-bold w-[100px] h-[100px] flex items-center justify-center text-center uppercase leading-none border-2 border-black">
-                        <div className="glitch-text text-xl">WERE<br/>WOLF</div>
+                <header className="game-header z-10 flex justify-between items-start h-[50px]">
+                    <div className="bg-accent text-black font-bold w-[50px] h-[50px] flex items-center justify-center text-center uppercase leading-none border-2 border-black">
+                        <div className="glitch-text text-xs leading-tight">WERE<br/>WOLF</div>
                     </div>
                     
-                    <div className="flex-1 ml-2.5 flex flex-col items-end">
-                       <div className="status-tag bg-white text-black px-3 py-1 font-mono font-bold text-sm uppercase mb-1 [clip-path:polygon(0_0,95%_0,100%_100%,5%_100%)]">
-                            {gameState.phase.replace('_', ' ')}
-                        </div>
-                        <div className="h-[2px] w-full bg-accent my-1"></div>
-                        <div className="font-mono text-xs text-[#888]">
-                            {t('room')}: {roomId} // {t('round_short')}: {gameState.round}
-                        </div>
+                    <div className="flex-1 ml-2.5 flex flex-col items-end justify-center h-full">
+                       <div className="flex items-center gap-2">
+                            <div className="status-tag bg-white text-black px-2 py-0.5 font-mono font-bold text-[10px] uppercase [clip-path:polygon(0_0,95%_0,100%_100%,5%_100%)]">
+                                {gameState.phase.replace('_', ' ')}
+                            </div>
+                            <div className="font-mono text-[10px] text-[#888]">
+                                {t('room')}: {roomId} // {t('round_short')}: {gameState.round}
+                            </div>
+                       </div>
+                        <div className="h-[1px] w-full bg-accent mt-1"></div>
                     </div>
                 </header>
 
                 {/* 2. MAIN STAGE (Others) */}
                 <section className="main-stage overflow-y-auto min-h-0 border-2 border-[#333] bg-[#050505] p-2">
                      <div className="grid grid-cols-4 gap-2">
-                        {/* We use PlayerGrid but pass 'others'. We might need to adjust grid cols in PlayerGrid or override classes? 
-                            PlayerGrid uses `grid-cols-2` hardcoded usually? No, `GameRoom` controlled usage.
-                            Wait, `PlayerGrid` is just `map`. The container grid is here.
-                            User wanted 4 columns? "others avatar" box suggests small icons.
-                        */}
                         <PlayerGrid players={otherPlayers} />
                      </div>
                 </section>

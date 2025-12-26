@@ -20,6 +20,7 @@ class WerewolfGame {
 
         this.nightManager = new NightManager();
         this.dayManager = new DayManager();
+        this.winner = null;
     }
 
     // --- State Access ---
@@ -55,7 +56,8 @@ class WerewolfGame {
             logs: this.logs,
             speaking: speakingData,
             executedId: this.executedPlayerId, // Expose executed player ID
-            hostId: this.hostId
+            hostId: this.hostId,
+            winner: this.winner
         };
     }
 
@@ -84,16 +86,41 @@ class WerewolfGame {
 
 
             // Context specific info
+            let hasActed = false;
+
             if (me.role === ROLES.WOLF) {
                 info.nightTarget = this.nightManager.actions.wolfTarget;
                 info.wolfVotes = this.nightManager.actions.wolfVotes;
+                if (this.phase === PHASES.NIGHT_WOLVES && this.nightManager.actions.wolfTarget) {
+                    hasActed = true;
+                }
             }
             if (me.role === ROLES.WITCH && this.phase === PHASES.NIGHT_WITCH) {
                  // Only reveal victim if Witch has Antidote (save not used)
                  if (!this.nightManager.witchState.saveUsed) {
                      info.wolfTarget = this.nightManager.actions.wolfTarget;
                  }
+                 if (this.nightManager.actions.witchAction) {
+                     hasActed = true;
+                 }
             }
+            if (me.role === ROLES.SEER && this.phase === PHASES.NIGHT_SEER) {
+                if (this.nightManager.actions.seerResult || this.nightManager.actions.seerTarget) {
+                    hasActed = true;
+                }
+            }
+            
+            if (this.phase === PHASES.DAY_VOTE) {
+                if (this.dayManager.votes && this.dayManager.votes[playerId]) {
+                    hasActed = true;
+                }
+                info.votes = this.dayManager.votes;
+            } else if (this.phase === PHASES.DAY_ELECTION_VOTE) {
+                 // Info about election votes if needed? 
+                 // Original code exposed election state generally.
+            }
+
+            info.hasActed = hasActed;
             
             publicState.me = info;
         }
@@ -108,7 +135,10 @@ class WerewolfGame {
         }
         
         // Reveal All if Dead/Finished
-        if ((me && me.status !== 'alive') || this.phase === PHASES.FINISHED) {
+        // EXCEPTION: If I am currently executed and giving last words, hide roles until I am done.
+        const isMyLastWords = this.phase === PHASES.DAY_LEAVE_SPEECH && this.executedPlayerId === playerId;
+        
+        if (((me && me.status !== 'alive' && !isMyLastWords) || this.phase === PHASES.FINISHED)) {
              Object.values(this.players).forEach(p => {
                  publicState.players[p.id].role = p.role;
              });
@@ -321,6 +351,7 @@ class WerewolfGame {
 
     finishGame(winner) {
         this.phase = PHASES.FINISHED;
+        this.winner = winner;
         const winnerText = winner === 'VILLAGERS' ? 'VILLAGERS (村民)' : 'WEREWOLVES (狼人)';
         this.addLog(`GAME OVER. ${winnerText} WIN! (游戏结束。${winnerText} 胜利！)`);
     }
@@ -337,6 +368,7 @@ class WerewolfGame {
         // Reset Managers
         this.nightManager = new NightManager();
         this.dayManager = new DayManager();
+        this.winner = null;
         
         // Reset Players (Keep connections/names, clear roles/status)
         Object.values(this.players).forEach(p => {

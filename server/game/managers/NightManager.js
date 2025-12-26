@@ -60,10 +60,12 @@ class NightManager {
             const result = target ? (target.role === ROLES.WOLF ? 'WOLF' : 'GOOD') : 'UNKNOWN';
             
             this.actions.seerResult = { targetId: action.targetId, status: result };
-
+            
+            // Should return object for server handling
+            // NOTE: 'status' is local internal logic, but server expects 'role' in emission
             game.addLog("JUDGE: The Seer has acted.");
             setTimeout(() => game.resolveNight(), 1500);
-            return result;
+            return { targetId: action.targetId, role: result }; // result is 'WOLF' or 'GOOD'
         }
 
         return false;

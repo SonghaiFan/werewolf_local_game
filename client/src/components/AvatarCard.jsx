@@ -2,8 +2,44 @@ import React, { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useGameContext } from '../context/GameContext';
 
-// Role SVGs (Neo-Brutalist / Geometric)
-// ... (RoleIcons consts matched by signature, assuming unchanged above this block)
+// Role SVGs (Geometric)
+const RoleIcons = {
+    WOLF: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <path d="M20 80 L30 40 L50 70 L70 40 L80 80 Z" />
+            <circle cx="35" cy="55" r="3" fill="var(--color-bg)" />
+            <circle cx="65" cy="55" r="3" fill="var(--color-bg)" />
+        </svg>
+    ),
+    VILLAGER: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <rect x="30" y="40" width="40" height="40" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path d="M25 40 L50 15 L75 40" stroke="currentColor" strokeWidth="4" fill="none" />
+            <rect x="45" y="60" width="10" height="20" fill="currentColor" />
+        </svg>
+    ),
+    SEER: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <circle cx="50" cy="50" r="30" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="50" cy="50" r="10" fill="currentColor" />
+            <path d="M50 20 L50 80 M20 50 L80 50" stroke="currentColor" strokeWidth="1" />
+        </svg>
+    ),
+    WITCH: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
+            <path d="M20 70 Q50 90 80 70" fill="none" stroke="currentColor" strokeWidth="4" />
+            <path d="M30 70 L50 20 L70 70 Z" stroke="currentColor" strokeWidth="2" fill="none" />
+            <circle cx="50" cy="60" r="5" fill="currentColor" />
+            <path d="M40 30 L60 30" stroke="currentColor" strokeWidth="2" />
+        </svg>
+    ),
+    UNKNOWN: (
+        <svg viewBox="0 0 100 100" className="w-full h-full fill-current opacity-20">
+            <rect x="30" y="30" width="40" height="40" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="4" />
+            <path d="M30 30 L70 70 M70 30 L30 70" stroke="currentColor" strokeWidth="1" />
+        </svg>
+    )
+};
 
 export default function AvatarCard({ 
     player, 
@@ -33,8 +69,6 @@ export default function AvatarCard({
 
     const isMe = player.id === myId;
     const isDead = player.status === 'dead';
-    const isSeerVision = phase === 'WOLF_VISION';
-    const isWitchVision = phase === 'WITCH_VISION';
     
     // --- Decision Tree ---
 

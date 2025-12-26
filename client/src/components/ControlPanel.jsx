@@ -3,25 +3,24 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
 import { useGameContext } from '../context/GameContext';
 
-export default function ControlPanel(props) {
+export default function ControlPanel({ onlyActions = false, onlyLogs = false }) {
     const { t } = useTranslation();
     const { 
         roomId, 
-        // serverIP, // Not in initial context? We need to add it or fetch it. It's state in GameRoom.
-        // It's local state in GameRoom. We didn't put it in contextvalue. 
-        // PLAN FIX: Add serverIP to context in GameRoom if needed, or just omit for now if not critical or pass it?
-        // Wait, ControlPanel needs it for QR code. 
-        // Let's assume we update GameRoom to pass it in Context OR we keep props for things NOT in context?
-        // But we want to remove props.
-        // Let's add serverIP to context in GameRoom first? Or just do it here.
-        // For now, let's look at what IS in context.
         gameState,
         actions,
         myId,
         executedId,
         hostId,
-        serverIP // Now available
+        serverIP
     } = useGameContext();
+
+    const { phase, players, logs, speaking } = gameState;
+    const role = gameState.me?.role;
+    const myStatus = gameState.me?.status;
+    const hasActed = gameState.me?.hasActed;
+    const isHost = hostId === myId;
+    const isReady = players && players[myId] && players[myId].isReady;
 
     const logsEndRef = useRef(null);
     const [showQRCode, setShowQRCode] = useState(false);
@@ -125,19 +124,11 @@ export default function ControlPanel(props) {
                                  
                                  return (
                                     <div className="relative w-full">
-                                         {!canStart && (
-                                            <div className="absolute bottom-full left-0 w-full text-[9px] text-center mb-2 text-danger font-bold uppercase tracking-wider animate-pulse">
-                                                {t('waiting_for_others')}
-                                            </div>
-                                         )}
                                          <button 
                                             className={`btn-brutal bg-accent text-black w-full ${!canStart && 'opacity-50 cursor-not-allowed'}`}
-                                            onClick={() => {
-                                                if(canStart) actions.onStartGame();
-                                                else alert(t('waiting_for_others'));
-                                            }}
+                                            onClick={() => { actions.onStartGame(); }}
                                         >
-                                            {t('start_game')}
+                                            {!canStart ? t('waiting_for_others') : t('start_game')}
                                         </button>
                                      </div>
                                  );
@@ -173,6 +164,16 @@ export default function ControlPanel(props) {
         // WOLVES
         if (phase === 'NIGHT_WOLVES') {
             if (role === 'WOLF') {
+                 if (hasActed) {
+                     return (
+                         <div className="mt-auto">
+                              <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
+                                 &gt;&gt; {t('wolf_wake')}
+                              </div>
+                              <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                         </div>
+                     );
+                 }
                  return (
                      <div className="mt-auto">
                          <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
@@ -194,6 +195,16 @@ export default function ControlPanel(props) {
         // WITCH
         if (phase === 'NIGHT_WITCH') {
             if (role === 'WITCH') {
+                 if (hasActed) {
+                     return (
+                        <div className="mt-auto">
+                            <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
+                               &gt;&gt; {t('witch_wake')}
+                            </div>
+                            <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                        </div>
+                     );
+                 }
                  return (
                     <div className="mt-auto">
                         <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
@@ -218,6 +229,16 @@ export default function ControlPanel(props) {
         // SEER
         if (phase === 'NIGHT_SEER') {
             if (role === 'SEER') {
+                 if (hasActed) {
+                     return (
+                        <div className="mt-auto">
+                            <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
+                               &gt;&gt; {t('seer_wake')}
+                            </div>
+                            <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                        </div>
+                     );
+                 }
                  return (
                     <div className="mt-auto">
                         <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
@@ -332,6 +353,16 @@ export default function ControlPanel(props) {
         }
 
         if (phase === 'DAY_VOTE') {
+             if (hasActed) {
+                 return (
+                     <div className="mt-auto">
+                         <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
+                            &gt;&gt; {t('vote_required')}
+                         </div>
+                         <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                     </div>
+                 );
+             }
              return (
                  <div className="mt-auto">
                      <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
@@ -343,18 +374,32 @@ export default function ControlPanel(props) {
         }
 
         if (phase === 'FINISHED') {
-         return (
-             <div className="flex flex-col items-center justify-center h-full">
-                 <div className="text-xl font-bold mb-4 glitch-text">{t('game_over')}</div>
-                 {isHost && (
-                     <button className="btn-brutal bg-white text-black pl-5 pr-5" onClick={actions.onPlayAgain}>
-                         {t('play_again')}
-                     </button>
-                 )}
-                 {!isHost && <div className="text-xs text-[#666]">{t('waiting_for_host')}</div>}
-             </div>
-         );
-    }        
+            const winner = gameState.winner;
+            const isVillagersWin = winner === 'VILLAGERS';
+            const winColor = isVillagersWin ? 'text-accent' : 'text-danger';
+            
+            // Construct message
+            // We use simple fallback if t() keys missing, but assuming they exist from context
+            const winnerName = isVillagersWin ? t('roles.VILLAGER') : t('roles.WOLF');
+            
+            return (
+                <div className="flex flex-col items-center justify-center h-full w-full animate-in zoom-in duration-300">
+                    <div className={`p-5 border-4 border-current mb-4 text-center ${isVillagersWin ? 'bg-accent text-black' : 'bg-danger text-white'}`}>
+                        <div className="text-sm font-mono font-bold uppercase mb-1">{t('game_over')}</div>
+                        <div className="text-3xl font-black uppercase leading-none tracking-tighter">
+                            {winnerName} {t('win')}!
+                        </div>
+                    </div>
+                    
+                    {isHost && (
+                        <button className="btn-brutal bg-white text-black pl-8 pr-8 text-lg" onClick={actions.onPlayAgain}>
+                            {t('play_again')}
+                        </button>
+                    )}
+                    {!isHost && <div className="text-xs text-[#666]">{t('waiting_for_host')}</div>}
+                </div>
+            );
+       }        
 
         // FINISHED
         return (

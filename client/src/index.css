@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+/* ============================================
+   THEME TOKENS
+   ============================================ */
 @theme {
   --color-bg: #0a0a0a;
   --color-ink: #ffffff;
@@ -9,108 +12,228 @@
   --font-mono: "Space Mono", monospace;
 }
 
+/* ============================================
+   BASE STYLES
+   ============================================ */
 @layer base {
   :root {
-    --grain-opacity: 0.18;
+    --grain-opacity: 0.15;
   }
   
   body {
-    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] flex items-center justify-center relative;
+    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] 
+           flex items-center justify-center relative antialiased;
   }
 }
 
+/* ============================================
+   COMPONENT STYLES
+   ============================================ */
 @layer components {
-    .werewolf-app {
-        @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] flex items-center justify-center relative;
-    }
+  /* App Container */
+  .werewolf-app {
+    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] 
+           flex items-center justify-center relative;
+  }
 
-    /* Brulatist Button */
-    .btn-brutal {
-        @apply w-full p-5 bg-danger text-white border-0 font-grotesk text-2xl font-bold uppercase transition-all duration-100 cursor-pointer;
-        clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
-    }
+  /* Brutalist Button */
+  .btn-brutal {
+    @apply w-full p-5 bg-danger text-white border-0 font-grotesk 
+           text-2xl font-bold uppercase tracking-tight
+           transition-all duration-150 ease-out cursor-pointer
+           shadow-[4px_4px_0px_rgba(0,0,0,0.3)];
+    clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+  }
 
-    .btn-brutal:active {
-        @apply scale-[0.98] brightness-150;
-    }
+  .btn-brutal:hover {
+    @apply brightness-110 translate-x-[-2px] translate-y-[-2px]
+           shadow-[6px_6px_0px_rgba(0,0,0,0.4)];
+  }
 
-    .btn-brutal:disabled {
-        @apply bg-[#333] text-[#666] cursor-not-allowed transform-none;
-    }
+  .btn-brutal:active {
+    @apply scale-[0.98] brightness-125 
+           shadow-[2px_2px_0px_rgba(0,0,0,0.3)];
+  }
 
-    .btn-start {
-        @apply bg-accent text-black;
-    }
+  .btn-brutal:disabled {
+    @apply bg-[#333] text-[#666] cursor-not-allowed 
+           transform-none shadow-none brightness-100;
+  }
 
-    /* Brutalist Input */
-    .input-brutal {
-        @apply w-full bg-[#111] border-2 border-[#333] text-ink p-4 font-mono text-base outline-none transition-all duration-200;
-    }
+  .btn-start {
+    @apply bg-accent text-black;
+  }
 
-    .input-brutal:focus {
-        @apply border-accent bg-black;
-    }
+  /* Brutalist Input */
+  .input-brutal {
+    @apply w-full bg-[#111] border-2 border-[#333] text-ink 
+           p-4 font-mono text-base outline-none 
+           transition-all duration-200 ease-in-out;
+  }
+
+  .input-brutal:focus {
+    @apply border-accent bg-black shadow-[0_0_0_2px_rgba(225,255,0,0.1)];
+  }
+
+  .input-brutal::placeholder {
+    @apply text-[#555] italic;
+  }
 }
 
-/* Utilities for grain and scanlines that difficult to express purely in tailwind config efficiently */
+/* ============================================
+   VISUAL EFFECTS
+   ============================================ */
+
+/* Film Grain Overlay */
 .grain-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   pointer-events: none;
   z-index: 100;
   opacity: var(--grain-opacity);
+  mix-blend-mode: overlay;
 }
 
+/* CRT Scanline Effect */
 .scanline {
   width: 100%;
   height: 2px;
-  background: rgba(225, 255, 0, 0.2);
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(225, 255, 0, 0.3) 50%,
+    transparent 100%
+  );
   position: absolute;
   top: 0;
   left: 0;
   z-index: 5;
   animation: scan 4s linear infinite;
   pointer-events: none;
+  filter: blur(0.5px);
 }
 
 @keyframes scan {
-  0% { top: 0; }
-  100% { top: 100%; }
+  0% { 
+    top: 0; 
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% { 
+    top: 100%; 
+    opacity: 0;
+  }
 }
 
+/* Photocopy Grid Texture */
 .photocopy-texture {
   position: absolute;
   inset: 0;
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
   background-size: 20px 20px;
   pointer-events: none;
+  opacity: 0.5;
 }
 
+/* Glitch Text Effect */
 .glitch-text {
   position: relative;
+  display: inline-block;
+}
+
+.glitch-text::before,
+.glitch-text::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+}
+
+.glitch-text:hover::before {
+  color: var(--color-danger);
+  animation: glitch-1 0.3s infinite;
+  opacity: 0.8;
+  z-index: -1;
 }
 
 .glitch-text:hover::after {
-  content: "WEREWOLF";
-  position: absolute;
-  left: 2px;
-  top: 2px;
-  color: var(--danger);
-  z-index: -1;
+  color: var(--color-accent);
+  animation: glitch-2 0.3s infinite;
   opacity: 0.8;
-  animation: glitch 0.3s infinite;
+  z-index: -2;
 }
 
-@keyframes glitch {
-  0% { transform: translate(0); }
-  20% { transform: translate(-2px, 2px); }
-  40% { transform: translate(-2px, -2px); }
-  60% { transform: translate(2px, 2px); }
-  80% { transform: translate(2px, -2px); }
-  100% { transform: translate(0); }
+@keyframes glitch-1 {
+  0%, 100% { 
+    transform: translate(0); 
+    clip-path: inset(0 0 0 0);
+  }
+  20% { 
+    transform: translate(-3px, 2px); 
+    clip-path: inset(10% 0 85% 0);
+  }
+  40% { 
+    transform: translate(-2px, -3px); 
+    clip-path: inset(80% 0 10% 0);
+  }
+  60% { 
+    transform: translate(3px, 1px); 
+    clip-path: inset(50% 0 30% 0);
+  }
+  80% { 
+    transform: translate(2px, -2px); 
+    clip-path: inset(30% 0 70% 0);
+  }
+}
+
+@keyframes glitch-2 {
+  0%, 100% { 
+    transform: translate(0); 
+    clip-path: inset(0 0 0 0);
+  }
+  20% { 
+    transform: translate(2px, -2px); 
+    clip-path: inset(20% 0 60% 0);
+  }
+  40% { 
+    transform: translate(-3px, 3px); 
+    clip-path: inset(60% 0 20% 0);
+  }
+  60% { 
+    transform: translate(1px, -3px); 
+    clip-path: inset(40% 0 40% 0);
+  }
+  80% { 
+    transform: translate(-2px, 2px); 
+    clip-path: inset(70% 0 10% 0);
+  }
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+/* Hide Scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Smooth Transitions */
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }

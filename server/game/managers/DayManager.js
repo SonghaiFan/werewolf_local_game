@@ -25,8 +25,15 @@ class DayManager {
         this.currentSpeakerIndex = 0;
         
         if (order.length > 0) {
-            const nextP = game.players[order[0]];
+            const nextId = order[0];
+            const nextP = game.players[nextId];
             game.addLog(`JUDGE: Discussion starts. ${nextP.name}, you have the floor.`);
+            
+            // Trigger specific voice for first speaker
+            // setTimeout to let the "Start Discussion" intro play first if needed, 
+            // but usually they are sequential in client queue or we just send it.
+            // Let's send it directly.
+            game.onVoiceCue(`请${nextP.avatar}号玩家发言`);
         } else {
              // Should unlikely happen
              game.advancePhase(PHASES.DAY_VOTE);
@@ -64,7 +71,8 @@ class DayManager {
             const nextId = this.speakingOrder[this.currentSpeakerIndex];
             const nextP = game.players[nextId];
             game.addLog(`JUDGE: Next speaker is ${nextP.name}.`);
-            game.triggerVoice(PHASES.DAY_DISCUSSION); // Re-trigger sound? Or custom prompt?
+            // Specific voice cue
+            game.onVoiceCue(`请${nextP.avatar}号玩家发言`);
         }
         
         // Trigger generic update for UI
