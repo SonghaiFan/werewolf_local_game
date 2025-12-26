@@ -186,7 +186,7 @@ class WerewolfGame {
         }
     }
 
-    startGame() {
+    startGame(config = null) {
         if (this.phase !== PHASES.WAITING) return;
         
         const allReady = Object.values(this.players).every(p => p.isReady || p.id === this.hostId);
@@ -201,15 +201,52 @@ class WerewolfGame {
         const count = playerIds.length;
         
         // Role Distribution
-        let rolesToDistribute = [];
-        // 3. Assign Roles - Simplified
-        // 1/3 wolves, includes 1 seer, 1 witch, rest villagers.
-        const roles = [ROLES.SEER, ROLES.WITCH];
-        const numWolves = Math.max(1, Math.floor(count / 3));
-        for (let i = 0; i < numWolves; i++) roles.push(ROLES.WOLF);
+        const roles = [];
         
+        if (config && typeof config === 'object') {
+             // 3a. Custom Config from Host
+             const { wolves = 0, seer = false, witch = false } = config;
+             
+             // Add Wolves
+             for (let i = 0; i < wolves; i++) roles.push(ROLES.WOLF);
+             
+             // Add Specials
+             if (seer) roles.push(ROLES.SEER);
+             if (witch) roles.push(ROLES.WITCH);
+             
+             // Validation: If config exceeds count, we might have issues, but UI prevents this.
+             // If config is less, we fill with villagers below.
+             
+             this.addLog(`JUDGE: Custom Rules - Wolves: ${wolves}, Seer: ${seer?'Yes':'No'}, Witch: ${witch?'Yes':'No'}.`);
+             
+        } else {
+            // 3b. Standard Auto-Config (Fallback)
+             if (count >= 6 && count < 9) {
+                 // 6-8: 2 Wolves, 1 Seer, 1 Witch, rest Villagers
+                 roles.push(ROLES.WOLF, ROLES.WOLF);
+                 roles.push(ROLES.SEER, ROLES.WITCH);
+             } else if (count >= 9 && count < 12) {
+                  // 9-11: 3 Wolves, 1 Seer, 1 Witch, rest Villagers (Hunter placeholder as Villager)
+                  roles.push(ROLES.WOLF, ROLES.WOLF, ROLES.WOLF);
+                  roles.push(ROLES.SEER, ROLES.WITCH);
+             } else if (count >= 12) {
+                  // 12+: 4 Wolves, 1 Seer, 1 Witch, rest Villagers
+                  roles.push(ROLES.WOLF, ROLES.WOLF, ROLES.WOLF, ROLES.WOLF);
+                  roles.push(ROLES.SEER, ROLES.WITCH);
+             } else {
+                  // Fallback for small usage / debugging (<6)
+                  // e.g. 3 players -> 1 Wolf, 1 Seer, 1 Villager
+                  const numWolves = Math.max(1, Math.floor(count / 3));
+                  for (let i = 0; i < numWolves; i++) roles.push(ROLES.WOLF);
+                  roles.push(ROLES.SEER); 
+                  if (roles.length < count) roles.push(ROLES.WITCH);
+             }
+        }
+
         // Fill rest with Villagers
         while (roles.length < count) roles.push(ROLES.VILLAGER);
+        // Truncate if overflow (shouldn't happen with above logic but safe)
+        while (roles.length > count) roles.pop();
         
         // Shuffle
         roles.sort(() => Math.random() - 0.5);
@@ -322,6 +359,14 @@ class WerewolfGame {
             this.addLog("JUDGE: Sun rises. It was a peaceful night.");
         }
 
+        // Check for Game Over immediately after deaths (e.g. 1 Wolf vs 1 Villager -> Wolf Win)
+        const winResult = this.checkWinCondition();
+        if (winResult) {
+            this.finishGame(winResult);
+            this.pendingDeaths = []; // Clear pending
+            return;
+        }
+
         // Proceed to next phase
         setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000);
         this.pendingDeaths = [];
@@ -354,6 +399,7 @@ class WerewolfGame {
         this.winner = winner;
         const winnerText = winner === 'VILLAGERS' ? 'VILLAGERS (村民)' : 'WEREWOLVES (狼人)';
         this.addLog(`GAME OVER. ${winnerText} WIN! (游戏结束。${winnerText} 胜利！)`);
+        if(this.onGameUpdate) this.onGameUpdate(this);
     }
 
     reset() {

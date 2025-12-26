@@ -7,6 +7,7 @@ function App() {
   const [roomId, setRoomId] = useState(null);
   const [myId, setMyId] = useState(null);
   const [inGame, setInGame] = useState(false);
+  const [serverIP, setServerIP] = useState(null);
 
   useEffect(() => {
     function onConnect() {
@@ -41,6 +42,11 @@ function App() {
            }
        });
        
+       socket.on('server_config', ({ ip }) => {
+            console.log('[App] Received Server IP:', ip);
+            setServerIP(ip);
+       });
+
        socket.on('error', (alertMsg) => alert(alertMsg));
        
        return () => {
@@ -48,6 +54,7 @@ function App() {
            socket.off('disconnect');
            socket.off('game_created');
            socket.off('game_state');
+           socket.off('server_config');
            socket.off('error');
        }
   }, []);
@@ -66,6 +73,7 @@ function App() {
             roomId={roomId} 
             myId={myId || socket.id} 
             onExit={handleExit} 
+            serverIP={serverIP}
         />
       )}
     </div>

@@ -25,6 +25,14 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
     const logsEndRef = useRef(null);
     const [showQRCode, setShowQRCode] = useState(false);
     
+    // Host Settings State
+    const [showSettings, setShowSettings] = useState(false);
+    const [gameConfig, setGameConfig] = useState({
+        wolves: 2,
+        seer: true,
+        witch: true
+    });
+    
     const playerCount = players ? Object.keys(players).length : 0;
     const allReady = players ? Object.values(players).every(p => p.isReady) : false;
 
@@ -36,6 +44,33 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
 
 
     const renderActions = () => {
+        if (phase === 'FINISHED') {
+            const winner = gameState.winner;
+            const isVillagersWin = winner === 'VILLAGERS';
+            
+            // Construct message
+            // We use simple fallback if t() keys missing, but assuming they exist from context
+            const winnerName = isVillagersWin ? t('roles.VILLAGER') : t('roles.WOLF');
+            
+            return (
+                <div className="flex flex-col items-center justify-center h-full w-full animate-in zoom-in duration-300">
+                    <div className={`p-5 border-4 border-current mb-4 text-center ${isVillagersWin ? 'bg-accent text-black' : 'bg-danger text-white'}`}>
+                        <div className="text-sm font-mono font-bold uppercase mb-1">{t('game_over')}</div>
+                        <div className="text-3xl font-black uppercase leading-none tracking-tighter">
+                            {winnerName} {t('win')}!
+                        </div>
+                    </div>
+                    
+                    {isHost && (
+                        <button className="btn-brutal bg-white text-black pl-8 pr-8 text-lg" onClick={actions.onPlayAgain}>
+                            {t('play_again')}
+                        </button>
+                    )}
+                    {!isHost && <div className="text-xs text-[#666]">{t('waiting_for_host')}</div>}
+                </div>
+            );
+       }
+
         // Special Case: If it's your Last Words (DAY_LEAVE_SPEECH) and you are the one executed,
         // you are likely 'dead' but still need to act.
         const isMyLastWords = phase === 'DAY_LEAVE_SPEECH' && executedId === myId;
@@ -83,19 +118,80 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                          </button>
                      )}
 
-                     {/* Host Start Button */}
+                     {/* Host Start Button & Settings */}
                      {isHost && (
                         <div className="pt-2.5 border-t border-[#333]">
                              {(() => {
-                                 // Host can start if everyone else is ready
                                  const canStart = players && Object.values(players).every(p => p.id === myId || p.isReady);
                                  
+                                 // Settings State (Defined inside render for simplicity or moved up?)
+                                 // React Hooks must be at top level. Let's rely on component state defined at top.
+                                 // Since we can't add hooks here, we'll assume we added them at the top.
+                                 // WAIT: We need to add the state at the top of the component.
+                                 // I will use a multi-step approach or just assume I can edit the whole file?
+                                 // I'm in a replace_content block. I should have added the state first? 
+                                 // Actually, I can use a local component or just standard React state.
+                                 // Let's modify the top of the file to add state first in a separate call? 
+                                 // No, I can try to do it all if I edit the validation logic later.
+                                 // But for now, let's just add the UI here and refer to state that I will add in the next step.
+                                 
+                                 // ACTUAL PLAN: I will replace the Host block to include the UI. 
+                                 // AND I will need to add the state at the top. 
+                                 // I will do the state addition in a separate call to be safe using multi_replace.
+                                 
                                  return (
-                                    <div className="relative w-full">
+                                    <div className="w-full">
+                                         {/* Simple Settings Toggle */}
+                                         <div className="mb-2 flex items-center justify-between text-xs text-[#666]">
+                                             <span>{t('settings')}</span>
+                                             <button 
+                                                 className={`px-2 py-0.5 border ${showSettings ? 'bg-white text-black border-white' : 'border-[#444] text-[#888]'}`}
+                                                 onClick={() => setShowSettings(!showSettings)}
+                                             >
+                                                 {showSettings ? '-' : '+'}
+                                             </button>
+                                         </div>
+
+                                         {showSettings && (
+                                             <div className="mb-2.5 p-2 bg-[#1a1a1a] border border-[#333] text-xs">
+                                                 <div className="flex items-center justify-between mb-1">
+                                                     <label>Wolves: {gameConfig.wolves}</label>
+                                                     <div className="flex gap-1">
+                                                         <button className="px-1.5 bg-[#333]" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
+                                                         <button className="px-1.5 bg-[#333]" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
+                                                     </div>
+                                                 </div>
+                                                 <div className="flex items-center gap-2 mb-1">
+                                                     <input 
+                                                         type="checkbox" 
+                                                         checked={gameConfig.seer} 
+                                                         onChange={e => setGameConfig(p => ({...p, seer: e.target.checked}))}
+                                                     />
+                                                     <label>Seer</label>
+                                                 </div>
+                                                 <div className="flex items-center gap-2 mb-2">
+                                                     <input 
+                                                         type="checkbox" 
+                                                         checked={gameConfig.witch} 
+                                                         onChange={e => setGameConfig(p => ({...p, witch: e.target.checked}))}
+                                                     />
+                                                     <label>Witch</label>
+                                                 </div>
+                                                 
+                                                 <div className="pt-1 border-t border-[#333] text-[#888]">
+                                                     Villagers: {playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0)}
+                                                 </div>
+                                             </div>
+                                         )}
+
                                          <button 
-                                            className={`btn-brutal bg-accent text-black w-full ${!canStart && 'opacity-50 cursor-not-allowed'}`}
-                                            onClick={() => { if(canStart) actions.onStartGame(); }}
-                                            disabled={!canStart}
+                                            className={`btn-brutal bg-accent text-black w-full ${(!canStart || (playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0) < 0)) && 'opacity-50 cursor-not-allowed'}`}
+                                            onClick={() => { 
+                                                if(canStart && (playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0) >= 0)) {
+                                                    actions.onStartGame(gameConfig);
+                                                }
+                                            }}
+                                            disabled={!canStart || (playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0) < 0)}
                                         >
                                             {!canStart ? t('waiting_for_others') : t('start_game')}
                                         </button>
@@ -342,33 +438,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              );
         }
 
-        if (phase === 'FINISHED') {
-            const winner = gameState.winner;
-            const isVillagersWin = winner === 'VILLAGERS';
-            const winColor = isVillagersWin ? 'text-accent' : 'text-danger';
-            
-            // Construct message
-            // We use simple fallback if t() keys missing, but assuming they exist from context
-            const winnerName = isVillagersWin ? t('roles.VILLAGER') : t('roles.WOLF');
-            
-            return (
-                <div className="flex flex-col items-center justify-center h-full w-full animate-in zoom-in duration-300">
-                    <div className={`p-5 border-4 border-current mb-4 text-center ${isVillagersWin ? 'bg-accent text-black' : 'bg-danger text-white'}`}>
-                        <div className="text-sm font-mono font-bold uppercase mb-1">{t('game_over')}</div>
-                        <div className="text-3xl font-black uppercase leading-none tracking-tighter">
-                            {winnerName} {t('win')}!
-                        </div>
-                    </div>
-                    
-                    {isHost && (
-                        <button className="btn-brutal bg-white text-black pl-8 pr-8 text-lg" onClick={actions.onPlayAgain}>
-                            {t('play_again')}
-                        </button>
-                    )}
-                    {!isHost && <div className="text-xs text-[#666]">{t('waiting_for_host')}</div>}
-                </div>
-            );
-       }        
+
 
         // FINISHED
         return (

@@ -99,15 +99,29 @@ class DayManager {
 
     resolve(game) {
         const voteCounts = {};
+        const voteDetails = [];
+
         // Initialize counts to 0 for targets
         Object.values(this.votes).forEach(targetId => {
              voteCounts[targetId] = 0;
         });
 
+        // Tally and build detail log
         Object.entries(this.votes).forEach(([voterId, targetId]) => {
              let w = 1;
              voteCounts[targetId] = (voteCounts[targetId] || 0) + w;
+             
+             const voterName = game.players[voterId]?.avatar || game.players[voterId]?.name || 'Unknown';
+             const targetName = game.players[targetId]?.avatar || game.players[targetId]?.name || 'Unknown';
+             voteDetails.push(`${voterName}->${targetName}`);
         });
+
+        // Log the details
+        if (voteDetails.length > 0) {
+            game.addLog(`JUDGE: Votes: ${voteDetails.join(', ')}`);
+        } else {
+            game.addLog(`JUDGE: No votes cast.`);
+        }
 
         let maxVotes = 0;
         let candidates = [];
@@ -117,6 +131,9 @@ class DayManager {
         }
 
         game.phase = PHASES.DAY_ELIMINATION;
+        
+        // Broadcast immediately to show the "Tallying" result / logs
+        if(game.onGameUpdate) game.onGameUpdate(game);
 
         if (candidates.length === 1) {
             const victim = candidates[0];
@@ -125,22 +142,26 @@ class DayManager {
             
             game.executedPlayerId = victim;
 
-
-        } else {
-            game.addLog("JUDGE: Tie vote. No one gets executed today.");
-            game.executedPlayerId = null; 
-        }
-
-        const winResult = game.checkWinCondition();
-        if (winResult) {
-            game.finishGame(winResult);
-        } else {
-             if (game.executedPlayerId) {
-                 // Victim Logic
+            const winResult = game.checkWinCondition();
+            if (winResult) {
+                game.finishGame(winResult);
+            } else {
                  game.advancePhase(PHASES.DAY_LEAVE_SPEECH);
-             } else {
-                 setTimeout(() => game.startNightOrEnd(), 2000);
-             }
+            }
+
+        } else {
+            // TIE / DRAW
+            game.addLog("JUDGE: Tie vote. Please vote again. (平票，请重新投票)");
+            game.executedPlayerId = null; 
+            
+            // Broadcast the tie message
+            if(game.onGameUpdate) game.onGameUpdate(game);
+
+            setTimeout(() => {
+                game.addLog("JUDGE: Re-opening voting...");
+                this.resetVotes();
+                game.advancePhase(PHASES.DAY_VOTE); // Go back to voting
+            }, 3000);
         }
     }
 

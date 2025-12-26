@@ -6,7 +6,7 @@ import AvatarCard from './AvatarCard';
 import { useTranslation } from 'react-i18next';
 import GameContext from '../context/GameContext';
 
-export default function GameRoom({ roomId, myId, onExit }) {
+export default function GameRoom({ roomId, myId, onExit, serverIP }) {
     const { t } = useTranslation();
     const [gameState, setGameState] = useState({
         phase: 'WAITING',
@@ -17,13 +17,13 @@ export default function GameRoom({ roomId, myId, onExit }) {
     });
     
     const [selectedTarget, setSelectedTarget] = useState(null);
-    const [serverIP, setServerIP] = useState(null);
+    // const [serverIP, setServerIP] = useState(null); // Now passed as prop
     const [inspectedPlayers, setInspectedPlayers] = useState({});
 
     useEffect(() => {
-        socket.on('server_config', ({ ip }) => {
-            setServerIP(ip);
-        });
+        // socket.on('server_config', ({ ip }) => {
+        //     setServerIP(ip);
+        // });
         function onGameState(state) {
             setGameState(prev => ({
                 ...prev,
@@ -97,8 +97,8 @@ export default function GameRoom({ roomId, myId, onExit }) {
     const otherPlayers = Object.values(gameState.players).filter(p => p.id !== myId);
 
     const actions = {
-        onStartGame: () => {
-            socket.emit('start_game', { roomId });
+        onStartGame: (config) => {
+            socket.emit('start_game', { roomId, config });
             setInspectedPlayers({});
         },
         onPlayerReady: () => socket.emit('player_ready', { roomId }),

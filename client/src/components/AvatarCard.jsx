@@ -100,7 +100,7 @@ export default function AvatarCard({
             className={`
                 relative bg-[#151515] border-2 h-full min-h-[120px] md:min-h-[140px] 
                 transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col
-                ${canInteract ? 'cursor-pointer hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_var(--accent)] hover:bg-[#1a1a1a] hover:border-ink' : ''}
+                ${canInteract ? 'cursor-pointer' : ''}
                 ${!canInteract && !isMe ? 'opacity-90' : ''}
                 ${!isSelectable && !isMe ? 'opacity-50 grayscale cursor-not-allowed' : ''}
                 ${isSelected ? 'bg-accent text-black border-black -rotate-1 -translate-x-1 -translate-y-1 shadow-[8px_8px_0px_#fff]' : 'border-[#333] text-ink'}
@@ -155,7 +155,7 @@ export default function AvatarCard({
                         
                         {/* Tap to Reveal Overlay for Self */}
                         {isMe && !isDead && (
-                             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center hover:bg-white/5 transition-colors cursor-pointer"
+                             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center transition-colors cursor-pointer"
                                  onClick={(e) => { e.stopPropagation(); setIsRevealed(true); }}
                              >
                                 <div className="bg-[#222] border border-[#444] px-4 py-2 rounded-full shadow-lg flex items-center gap-2">

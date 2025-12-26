@@ -123,11 +123,11 @@ io.on('connection', (socket) => {
         broadcastState(game);
     });
 
-    socket.on('start_game', ({ roomId }) => {
+    socket.on('start_game', ({ roomId, config }) => {
         const game = games.get(roomId);
         if (!game) return;
         
-        game.startGame();
+        game.startGame(config);
         broadcastState(game);
     });
 
