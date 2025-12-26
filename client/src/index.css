@@ -1,127 +1,116 @@
-:root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@theme {
+  --color-bg: #0a0a0a;
+  --color-ink: #ffffff;
+  --color-accent: #e1ff00;
+  --color-danger: #ff4d00;
+  --font-grotesk: "Space Grotesk", sans-serif;
+  --font-mono: "Space Mono", monospace;
 }
 
-body {
-  margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+@layer base {
+  :root {
+    --grain-opacity: 0.18;
+  }
+  
+  body {
+    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-screen flex items-center justify-center relative;
+  }
 }
 
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+@layer components {
+    .werewolf-app {
+        @apply bg-bg text-ink font-grotesk overflow-hidden h-screen w-screen flex items-center justify-center relative;
+    }
+
+    /* Brulatist Button */
+    .btn-brutal {
+        @apply w-full p-5 bg-danger text-white border-0 font-grotesk text-2xl font-bold uppercase transition-all duration-100 cursor-pointer;
+        clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+    }
+
+    .btn-brutal:active {
+        @apply scale-[0.98] brightness-150;
+    }
+
+    .btn-brutal:disabled {
+        @apply bg-[#333] text-[#666] cursor-not-allowed transform-none;
+    }
+
+    .btn-start {
+        @apply bg-accent text-black;
+    }
+
+    /* Brutalist Input */
+    .input-brutal {
+        @apply w-full bg-[#111] border-2 border-[#333] text-ink p-4 font-mono text-base outline-none transition-all duration-200;
+    }
+
+    .input-brutal:focus {
+        @apply border-accent bg-black;
+    }
+}
+
+/* Utilities for grain and scanlines that difficult to express purely in tailwind config efficiently */
+.grain-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
   width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+  opacity: var(--grain-opacity);
 }
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
+.scanline {
+  width: 100%;
+  height: 2px;
+  background: rgba(225, 255, 0, 0.2);
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  animation: scan 4s linear infinite;
+  pointer-events: none;
 }
 
-/* Glassmorphism Card */
-.card {
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    max-width: 500px;
-    margin: 0 auto;
+@keyframes scan {
+  0% { top: 0; }
+  100% { top: 100%; }
 }
 
-.btn-primary {
-    background: linear-gradient(90deg, #ff8a00, #e52e71);
-    border: none;
-    color: white;
-    font-weight: bold;
-    padding: 12px 24px;
-    border-radius: 30px;
-    transition: transform 0.2s, box-shadow 0.2s;
+.photocopy-texture {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
 }
 
-.btn-primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(229, 46, 113, 0.4);
+.glitch-text {
+  position: relative;
 }
 
-.input-field {
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 8px;
-    padding: 10px;
-    color: white;
-    width: 100%;
-    margin-bottom: 1rem;
-    font-size: 1rem;
-    box-sizing: border-box;
+.glitch-text:hover::after {
+  content: "WEREWOLF";
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  color: var(--danger);
+  z-index: -1;
+  opacity: 0.8;
+  animation: glitch 0.3s infinite;
 }
 
-.game-actions {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    margin-top: 2rem;
-}
-
-.move-btn {
-    background: rgba(255,255,255,0.1);
-    border-radius: 50%;
-    width: 80px;
-    height: 80px;
-    font-size: 2rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    border: 2px solid transparent;
-}
-
-.move-btn:hover {
-    background: rgba(255,255,255,0.2);
-    transform: scale(1.1);
-}
-
-.move-btn.selected {
-    border-color: #ff8a00;
-    box-shadow: 0 0 15px rgba(255, 138, 0, 0.5);
-    background: rgba(255, 138, 0, 0.1);
-}
-
-.move-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-    transform: none;
+@keyframes glitch {
+  0% { transform: translate(0); }
+  20% { transform: translate(-2px, 2px); }
+  40% { transform: translate(-2px, -2px); }
+  60% { transform: translate(2px, 2px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
 }

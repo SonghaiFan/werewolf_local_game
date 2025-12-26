@@ -3,7 +3,38 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
+const os = require('os');
 const { WerewolfGame, PHASES } = require('./werewolfLogic');
+
+// Helper to get Local LAN IP
+function getLocalExternalIP() {
+    const interfaces = os.networkInterfaces();
+    const candidates = [];
+    for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]) {
+            // Skip internal (non-127.0.0.1) and non-ipv4
+            if ('IPv4' !== iface.family || iface.internal) {
+                continue;
+            }
+            candidates.push(iface.address);
+        }
+    }
+    
+    // Filter out 169.254 (Link-Local) unless it's the only one
+    const workable = candidates.filter(ip => !ip.startsWith('169.254'));
+    const list = workable.length > 0 ? workable : candidates;
+
+    // Prioritize common LAN subnets
+    const best = list.find(ip => ip.startsWith('192.168')) 
+              || list.find(ip => ip.startsWith('10.'))
+              || list.find(ip => ip.startsWith('172.'))
+              || list[0]
+              || '127.0.0.1';
+              
+    return best;
+}
+const SERVER_IP = getLocalExternalIP();
+console.log(`[System] Detected Local Server IP: ${SERVER_IP}`);
 
 const app = express();
 app.use(cors());
@@ -24,6 +55,8 @@ const games = new Map(); // RoomID -> WerewolfGame
 
 io.on('connection', (socket) => {
     console.log('User connected:', socket.id);
+    // Broadcast server IP config to new connection
+    socket.emit('server_config', { ip: SERVER_IP });
 
     // Helper to broadcast state to room
     const broadcastState = (game) => {
@@ -41,7 +74,12 @@ io.on('connection', (socket) => {
 
     socket.on('create_game', ({ name }) => {
         const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const game = new WerewolfGame(roomId, socket.id);
+        // Pass callback for voice cues
+        const onVoiceCue = (text) => {
+            io.to(roomId).emit('voice_cue', { text });
+        };
+
+        const game = new WerewolfGame(roomId, socket.id, onVoiceCue);
         
         game.addPlayer(socket.id, name);
         games.set(roomId, game);
@@ -53,6 +91,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('join_game', ({ roomId, name }) => {
+        // ... (Join logic same)
         const game = games.get(roomId);
 
         if (!game) {
@@ -72,42 +111,47 @@ io.on('connection', (socket) => {
         console.log(`User ${name} joined room ${roomId}`);
     });
 
-    socket.on('start_game', ({ roomId }) => {
-        const game = games.get(roomId);
-        if (!game || game.hostId !== socket.id) return;
-        
-        game.startGame();
-        broadcastState(game);
-        io.to(roomId).emit('notification', 'The Game Has Started!');
-    });
-
-    socket.on('night_action', ({ roomId, action }) => {
+    // ... (Start game same)
+    socket.on('player_ready', ({ roomId }) => {
         const game = games.get(roomId);
         if (!game) return;
         
-        const result = game.handleNightAction(socket.id, action);
-        
-        // If Seer check, send private result back immediately
-        if (result && typeof result === 'string') {
-            socket.emit('seer_result', { targetId: action.targetId, role: result });
-        }
-
-        // Just update state for everyone (so they see "waiting" or updated lock-in if applicable)
+        game.handlePlayerReady(socket.id);
         broadcastState(game);
     });
 
-    socket.on('resolve_phase', ({ roomId }) => {
-        // Can be triggered by Host manually to force move night -> day
-        const game = games.get(roomId);
-        if (!game || game.hostId !== socket.id) return;
+    socket.on('start_game', ({ roomId }) => {
 
-        if (game.phase === PHASES.NIGHT) {
-             game.resolveNight();
-             broadcastState(game);
-        } else if (game.phase === PHASES.DAY) {
-             const result = game.resolveDay();
-             broadcastState(game);
-        }
+    // ... (Night/Resolve same)
+
+    // --- Election Events ---
+    socket.on('election_nominate', ({ roomId }) => {
+        const game = games.get(roomId);
+        if(!game) return;
+        game.handleElectionNominate(socket.id);
+        broadcastState(game);
+    });
+
+    socket.on('election_pass', ({ roomId }) => {
+        const game = games.get(roomId);
+        if(!game) return;
+        game.handleElectionPass(socket.id);
+        broadcastState(game);
+    });
+
+    socket.on('election_vote', ({ roomId, targetId }) => {
+        const game = games.get(roomId);
+        if(!game) return;
+        game.handleElectionVote(socket.id, targetId);
+        broadcastState(game);
+    });
+
+    socket.on('sheriff_handover', ({ roomId, targetId }) => {
+        const game = games.get(roomId);
+        if(!game) return;
+        // targetId can be null (tear) or a playerId
+        game.handleSheriffHandover(socket.id, targetId);
+        broadcastState(game);
     });
 
     socket.on('day_vote', ({ roomId, targetId }) => {
@@ -122,19 +166,19 @@ io.on('connection', (socket) => {
         console.log('User disconnected:', socket.id);
         for (const [roomId, game] of games.entries()) {
             if (game.players[socket.id]) {
-                game.players[socket.id].status = 'disconnected'; // Mark as disconnected but keep in game logic?
-                // For simplified logic, if in waiting, remove. If playing, keep but "dead"?
-                if (game.phase === 'WAITING') {
-                    game.removePlayer(socket.id);
-                    if (Object.keys(game.players).length === 0) {
-                        games.delete(roomId);
-                    } else {
-                        broadcastState(game);
-                    }
+                game.players[socket.id].status = 'disconnected'; // Mark as disconnected
+                // If it's the host, maybe migrate host? For now, if everyone leaves, destroy.
+                
+                const playerName = game.players[socket.id].name;
+                game.removePlayer(socket.id); 
+                
+                // If count is 0, delete room.
+                if (Object.keys(game.players).length === 0) {
+                     console.log(`Room ${roomId} empty. Closing.`);
+                     games.delete(roomId);
                 } else {
-                    // In game, mark disconnected
-                    game.addLog(`Player ${game.players[socket.id].name} disconnected.`);
-                    broadcastState(game);
+                     game.addLog(`Player ${playerName} disconnected.`);
+                     broadcastState(game);
                 }
             }
         }

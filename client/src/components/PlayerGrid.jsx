@@ -40,7 +40,7 @@ const Avatars = [
 
 export default function PlayerGrid({ players, myId, selectedId, onSelect, phase }) {
     return (
-        <div className="main-stage">
+        <>
             {Object.values(players).map(player => {
                 const isMe = player.id === myId;
                 const isSelected = player.id === selectedId;
@@ -58,29 +58,52 @@ export default function PlayerGrid({ players, myId, selectedId, onSelect, phase 
                 return (
                     <div 
                         key={player.id} 
-                        className={`player-card ${isSelected ? 'selected' : ''} ${isDead ? 'dead' : ''}`}
+                        className={`
+                            relative bg-[#151515] border-2 border-ink h-full min-h-[120px] md:min-h-[200px] 
+                            transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden cursor-pointer
+                            hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[12px_12px_0px_var(--accent)] hover:bg-ink hover:text-black
+                            ${isSelected ? 'bg-accent text-black border-black -rotate-1 -translate-x-1 -translate-y-1 shadow-[12px_12px_0px_#fff]' : ''}
+                            ${isDead ? 'opacity-30 grayscale blur-[1px] pointer-events-none' : ''}
+                        `}
                         onClick={() => !isDead && onSelect(player.id)}
                     >
-                        <div className="id">{player.avatar || '00'}</div>
-                        <div className="name-tag">{player.name} {isMe && '(YOU)'}</div>
-                        
-                        <div className="avatar-box">
-                            {Avatars[(player.avatar || 1) - 1] || Avatars[0]}
+                        <div className="absolute top-2.5 left-2.5 font-mono text-2xl md:text-[40px] leading-none z-10">{player.avatar || '00'}</div>
+                        <div className="absolute top-2.5 right-2.5 font-mono text-[11px] md:text-sm font-bold z-10 flex flex-col items-end">
+                            <span>{player.name} {isMe && '(YOU)'}</span>
+                            {/* Ready Status */}
+                            {phase === 'WAITING' && (
+                                <span className={`text-[10px] ${player.isReady ? 'text-accent' : 'text-[#444]'}`}>
+                                    {player.isReady ? 'READY' : '...'}
+                                </span>
+                            )}
                         </div>
                         
-                        <div className="role-status">
+                        <div className="w-full h-full flex items-center justify-center opacity-80 mix-blend-luminosity">
+                            <div className="w-[70%] h-auto fill-current">
+                                {Avatars[(player.avatar || 1) - 1] || Avatars[0]}
+                            </div>
+                        </div>
+                        
+                        <div className="absolute bottom-2.5 right-2.5 writing-vertical-rl text-xs uppercase border-l border-current pl-[5px]">
                             {statusText}
                         </div>
 
                         {/* Voting Indicator - simplified */}
                         {player.isVoting && phase === 'DAY' && (
-                            <div style={{position: 'absolute', bottom: '50px', right: '10px', fontSize: '20px'}}>
-                                🗳️
-                            </div>
+                            <div className="absolute top-2 right-2 text-[10px] bg-black px-1 border border-ink">
+                    {player.status === 'dead' ? 'DEAD' : (player.id === myId ? 'ME' : 'PLAYER')}
+                </div>
                         )}
+                
+                {/* Sheriff Badge */}
+                {player.isSheriff && (
+                    <div className="absolute top-2 left-2 text-xl filter drop-shadow-[0_0_5px_rgba(255,215,0,0.8)] z-20">
+                        👮
+                    </div>
+                )}
                     </div>
                 );
             })}
-        </div>
+        </>
     );
 }

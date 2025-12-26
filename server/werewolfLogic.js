@@ -7,32 +7,633 @@ const ROLES = {
 
 const PHASES = {
     WAITING: 'WAITING',
-    NIGHT: 'NIGHT',
-    DAY: 'DAY',
+    // Granular Night Phases
+    NIGHT_WOLVES: 'NIGHT_WOLVES',
+    NIGHT_WITCH: 'NIGHT_WITCH',
+    NIGHT_SEER: 'NIGHT_SEER',
+    // Election Phases (Day 1)
+    DAY_ELECTION_NOMINATION: 'DAY_ELECTION_NOMINATION',
+    DAY_ELECTION_VOTE: 'DAY_ELECTION_VOTE',
+    // Granular Day Phases
+    DAY_ANNOUNCE: 'DAY_ANNOUNCE', // Deaths announced
+    DAY_DISCUSSION: 'DAY_DISCUSSION',
+    DAY_SHERIFF_SPEECH: 'DAY_SHERIFF_SPEECH', // Sheriff summary logic
+    DAY_VOTE: 'DAY_VOTE',
+    DAY_ELIMINATION: 'DAY_ELIMINATION', // Post-vote announcement
+    DAY_SHERIFF_HANDOVER: 'DAY_SHERIFF_HANDOVER', // Sheriff died
+    DAY_LEAVE_SPEECH: 'DAY_LEAVE_SPEECH', // Executed player last words
     FINISHED: 'FINISHED'
 };
 
 class WerewolfGame {
-    constructor(roomId, hostId) {
-        this.id = roomId;
+    constructor(id, hostId, onVoiceCue) {
+        this.id = id;
         this.hostId = hostId;
-        this.players = {}; // socketId -> { id, name, role, status: 'alive'|'dead'|'spectator', avatar? }
+        this.onVoiceCue = onVoiceCue || (() => {}); // Callback for voice
+
+        this.players = {}; // { status: alive/dead, role, etc }
         this.phase = PHASES.WAITING;
         this.round = 0;
-        this.logs = []; // Array of strings (public logs)
+        this.logs = [];
+        this.sheriffId = null; // Socket ID of sheriff
+        this.pendingNextPhase = null; // Staging for transitions
+        this.executedPlayerId = null; // Track who died day
         
-        // Night State
+        // ... (rest same)
         this.nightActions = {
             wolfTarget: null, // targetId
+            wolfVotes: {}, // wolfId -> targetId
             witchSaveUsed: false,
             witchPoisonUsed: false,
             witchAction: null, // { type: 'save'|'poison'|'skip', targetId }
             seerTarget: null, // targetId checked
         };
-
-        // Day State
-        this.votes = {}; // voterId -> targetId
+        // ... (election state same)
+        this.election = { candidates: [], votes: {} }; // for sheriff
+        
+        // ... (day state same)
+        this.votes = {}; // for day voting
+        this.pendingDeaths = []; // Store calls for night resolution
     }
+
+    // ... (skipped methods)
+
+    getPublicState() {
+        // Return sanitized state for everyone
+        const publicPlayers = {};
+        for(const [pid, p] of Object.entries(this.players)) {
+            publicPlayers[pid] = {
+                id: p.id,
+                name: p.name,
+                status: p.status,
+                isReady: p.isReady, // Public info
+                isSheriff: (pid === this.sheriffId),
+                // Hide role if alive, show if dead (maybe? usually standard is hide unless special)
+                // For MVP: hide role always.
+                isCandidate: this.election.candidates.includes(pid) // Helper
+            };
+        }
+        
+        return {
+            phase: this.phase,
+            round: this.round,
+            players: publicPlayers,
+            logs: this.logs,
+            election: this.election, // expose votes? Maybe just candidates
+            hostId: this.hostId // Essential for Voice Judge
+        };
+    }
+
+    advancePhase(newPhase) {
+        this.phase = newPhase;
+        this.logs.push(`--- PHASE: ${newPhase} ---`); 
+        
+        // Voice Triggers
+        if (newPhase === PHASES.NIGHT_WOLVES) {
+            this.onVoiceCue("It is night. Everyone close your eyes. Wolves, wake up.");
+        } else if (newPhase === PHASES.NIGHT_WITCH) {
+            this.onVoiceCue("Wolves, close your eyes. Witch, wake up.");
+        } else if (newPhase === PHASES.NIGHT_SEER) {
+            this.onVoiceCue("Witch, close your eyes. Seer, wake up.");
+        } else if (newPhase === PHASES.DAY_ANNOUNCE) {
+            // Handled in applyPendingDeaths usually, but reliable here too
+             this.onVoiceCue("The sun rises. Everyone wake up.");
+        } else if (newPhase === PHASES.DAY_ELECTION_NOMINATION) {
+             this.onVoiceCue("Election for Sheriff has started. Candidates, step forward.");
+        } else if (newPhase === PHASES.DAY_ELECTION_VOTE) {
+             this.onVoiceCue("Speeches over. Please vote for Sheriff.");
+        } else if (newPhase === PHASES.DAY_DISCUSSION) {
+             this.onVoiceCue("Discuss today's events.");
+        } else if (newPhase === PHASES.DAY_SHERIFF_SPEECH) {
+             this.onVoiceCue("Sheriff, please summarize.");
+        } else if (newPhase === PHASES.DAY_VOTE) {
+             this.onVoiceCue("Discussion End. Please vote for elimination.");
+        } else if (newPhase === PHASES.DAY_SHERIFF_HANDOVER) {
+             this.onVoiceCue("Sheriff has died. Pass the badge.");
+        } else if (newPhase === PHASES.DAY_LEAVE_SPEECH) {
+             this.onVoiceCue("Please leave your last words.");
+        }
+
+        switch (this.phase) {
+            // ... (Night Phases same)
+            case PHASES.NIGHT_WOLVES:
+                this.addLog("JUDGE: Night falls. Wolves, please wake up and hunt.");
+                this.resetNightState();
+                break;
+            case PHASES.NIGHT_WITCH:
+                this.addLog("JUDGE: Wolves have closed their eyes. Witch, please wake up.");
+                if (this.isRoleDead(ROLES.WITCH) || (this.nightActions.witchSaveUsed && this.nightActions.witchPoisonUsed)) {
+                     setTimeout(() => this.advancePhase(PHASES.NIGHT_SEER), 2000);
+                     this.addLog("JUDGE: (Witch is inactive/dead/out of potions)...");
+                }
+                break;
+            case PHASES.NIGHT_SEER:
+                this.addLog("JUDGE: Witch has closed eyes. Seer, please wake up.");
+                if (this.isRoleDead(ROLES.SEER)) {
+                     setTimeout(() => this.resolveNight(), 2000);
+                     this.addLog("JUDGE: (Seer is inactive/dead)...");
+                }
+                break;
+            // ... (Election phases same)
+            case PHASES.DAY_ELECTION_NOMINATION:
+                this.addLog("JUDGE: It is now time for the Sheriff Election. Please declare if you wish to run.");
+                this.electionState = { candidates: [], votes: {} };
+                break;
+            case PHASES.DAY_ELECTION_VOTE:
+                const cIds = this.electionState.candidates;
+                if (cIds.length === 0) {
+                     this.addLog("JUDGE: No candidates. Cancelling Election.");
+                     setTimeout(() => this.startDayAnnounce(), 2000);
+                } else if (cIds.length === 1) {
+                     this.sheriffId = cIds[0];
+                     this.addLog(`JUDGE: Only one candidate. Player ${this.players[cIds[0]].name} is automatically the Sheriff!`);
+                     setTimeout(() => this.startDayAnnounce(), 3000);
+                } else {
+                     const names = cIds.map(id => this.players[id].name).join(", ");
+                     this.addLog(`JUDGE: Candidates are: ${names}. Voters, please cast your vote.`);
+                }
+                break;
+            case PHASES.DAY_ANNOUNCE:
+                this.applyPendingDeaths();
+                break;
+            case PHASES.DAY_DISCUSSION:
+                this.addLog("JUDGE: Discuss who is the suspicion. You have free speech.");
+                
+                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
+                    const pIds = Object.keys(this.players);
+                    const sIndex = pIds.indexOf(this.sheriffId);
+                    const nextIndex = (sIndex + 1) % pIds.length;
+                    const nextPlayer = this.players[pIds[nextIndex]];
+                    this.addLog(`JUDGE: Sheriff ${this.players[this.sheriffId].name}, please direct discussion starting from ${nextPlayer.name} (Next Player).`);
+                }
+                break;
+            case PHASES.DAY_SHERIFF_SPEECH:
+                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
+                    this.addLog(`JUDGE: Discussion over. Sheriff ${this.players[this.sheriffId].name}, please make your summary speech.`);
+                } else {
+                    this.addLog("JUDGE: Discussion over. (No Sheriff for summary).");
+                    setTimeout(() => this.advancePhase(PHASES.DAY_VOTE), 2000);
+                }
+                break;
+            case PHASES.DAY_VOTE:
+                this.addLog("JUDGE: Speech over. Please cast your votes now.");
+                this.votes = {}; 
+                break;
+            case PHASES.DAY_SHERIFF_HANDOVER:
+                this.addLog(`JUDGE: Sheriff has died. Please wait for them to handover the badge or tear it.`);
+                break;
+            case PHASES.DAY_LEAVE_SPEECH:
+                if (this.executedPlayerId && this.players[this.executedPlayerId]) {
+                    this.addLog(`JUDGE: ${this.players[this.executedPlayerId].name} has been executed. Please leave your last words.`);
+                } else {
+                    // Should not happen, but safe fallback
+                    setTimeout(() => this.startNightOrEnd(), 1000);
+                }
+                break;
+            case PHASES.DAY_ELIMINATION:
+                break;
+            case PHASES.FINISHED:
+                break; 
+        }
+    }
+
+    // ... (resetNightState, isRoleDead, handleNightAction, resolveNight same)
+
+    resolveNight() {
+        let deadIds = [];
+        const wolfTarget = this.nightActions.wolfTarget;
+        const witchAction = this.nightActions.witchAction;
+
+        if (wolfTarget) {
+            let actualDeath = wolfTarget;
+            if (witchAction && witchAction.type === 'save' && witchAction.targetId === wolfTarget) {
+                actualDeath = null;
+            }
+            if (actualDeath) deadIds.push(actualDeath);
+        }
+
+        if (witchAction && witchAction.type === 'poison') {
+            if (!deadIds.includes(witchAction.targetId)) deadIds.push(witchAction.targetId);
+        }
+
+        this.pendingDeaths = deadIds;
+
+        if (this.round === 1) {
+            this.advancePhase(PHASES.DAY_ELECTION_NOMINATION);
+        } else {
+            this.startDayAnnounce();
+        }
+        
+        return { deadIds };
+    }
+
+
+    applyPendingDeaths() {
+        this.pendingDeaths.forEach(id => {
+            if(this.players[id]) this.players[id].status = 'dead';
+        });
+        
+        const deadCount = this.pendingDeaths.length;
+        if (deadCount > 0) {
+            const names = this.pendingDeaths.map(id => this.players[id].name).join(", ");
+            this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died: ${names}.`);
+        } else {
+            this.addLog("JUDGE: Sun rises. It was a peaceful night.");
+        }
+
+        const sheriffDied = this.sheriffId && this.pendingDeaths.includes(this.sheriffId);
+        this.pendingDeaths = []; 
+
+        if (sheriffDied) {
+            // Night Death -> Handover -> Discussion (Standard Rule)
+            this.pendingNextPhase = PHASES.DAY_DISCUSSION; 
+            this.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
+        } else {
+            setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000); 
+        }
+    }
+    
+    // ... (handleSheriffHandover same)
+    
+    // ... (Election logic same)
+
+    // ... (Day Vote logic same)
+
+    resolveDay() {
+        // ... (Tally same)
+        const voteCounts = {};
+        Object.values(this.votes).forEach(targetId => {
+            voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
+        });
+        Object.keys(voteCounts).forEach(k => voteCounts[k] = 0);
+        Object.entries(this.votes).forEach(([voterId, targetId]) => {
+             let w = 1;
+             if (voterId === this.sheriffId) w = 1.5;
+             voteCounts[targetId] += w;
+        });
+
+        let maxVotes = 0;
+        let candidates = [];
+        for (const [id, count] of Object.entries(voteCounts)) {
+            if (count > maxVotes) { maxVotes = count; candidates = [id]; }
+            else if (count === maxVotes) candidates.push(id);
+        }
+
+        this.phase = PHASES.DAY_ELIMINATION;
+
+        let victim = null;
+        if (candidates.length === 1) {
+            victim = candidates[0];
+            this.players[victim].status = 'dead';
+            this.executedPlayerId = victim; // Store for last words
+            this.addLog(`JUDGE: The village has voted to execute ${this.players[victim].name}.`);
+        } else {
+            this.executedPlayerId = null;
+            this.addLog("JUDGE: Tie vote. No one gets executed today.");
+        }
+
+        // Logic branching
+        // If victim is Sheriff: Handover -> Leave Speech -> Night/End
+        // If victim is Regular: Leave Speech -> Night/End
+        // If no victim: Night/End
+
+        if (this.executedPlayerId) {
+             const winResult = this.checkWinCondition();
+             if (winResult) {
+                 // Game Over overrides everything? 
+                 // Usually we let them say last words then end.
+                 // For MVP, just end.
+                 this.phase = PHASES.FINISHED;
+                 this.addLog(`GAME OVER. ${winResult} WIN!`);
+                 return { winner: winResult };
+             }
+
+             if (this.executedPlayerId === this.sheriffId) {
+                 this.pendingNextPhase = PHASES.DAY_LEAVE_SPEECH; // Go to speech after handover
+                 this.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
+             } else {
+                 // Go directly to speech
+                 this.advancePhase(PHASES.DAY_LEAVE_SPEECH);
+             }
+        } else {
+             // No death
+             setTimeout(() => this.startNightOrEnd(), 2000);
+        }
+    }
+    
+    startNightOrEnd() {
+        const winResult = this.checkWinCondition();
+        if (winResult) {
+            this.phase = PHASES.FINISHED;
+            this.addLog(`GAME OVER. ${winResult} WIN!`);
+        } else {
+            // Start Next Night
+            setTimeout(() => {
+                this.round++;
+                this.advancePhase(PHASES.NIGHT_WOLVES);
+            }, 3000);
+        }
+    }
+
+    handleSheriffHandover(playerId, targetId) {
+        if (this.phase !== PHASES.DAY_SHERIFF_HANDOVER) return;
+        if (playerId !== this.sheriffId) return;
+
+        if (targetId && this.players[targetId]?.status === 'alive') {
+            this.sheriffId = targetId;
+            this.addLog(`JUDGE: Sheriff Badge has been passed to ${this.players[targetId].name}.`);
+        } else {
+            this.sheriffId = null;
+            this.addLog("JUDGE: The Sheriff Badge has been torn!");
+        }
+
+        // Resume
+        const next = this.pendingNextPhase;
+        this.pendingNextPhase = null;
+
+        if (next) {
+            this.advancePhase(next); // Go to pending (Discussion or Leave Speech)
+        } else {
+            // Fallback (Should typically be set)
+            this.startNightOrEnd();
+        }
+    }
+
+    // ... (skipped standard methods)
+
+    // --- State Machine & Phase Transitions ---
+
+    advancePhase(nextPhase) {
+        this.phase = nextPhase;
+
+        switch (this.phase) {
+            // ... (Night Phases same)
+            case PHASES.NIGHT_WOLVES:
+                this.addLog("JUDGE: Night falls. Wolves, please wake up and hunt.");
+                this.resetNightState();
+                break;
+            case PHASES.NIGHT_WITCH:
+                this.addLog("JUDGE: Wolves have closed their eyes. Witch, please wake up.");
+                if (this.isRoleDead(ROLES.WITCH) || (this.nightActions.witchSaveUsed && this.nightActions.witchPoisonUsed)) {
+                     setTimeout(() => this.advancePhase(PHASES.NIGHT_SEER), 2000);
+                     this.addLog("JUDGE: (Witch is inactive/dead/out of potions)...");
+                }
+                break;
+            case PHASES.NIGHT_SEER:
+                this.addLog("JUDGE: Witch has closed eyes. Seer, please wake up.");
+                if (this.isRoleDead(ROLES.SEER)) {
+                     setTimeout(() => this.resolveNight(), 2000);
+                     this.addLog("JUDGE: (Seer is inactive/dead)...");
+                }
+                break;
+            case PHASES.DAY_ELECTION_NOMINATION:
+                this.addLog("JUDGE: It is now time for the Sheriff Election. Please declare if you wish to run.");
+                this.electionState = { candidates: [], votes: {} };
+                break;
+            case PHASES.DAY_ELECTION_VOTE:
+                const cIds = this.electionState.candidates;
+                if (cIds.length === 0) {
+                     this.addLog("JUDGE: No candidates. Cancelling Election.");
+                     setTimeout(() => this.startDayAnnounce(), 2000);
+                } else if (cIds.length === 1) {
+                     this.sheriffId = cIds[0];
+                     this.addLog(`JUDGE: Only one candidate. Player ${this.players[cIds[0]].name} is automatically the Sheriff!`);
+                     setTimeout(() => this.startDayAnnounce(), 3000);
+                } else {
+                     const names = cIds.map(id => this.players[id].name).join(", ");
+                     this.addLog(`JUDGE: Candidates are: ${names}. Voters, please cast your vote.`);
+                }
+                break;
+            case PHASES.DAY_ANNOUNCE:
+                this.applyPendingDeaths();
+                break;
+            case PHASES.DAY_DISCUSSION:
+                this.addLog("JUDGE: Discuss who is the suspicion. You have free speech.");
+                
+                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
+                    const pIds = Object.keys(this.players);
+                    const sIndex = pIds.indexOf(this.sheriffId);
+                    const nextIndex = (sIndex + 1) % pIds.length;
+                    const nextPlayer = this.players[pIds[nextIndex]];
+                    this.addLog(`JUDGE: Sheriff ${this.players[this.sheriffId].name}, please direct discussion starting from ${nextPlayer.name} (Next Player).`);
+                }
+                break;
+            case PHASES.DAY_SHERIFF_SPEECH:
+                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
+                    this.addLog(`JUDGE: Discussion over. Sheriff ${this.players[this.sheriffId].name}, please make your summary speech.`);
+                } else {
+                    this.addLog("JUDGE: Discussion over. (No Sheriff for summary).");
+                    setTimeout(() => this.advancePhase(PHASES.DAY_VOTE), 2000);
+                }
+                break;
+            case PHASES.DAY_VOTE:
+                this.addLog("JUDGE: Speech over. Please cast your votes now.");
+                this.votes = {}; 
+                break;
+            case PHASES.DAY_SHERIFF_HANDOVER:
+                // Wait for player action
+                this.addLog(`JUDGE: Sheriff has died. Please wait for them to handover the badge or tear it.`);
+                break;
+            case PHASES.DAY_ELIMINATION:
+                break;
+            case PHASES.FINISHED:
+                break; 
+        }
+    }
+
+    // ... (resetNightState, isRoleDead, handleNightAction same)
+
+    resolveNight() {
+        let deadIds = [];
+        const wolfTarget = this.nightActions.wolfTarget;
+        const witchAction = this.nightActions.witchAction;
+
+        if (wolfTarget) {
+            let actualDeath = wolfTarget;
+            if (witchAction && witchAction.type === 'save' && witchAction.targetId === wolfTarget) {
+                actualDeath = null;
+            }
+            if (actualDeath) deadIds.push(actualDeath);
+        }
+
+        if (witchAction && witchAction.type === 'poison') {
+            if (!deadIds.includes(witchAction.targetId)) deadIds.push(witchAction.targetId);
+        }
+
+        this.pendingDeaths = deadIds;
+
+        if (this.round === 1) {
+            this.advancePhase(PHASES.DAY_ELECTION_NOMINATION);
+        } else {
+            this.startDayAnnounce();
+        }
+        
+        return { deadIds };
+    }
+
+    applyPendingDeaths() {
+        // Commit Deaths
+        this.pendingDeaths.forEach(id => {
+            if(this.players[id]) this.players[id].status = 'dead';
+        });
+        
+        const deadCount = this.pendingDeaths.length;
+        if (deadCount > 0) {
+            const names = this.pendingDeaths.map(id => this.players[id].name).join(", ");
+            this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died: ${names}.`);
+        } else {
+            this.addLog("JUDGE: Sun rises. It was a peaceful night.");
+        }
+
+        // Check Sheriff Death
+        const sheriffDied = this.sheriffId && this.pendingDeaths.includes(this.sheriffId);
+        this.pendingDeaths = []; // Clear
+
+        if (sheriffDied) {
+            this.pendingNextPhase = PHASES.DAY_DISCUSSION; // Resume to discussion after
+            this.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
+        } else {
+            setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000); 
+        }
+    }
+    
+    handleSheriffHandover(playerId, targetId) {
+        if (this.phase !== PHASES.DAY_SHERIFF_HANDOVER) return;
+        if (playerId !== this.sheriffId) return; // Only dead sheriff acts
+
+        if (targetId) {
+            // Check if target is valid
+            // Logic allows handing to DEAD player? Usually NO.
+            // Logic allows handing to SELF? No.
+            if (this.players[targetId] && this.players[targetId].status === 'alive') {
+                this.sheriffId = targetId;
+                this.addLog(`JUDGE: Sheriff Badge has been passed to ${this.players[targetId].name}.`);
+            } else {
+                return; // Invalid target
+            }
+        } else {
+            this.sheriffId = null;
+            this.addLog("JUDGE: The Sheriff Badge has been torn!");
+        }
+
+        // Resume
+        const next = this.pendingNextPhase || PHASES.DAY_DISCUSSION; // Default fallback
+        this.pendingNextPhase = null;
+        setTimeout(() => this.advancePhase(next), 2000);
+    }
+
+    // ... (Election logic same)
+
+    // ... (Day Vote logic same)
+
+    resolveDay() {
+        // ... (Tally votes logic same)
+        const voteCounts = {};
+        Object.values(this.votes).forEach(targetId => {
+            voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
+        });
+        Object.keys(voteCounts).forEach(k => voteCounts[k] = 0);
+        Object.entries(this.votes).forEach(([voterId, targetId]) => {
+             let w = 1;
+             if (voterId === this.sheriffId) w = 1.5;
+             voteCounts[targetId] += w;
+        });
+
+        let maxVotes = 0;
+        let candidates = [];
+        for (const [id, count] of Object.entries(voteCounts)) {
+            if (count > maxVotes) { maxVotes = count; candidates = [id]; }
+            else if (count === maxVotes) candidates.push(id);
+        }
+
+        this.phase = PHASES.DAY_ELIMINATION;
+
+        let victim = null;
+        if (candidates.length === 1) {
+            victim = candidates[0];
+            this.players[victim].status = 'dead';
+            this.addLog(`JUDGE: The village has voted to execute ${this.players[victim].name}.`);
+        } else {
+            this.addLog("JUDGE: Tie vote. No one gets executed today.");
+        }
+
+        // Handover check
+        if (victim && victim === this.sheriffId) {
+             this.pendingNextPhase = this.checkWinCondition() ? PHASES.FINISHED : PHASES.NIGHT_WOLVES;
+             // If game over, does handover matter? Usually yes for lore, but system wise NO.
+             // If Win condition met, we should probably just end. 
+             // But if we want full fidelity, do handover first.
+             // Let's check win AFTER handover?
+             // Actually if Sheriff dies, Wolves might win immediately if he was last villager?
+             // Let's do: Handover Phase -> Then Check Next Round Logic (which includes Win Check)
+             // Store "NextStep: CheckWinAndNight"
+             
+             // Issue: 'pendingNextPhase' expects a specific PHASE string usually.
+             // We'll create a special internal handling or just generic next-night func.
+             // Let's use 'NIGHT_WOLVES' as target, but the `advancePhase` will handle round increment...
+             // Wait, `resolveDay` handled round increment logic manually before.
+             
+             // Let's refactor: `startNightCycle()`.
+             this.pendingNextPhase = 'START_NIGHT'; // Magic string to interpret in handleSheriffHandover? 
+             // Or just set it to NIGHT_WOLVES and handle round++ in that trans?
+             // Simplify: Just go to Handover. Handle logic there.
+             this.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
+             return;
+        }
+
+        const winResult = this.checkWinCondition();
+        if (winResult) {
+            this.phase = PHASES.FINISHED;
+            this.addLog(`GAME OVER. ${winResult} WIN!`);
+            return { winner: winResult };
+        } else {
+            // Start Next Night
+            setTimeout(() => {
+                this.round++;
+                this.advancePhase(PHASES.NIGHT_WOLVES);
+            }, 5000);
+            return null;
+        }
+    }
+    
+    // Override simple handover resume to handle Night Transition logic if needed
+    // ... Actually we can put the "Check Win" logic INSIDE handleSheriffHandover resume block?
+    // OR we put `pendingNextPhase` = 'CHECK_WIN_THEN_NIGHT'.
+    
+    // Updated handleSheriffHandover for special resume
+    handleSheriffHandover(playerId, targetId) {
+        if (this.phase !== PHASES.DAY_SHERIFF_HANDOVER) return;
+        if (playerId !== this.sheriffId) return;
+
+        if (targetId && this.players[targetId]?.status === 'alive') {
+            this.sheriffId = targetId;
+            this.addLog(`JUDGE: Sheriff Badge has been passed to ${this.players[targetId].name}.`);
+        } else {
+            this.sheriffId = null;
+            this.addLog("JUDGE: The Sheriff Badge has been torn!");
+        }
+
+        // Resume
+        const next = this.pendingNextPhase;
+        this.pendingNextPhase = null;
+
+        if (next === PHASES.DAY_DISCUSSION) {
+            setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 2000);
+        } else {
+            // Assume it was Day Resolution (go to night/win)
+            const winResult = this.checkWinCondition();
+            if (winResult) {
+                this.phase = PHASES.FINISHED;
+                this.addLog(`GAME OVER. ${winResult} WIN!`);
+            } else {
+                setTimeout(() => {
+                    this.round++;
+                    this.advancePhase(PHASES.NIGHT_WOLVES);
+                }, 3000);
+            }
+        }
+    }
+
 
     addLog(message) {
         const time = new Date().toLocaleTimeString('en-US', { hour12: false });
@@ -47,9 +648,17 @@ class WerewolfGame {
             name: name,
             role: null,
             status: 'alive',
-            avatar: Math.floor(Math.random() * 6) + 1 // placeholder for avatar index
+            avatar: Math.floor(Math.random() * 6) + 1,
+            isReady: false // Track readiness
         };
         return true;
+    }
+
+    handlePlayerReady(playerId) {
+        if (this.phase !== PHASES.WAITING) return;
+        if (this.players[playerId]) {
+            this.players[playerId].isReady = !this.players[playerId].isReady;
+        }
     }
 
     removePlayer(socketId) {
@@ -62,20 +671,18 @@ class WerewolfGame {
         const playerIds = Object.keys(this.players);
         const count = playerIds.length;
         
-        // Simple Role Distribution Logic
-        // For < 5 players (Testing): 1 Wolf, 1 Seer, Rest Villagers
-        // For >= 5: 2 Wolves, 1 Seer, 1 Witch, Rest Villagers
+        // Role Distribution
         let rolesToDistribute = [];
-        
         if (count < 5) {
+            // Testing: 1 Wolf, 1 Seer, Villagers
             rolesToDistribute = [ROLES.WOLF, ROLES.SEER];
             while (rolesToDistribute.length < count) rolesToDistribute.push(ROLES.VILLAGER);
         } else {
+            // Standard: 2 Wolves, 1 Seer, 1 Witch, Villagers
             rolesToDistribute = [ROLES.WOLF, ROLES.WOLF, ROLES.SEER, ROLES.WITCH];
             while (rolesToDistribute.length < count) rolesToDistribute.push(ROLES.VILLAGER);
         }
 
-        // Shuffle
         rolesToDistribute.sort(() => Math.random() - 0.5);
 
         playerIds.forEach((id, index) => {
@@ -84,86 +691,165 @@ class WerewolfGame {
         });
 
         this.round = 1;
-        this.addLog("System initialized. Identities assigned.");
-        this.startNight();
+        this.addLog("SYSTEM: Roles assigned. Game initializing.");
+        this.advancePhase(PHASES.NIGHT_WOLVES); // Start Night Cycle
     }
 
-    startNight() {
-        this.phase = PHASES.NIGHT;
-        this.nightActions = {
-            wolfTarget: null,
-            witchSaveUsed: this.nightActions.witchSaveUsed, // Persist
-            witchPoisonUsed: this.nightActions.witchPoisonUsed, // Persist
-            witchAction: null,
-            seerTarget: null
-        };
-        this.addLog(`Night Fall // Day ${this.round}. The village sleeps.`);
+    // --- State Machine & Phase Transitions ---
+
+    advancePhase(nextPhase) {
+        this.phase = nextPhase;
+
+        switch (this.phase) {
+            case PHASES.NIGHT_WOLVES:
+                this.addLog("JUDGE: Night falls. Wolves, please wake up and hunt.");
+                this.resetNightState();
+                break;
+            case PHASES.NIGHT_WITCH:
+                this.addLog("JUDGE: Wolves have closed their eyes. Witch, please wake up.");
+                // If witch is dead, we auto-skip in check logic, but here assume valid transition
+                if (this.isRoleDead(ROLES.WITCH) || (this.nightActions.witchSaveUsed && this.nightActions.witchPoisonUsed)) {
+                     // Auto-skip delay or immediate
+                     setTimeout(() => this.advancePhase(PHASES.NIGHT_SEER), 2000);
+                     this.addLog("JUDGE: (Witch is inactive/dead/out of potions)...");
+                }
+                break;
+            case PHASES.NIGHT_SEER:
+                this.addLog("JUDGE: Witch has closed eyes. Seer, please wake up.");
+                if (this.isRoleDead(ROLES.SEER)) {
+                     setTimeout(() => this.resolveNight(), 2000);
+                     this.addLog("JUDGE: (Seer is inactive/dead)...");
+                }
+                break;
+            case PHASES.DAY_ELECTION_NOMINATION:
+                this.addLog("JUDGE: It is now time for the Sheriff Election. Please declare if you wish to run.");
+                this.electionState = { candidates: [], votes: {} };
+                break;
+            case PHASES.DAY_ELECTION_VOTE:
+                const cIds = this.electionState.candidates;
+                if (cIds.length === 0) {
+                     this.addLog("JUDGE: No candidates. Cancelling Election.");
+                     setTimeout(() => this.startDayAnnounce(), 2000);
+                } else if (cIds.length === 1) {
+                     this.sheriffId = cIds[0];
+                     this.addLog(`JUDGE: Only one candidate. Player ${this.players[cIds[0]].name} is automatically the Sheriff!`);
+                     setTimeout(() => this.startDayAnnounce(), 3000);
+                } else {
+                     const names = cIds.map(id => this.players[id].name).join(", ");
+                     this.addLog(`JUDGE: Candidates are: ${names}. Voters, please cast your vote.`);
+                }
+                break;
+            case PHASES.DAY_ANNOUNCE:
+                // Process Pending Deaths from Night
+                this.applyPendingDeaths();
+                break;
+            case PHASES.DAY_DISCUSSION:
+                this.addLog("JUDGE: Discuss who is the suspicion. You have free speech.");
+                
+                // Sheriff Order Logic
+                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
+                    const pIds = Object.keys(this.players); // Order matches insertion usually
+                    const sIndex = pIds.indexOf(this.sheriffId);
+                    // Simple "Next" logic: (index + 1) % length
+                    const nextIndex = (sIndex + 1) % pIds.length;
+                    const nextPlayer = this.players[pIds[nextIndex]];
+                    
+                    this.addLog(`JUDGE: Sheriff ${this.players[this.sheriffId].name}, please direct discussion starting from ${nextPlayer.name} (Next Player).`);
+                }
+                
+                // Auto-advance to Sheriff Speech or Vote after delay?
+                // Real game: Sheriff hits "Next" or timer. For now, use Timer -> Speech
+                // setTimeout(() => this.advancePhase(PHASES.DAY_SHERIFF_SPEECH), 60000); // 60s Discussion? 
+                // Let's rely on Admin Force OR just set a long timer.
+                break;
+            case PHASES.DAY_SHERIFF_SPEECH:
+                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
+                    this.addLog(`JUDGE: Discussion over. Sheriff ${this.players[this.sheriffId].name}, please make your summary speech.`);
+                } else {
+                    this.addLog("JUDGE: Discussion over. (No Sheriff for summary).");
+                    setTimeout(() => this.advancePhase(PHASES.DAY_VOTE), 2000); // Skip if no sheriff
+                }
+                break;
+            case PHASES.DAY_VOTE:
+                this.addLog("JUDGE: Speech over. Please cast your votes now.");
+                this.votes = {}; // Reset votes
+                break;
+            case PHASES.DAY_ELIMINATION:
+                // Triggered after votes
+                break;
+            case PHASES.FINISHED:
+                break; 
+        }
     }
+
+    resetNightState() {
+        this.nightActions.wolfVotes = {};
+        this.nightActions.wolfTarget = null;
+        this.nightActions.witchAction = null; // Reset per night
+        this.nightActions.seerTarget = null;
+    }
+
+    isRoleDead(role) {
+        const p = Object.values(this.players).find(p => p.role === role);
+        return !p || p.status !== 'alive';
+    }
+
+    // --- Action Handlers ---
 
     handleNightAction(playerId, action) {
-        if (this.phase !== PHASES.NIGHT) return false;
         const player = this.players[playerId];
         if (!player || player.status !== 'alive') return false;
 
-        // WOLF ACTION
-        if (player.role === ROLES.WOLF && action.type === 'kill') {
+        // WOLVES
+        if (this.phase === PHASES.NIGHT_WOLVES && player.role === ROLES.WOLF && action.type === 'kill') {
+            // First Act Logic: As soon as a wolf picks, it's locked and we move on.
             this.nightActions.wolfTarget = action.targetId;
+            const targetName = this.players[action.targetId]?.name || 'Unknown';
+            
+            // Log for internal debugging, or publicly? 
+            // "Wolves have chosen" is safe.
+            // this.addLog(`JUDGE: Wolves have sealed the fate of a player.`);
+            
+            // Auto-advance immediately
+            setTimeout(() => this.advancePhase(PHASES.NIGHT_WITCH), 1000);
             return true;
         }
 
-        // SEER ACTION
-        if (player.role === ROLES.SEER && action.type === 'check') {
-            this.nightActions.seerTarget = action.targetId;
-            const target = this.players[action.targetId];
-            return target ? (target.role === ROLES.WOLF ? 'WOLF' : 'GOOD') : 'UNKNOWN';
-        }
-
-        // WITCH ACTION
-        if (player.role === ROLES.WITCH) {
+        // WITCH
+        if (this.phase === PHASES.NIGHT_WITCH && player.role === ROLES.WITCH) {
             if (action.type === 'save' && !this.nightActions.witchSaveUsed) {
-                // Can only save if wolves have targeted someone (in a real game, witch wakes up after wolves)
-                // For simple turn-based async, we might let witch preemptively save or accept that she sees the target if we implement strict steps.
-                // Simplified: Witch just lock in action. Resolution handles logic.
-                // NOTE: Usually witch is told who died. We'll simplify: ID `wolfTarget` is sent to witch if set.
                 this.nightActions.witchAction = { type: 'save', targetId: this.nightActions.wolfTarget };
                 this.nightActions.witchSaveUsed = true;
-                return true;
-            }
-            if (action.type === 'poison' && !this.nightActions.witchPoisonUsed) {
+            } else if (action.type === 'poison' && !this.nightActions.witchPoisonUsed) {
                 this.nightActions.witchAction = { type: 'poison', targetId: action.targetId };
                 this.nightActions.witchPoisonUsed = true;
-                return true;
-            }
-            if (action.type === 'skip') {
+            } else if (action.type === 'skip') {
                 this.nightActions.witchAction = { type: 'skip' };
-                return true;
             }
+
+            if (this.nightActions.witchAction) { // Action committed
+                 this.addLog("JUDGE: The Witch has acted.");
+                 // AUTO-TRANSITION TO SEER
+                 setTimeout(() => this.advancePhase(PHASES.NIGHT_SEER), 1500);
+            }
+            return true;
         }
+
+        // SEER
+        if (this.phase === PHASES.NIGHT_SEER && player.role === ROLES.SEER && action.type === 'check') {
+            this.nightActions.seerTarget = action.targetId;
+            const target = this.players[action.targetId];
+            const result = target ? (target.role === ROLES.WOLF ? 'WOLF' : 'GOOD') : 'UNKNOWN';
+            
+            this.addLog("JUDGE: The Seer has acted.");
+            
+            // AUTO-TRANSITION TO DAY (via Resolve)
+            setTimeout(() => this.resolveNight(), 1500);
+
+            return result; // Return to socket for private emission
+        }
+
         return false;
-    }
-
-    // Check if night is over (all active roles acted)
-    checkNightEnd() {
-        const activePlayers = Object.values(this.players).filter(p => p.status === 'alive');
-        const wolves = activePlayers.filter(p => p.role === ROLES.WOLF);
-        const seer = activePlayers.find(p => p.role === ROLES.SEER);
-        const witch = activePlayers.find(p => p.role === ROLES.WITCH);
-
-        const wolfDone = this.nightActions.wolfTarget !== null; // Strictly needs target for now (or skip if we allow)
-        const seerDone = !seer || this.nightActions.seerTarget !== null; 
-        // Witch logic is complex: usually waits for wolf. 
-        // For this MVP, let's assume if Wolf has acted, Witch "CAN" act.
-        // We will trigger a specific "Witch Phase" socket event effectively.
-        // Or simplified: We wait for all roles to submit 'action' or 'skip'.
-        
-        // Simplified Logic: Just check if we have inputs.
-        // In a real app, we'd have sub-phases.
-        // Let's assume the frontend enforces the wait.
-        
-        // return wolfDone && seerDone && (witch ? !!this.nightActions.witchAction : true);
-        
-        // Actually, let's do manual trigger from Host or Auto-resolve when all submitted.
-        return false; // let's control via explicit "Next Phase" or wait for count.
     }
 
     resolveNight() {
@@ -171,46 +857,191 @@ class WerewolfGame {
         const wolfTarget = this.nightActions.wolfTarget;
         const witchAction = this.nightActions.witchAction;
 
-        // Wolf Kill
+        // Apply Kill
         if (wolfTarget) {
             let actualDeath = wolfTarget;
-            // Witch Save
+            // Save logic
             if (witchAction && witchAction.type === 'save' && witchAction.targetId === wolfTarget) {
                 actualDeath = null;
             }
             if (actualDeath) deadIds.push(actualDeath);
         }
 
-        // Witch Poison
+        // Apply Poison
         if (witchAction && witchAction.type === 'poison') {
-            deadIds.push(witchAction.targetId);
+            if (!deadIds.includes(witchAction.targetId)) deadIds.push(witchAction.targetId);
         }
 
-        // Apply Deaths
-        deadIds.forEach(id => {
-            if(this.players[id]) this.players[id].status = 'dead';
-        });
+        // Store pending deaths instead of applying immediately if it's Round 1
+        this.pendingDeaths = deadIds;
 
-        this.phase = PHASES.DAY;
-        this.votes = {};
-        
-        if (deadIds.length > 0) {
-            const names = deadIds.map(id => this.players[id].name).join(", ");
-            this.addLog(`Night summary: ${deadIds.length} casualties detected (${names}).`);
+        // ELECTION CHECK: Day 1
+        if (this.round === 1) {
+            this.advancePhase(PHASES.DAY_ELECTION_NOMINATION);
         } else {
-            this.addLog("Night summary: Safe night. No casualties.");
+            this.startDayAnnounce();
         }
         
         return { deadIds };
     }
 
+    startDayAnnounce() {
+        this.advancePhase(PHASES.DAY_ANNOUNCE);
+    }
+
+    applyPendingDeaths() {
+        // Commit Deaths
+        this.pendingDeaths.forEach(id => {
+            if(this.players[id]) this.players[id].status = 'dead';
+        });
+
+        if (this.pendingDeaths.length > 0) {
+            const names = this.pendingDeaths.map(id => this.players[id].name).join(", ");
+            this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died: ${names}.`);
+            
+            // Check if Sheriff died?
+            if (this.sheriffId && this.pendingDeaths.includes(this.sheriffId)) {
+                this.addLog(`JUDGE: The Sheriff has died! (Badge lost in chaos - MVP)`); 
+                // In full game: Prompt for handover. MVP: Lose badge or set null.
+                this.sheriffId = null; 
+            }
+        } else {
+            this.addLog("JUDGE: Sun rises. It was a peaceful night.");
+        }
+    }
+
+    async startElection() {
+        this.election = {
+            candidates: [],
+            votes: {},
+            participants: [] // Track who has acted (Run or Pass)
+        };
+        this.pendingNextPhase = PHASES.DAY_ELECTION_VOTE;
+        this.advancePhase(PHASES.DAY_ELECTION_NOMINATION);
+    }
+
+    handleElectionNominate(playerId) {
+        if (this.phase !== PHASES.DAY_ELECTION_NOMINATION) return;
+        const p = this.players[playerId];
+        if (!p || p.status !== 'alive') return;
+
+        // Add to candidates if not already
+        if (!this.election.candidates.includes(playerId)) {
+            this.election.candidates.push(playerId);
+            this.addLog(`JUDGE: ${p.name} is running for Sheriff.`);
+        }
+        
+        // Mark as participated
+        if (!this.election.participants.includes(playerId)) {
+            this.election.participants.push(playerId);
+        }
+
+        this.checkElectionNominationComplete();
+    }
+
+    handleElectionPass(playerId) {
+        if (this.phase !== PHASES.DAY_ELECTION_NOMINATION) return;
+        const p = this.players[playerId];
+        if (!p || p.status !== 'alive') return;
+
+        // If they were running, remove them (toggle logic?) - No, simpler is explicit choices.
+        // If they pass, ensure they are NOT in candidates
+        this.election.candidates = this.election.candidates.filter(id => id !== playerId);
+        
+        // Mark as participated
+        if (!this.election.participants.includes(playerId)) {
+            this.election.participants.push(playerId);
+            // Optional log? "X declined to run." No, too chatty.
+        }
+
+        this.checkElectionNominationComplete();
+    }
+
+    checkElectionNominationComplete() {
+        const aliveCount = Object.values(this.players).filter(p => p.status === 'alive').length;
+        if (this.election.participants.length >= aliveCount) {
+            // All have acted
+            if (this.election.candidates.length > 0) {
+                this.addLog(`JUDGE: Nominations closed. Candidates: ${this.election.candidates.map(id => this.players[id].name).join(', ')}.`);
+                setTimeout(() => this.advancePhase(PHASES.DAY_ELECTION_VOTE), 1000);
+            } else {
+                this.addLog("JUDGE: No candidates for Sheriff. Election cancelled.");
+                // Skip election vote, go straight to discussion
+                setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 2000);
+            }
+        }
+    }
+
+    handleElectionVote(voterId, candidateId) {
+        if (this.phase !== PHASES.DAY_ELECTION_VOTE) return;
+        // Candidates cannot vote? (Usually they can vote for anyone including themselves, but in some rules not)
+        // Standard: Candidates stay on stage, non-candidates vote.
+        // If candidate votes, they forfeit? No, usually candidates PK.
+        // Let's implement: Candidates CANNOT vote (simple "Jing Xia" rule). Or they can but usually they are the targets.
+        // Actually standard: Everyone votes (Candidate votes for self).
+        // BUT user prompt imply: "Alert to run" -> "Voting".
+        // Let's go with: Only non-candidates vote for candidates.
+        
+        if (this.electionState.candidates.includes(voterId)) {
+             // Candidates usually just defend. We'll simplify: Candidates DON'T vote.
+             // Or allow them? Let's allow simple voting.
+        }
+
+        this.electionState.votes[voterId] = candidateId;
+
+        // Check if all voters have voted
+        // Who acts? Everyone alive.
+        const alive = Object.values(this.players).filter(p => p.status === 'alive');
+        if (Object.keys(this.electionState.votes).length >= alive.length) { // >= in case of weirdness
+             this.resolveElection();
+        }
+    }
+
+    resolveElection() {
+        const counts = {};
+        Object.values(this.electionState.votes).forEach(cid => {
+            counts[cid] = (counts[cid] || 0) + 1;
+        });
+
+        let max = 0;
+        let winners = [];
+        for (const [cid, c] of Object.entries(counts)) {
+            if (c > max) { max = c; winners = [cid]; }
+            else if (c === max) winners.push(cid);
+        }
+
+        if (winners.length === 1) {
+             this.sheriffId = winners[0];
+             this.addLog(`JUDGE: Election Results: ${this.players[winners[0]].name} is elected Sheriff!`);
+        } else {
+             this.addLog("JUDGE: Election TIE. Badge is lost (MVP simplified rule).");
+             this.sheriffId = null;
+        }
+
+        setTimeout(() => this.startDayAnnounce(), 3000);
+    }
+    
+    // --- Day Handlers ---
+
     handleDayVote(voterId, targetId) {
-        if (this.phase !== PHASES.DAY) return;
-         // Allow changing vote, or toggle.
+        if (this.phase !== PHASES.DAY_VOTE) return;
+        
+        const player = this.players[voterId];
+        if (!player || player.status !== 'alive') return;
+
+        // Toggle vote
         if (this.votes[voterId] === targetId) {
-            delete this.votes[voterId]; // Toggle off
+            delete this.votes[voterId];
         } else {
             this.votes[voterId] = targetId;
+        }
+
+        // Check if everyone voted
+        const alivePlayers = Object.values(this.players).filter(p => p.status === 'alive');
+        if (Object.keys(this.votes).length === alivePlayers.length) {
+            // All votes cast
+            this.addLog("JUDGE: All votes received. Tallying...");
+            setTimeout(() => this.resolveDay(), 1500);
         }
     }
 
@@ -218,38 +1049,66 @@ class WerewolfGame {
         // Tally votes
         const voteCounts = {};
         Object.values(this.votes).forEach(targetId => {
-            voteCounts[targetId] = (voteCounts[targetId] || 0) + 1;
+            let weight = 1;
+            // Sheriff check
+            if (this.sheriffId) {
+                 // Who voted for this target?
+                 // No, wait, if SHERIFF voted for this target, add +0.5 weight?
+                 // Standard: Sheriff vote counts as 1.5 or tie-break.
+                 // Let's do simple: Sheriff has 1.5 votes.
+            }
+            
+            // To do weight properly, we need to iterate votes relative to voter
+            voteCounts[targetId] = (voteCounts[targetId] || 0) + 1; // Base count
+        });
+        
+        // Retally with weight
+        Object.keys(voteCounts).forEach(k => voteCounts[k] = 0); // Clear
+        Object.entries(this.votes).forEach(([voterId, targetId]) => {
+             let w = 1;
+             if (voterId === this.sheriffId) w = 1.5;
+             voteCounts[targetId] += w;
         });
 
         // Find max
         let maxVotes = 0;
-        let candidate = null;
-        let tie = false;
-
+        let candidates = [];
         for (const [id, count] of Object.entries(voteCounts)) {
             if (count > maxVotes) {
                 maxVotes = count;
-                candidate = id;
-                tie = false;
+                candidates = [id];
             } else if (count === maxVotes) {
-                tie = true;
+                candidates.push(id);
             }
         }
 
-        if (candidate && !tie) {
-            this.players[candidate].status = 'dead';
-            this.addLog(`Voting Result: Player ${this.players[candidate].name} eliminated by popular vote.`);
+        this.phase = PHASES.DAY_ELIMINATION;
+
+        if (candidates.length === 1) {
+            const victim = candidates[0];
+            this.players[victim].status = 'dead';
+            this.addLog(`JUDGE: The village has voted to execute ${this.players[victim].name}.`);
+            
+            // Handover check
+            if (victim === this.sheriffId) {
+                 this.addLog(`JUDGE: The Sheriff has been executed!`);
+                 this.sheriffId = null; // Lost 
+            }
         } else {
-            this.addLog("Voting Result: Tie or no votes. No one eliminated.");
+            this.addLog("JUDGE: Tie vote. No one gets executed today.");
         }
 
         const winResult = this.checkWinCondition();
         if (winResult) {
             this.phase = PHASES.FINISHED;
-            this.addLog(`GAME OVER. Winner: ${winResult}`);
+            this.addLog(`GAME OVER. ${winResult} WIN!`);
             return { winner: winResult };
         } else {
-            this.startNight();
+            // Start Next Night
+            setTimeout(() => {
+                this.round++;
+                this.advancePhase(PHASES.NIGHT_WOLVES);
+            }, 5000);
             return null;
         }
     }
@@ -264,8 +1123,9 @@ class WerewolfGame {
         return null;
     }
 
+    // --- State Serialization ---
+
     getPublicState() {
-        // Hide roles of others
         const publicPlayers = {};
         Object.values(this.players).forEach(p => {
             publicPlayers[p.id] = {
@@ -273,9 +1133,15 @@ class WerewolfGame {
                 name: p.name,
                 status: p.status,
                 avatar: p.avatar,
-                isVoting: !!this.votes[p.id] // Show IF they voted, maybe not WHO yet? Or just show logic.
+                isVoting: !!this.votes[p.id],
+                isSheriff: p.id === this.sheriffId
             };
         });
+
+        // Add Candidates Context
+        const election = (this.phase === PHASES.DAY_ELECTION_NOMINATION || this.phase === PHASES.DAY_ELECTION_VOTE) 
+            ? { candidates: this.electionState.candidates } 
+            : null;
 
         return {
             id: this.id,
@@ -283,7 +1149,8 @@ class WerewolfGame {
             phase: this.phase,
             round: this.round,
             logs: this.logs,
-            hostId: this.hostId
+            hostId: this.hostId,
+            election: election
         };
     }
 
@@ -291,18 +1158,23 @@ class WerewolfGame {
         const publicState = this.getPublicState();
         const me = this.players[playerId];
         
-        // Add private info
         if (me) {
-            publicState.me = { 
-                ...me, 
-                votes: this.votes,
-                nightTarget: (me.role === ROLES.WOLF) ? this.nightActions.wolfTarget : null,
-                // Witch gets to see wolf target only if we decide so, or if she has potion.
-                // Seer gets last check result?
-            };
+            let info = { ...me, votes: this.votes };
+            
+            // Context specific info
+            if (me.role === ROLES.WOLF) {
+                info.nightTarget = this.nightActions.wolfTarget;
+                info.wolfVotes = this.nightActions.wolfVotes; // See allies' votes
+            }
+            if (me.role === ROLES.WITCH && this.phase === PHASES.NIGHT_WITCH) {
+                 // Witch needs to know who is dying to save them
+                 info.wolfTarget = this.nightActions.wolfTarget;
+            }
+            
+            publicState.me = info;
         }
-        
-        // If Wolf, reveal other wolves
+
+        // Reveal Wolf Allies
         if (me && me.role === ROLES.WOLF) {
              Object.values(this.players).forEach(p => {
                  if (p.role === ROLES.WOLF) {
@@ -311,8 +1183,8 @@ class WerewolfGame {
              });
         }
         
-        // If Dead/Spectator, maybe reveal all?
-        if (me && me.status !== 'alive') {
+        // Reveal All if Dead/Finished
+        if ((me && me.status !== 'alive') || this.phase === PHASES.FINISHED) {
              Object.values(this.players).forEach(p => {
                  publicState.players[p.id].role = p.role;
              });
