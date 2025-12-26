@@ -265,14 +265,14 @@ class WerewolfGame {
         
         const confirmText = VOICE_MESSAGES.GAME_START_CONFIRM;
         this.addLog(`JUDGE: ${confirmText}`);
-        this.triggerVoice(confirmText);
+        this.triggerVoice('GAME_START_CONFIRM');
         
         // Ensure initial state is sent so players can see "Tap to Reveal"
         if(this.onGameUpdate) this.onGameUpdate(this);
 
         setTimeout(() => {
              const closeText = VOICE_MESSAGES.GAME_START_CLOSE_EYES;
-             this.triggerVoice(closeText);
+             this.triggerVoice('GAME_START_CLOSE_EYES');
              this.addLog(`JUDGE: ${closeText}`);
              
              setTimeout(() => {
