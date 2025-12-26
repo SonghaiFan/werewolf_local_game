@@ -17,19 +17,11 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
     });
     
     const [selectedTarget, setSelectedTarget] = useState(null);
-    // const [serverIP, setServerIP] = useState(null); // Now passed as prop
     const [inspectedPlayers, setInspectedPlayers] = useState({});
 
     useEffect(() => {
-        // socket.on('server_config', ({ ip }) => {
-        //     setServerIP(ip);
-        // });
         function onGameState(state) {
-            setGameState(prev => ({
-                ...prev,
-                ...state
-            }));
-        
+            setGameState(prev => ({ ...prev, ...state }));
         }
 
         function onNotification(msg) {
@@ -37,8 +29,6 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         }
 
         function onSeerResult({ targetId, role }) {
-             // Update local state to show on card
-             // Normalize role to uppercase to match RoleIcons keys
              const normalizedRole = role ? role.toUpperCase() : 'UNKNOWN';
              setInspectedPlayers(prev => ({
                  ...prev,
@@ -49,8 +39,6 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         socket.on('game_state', onGameState);
         socket.on('notification', onNotification);
         socket.on('seer_result', onSeerResult);
-
-        // Initial fetch if needed, but usually server sends on join
         
         return () => {
             socket.off('game_state', onGameState);
@@ -69,19 +57,12 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
     // Voice Judge Effect
     useEffect(() => {
         function onVoiceCue({ text }) {
-             // Only Host plays audio
              if (gameState.hostId === myId) {
                  const utterance = new SpeechSynthesisUtterance(text);
-                 // Force Chinese
                  utterance.lang = 'zh-CN';
-                 
-                 // Try to pick a Chinese voice
                  const voices = window.speechSynthesis.getVoices();
                  const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
-                 if (zhVoice) {
-                     utterance.voice = zhVoice;
-                 }
-
+                 if (zhVoice) utterance.voice = zhVoice;
                  utterance.rate = 0.9;
                  utterance.pitch = 0.8; 
                  window.speechSynthesis.speak(utterance);
@@ -90,8 +71,6 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         socket.on('voice_cue', onVoiceCue);
         return () => socket.off('voice_cue', onVoiceCue);
     }, [gameState.hostId, myId]);
-
-
 
     const mePlayer = gameState.players[myId] || { ...gameState.me, name: t('you'), id: myId, avatar: 1 };
     const otherPlayers = Object.values(gameState.players).filter(p => p.id !== myId);
@@ -104,7 +83,6 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         onPlayerReady: () => socket.emit('player_ready', { roomId }),
         onSelect: (targetId) => {
             if (gameState.phase === 'NIGHT_WOLVES' && gameState.me?.role === 'WOLF') {
-                // Real-time proposal sync
                 socket.emit('wolf_propose', { roomId, targetId });
             }
             setSelectedTarget(targetId);
@@ -155,7 +133,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         inspectedPlayers,
         candidates: gameState.candidates || [],
         wolfTarget: gameState.wolfTarget || gameState.me?.wolfTarget,
-        wolfVotes: gameState.wolfVotes, // Exposed from server
+        wolfVotes: gameState.wolfVotes, 
         selectedTarget,
         setSelectedTarget,
         role: gameState.me?.role,
@@ -166,73 +144,65 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
 
     return (
         <GameContext.Provider value={contextValue}>
-            <div className="werewolf-app">
-            {/* Background effects */}
-            <div className="grain-overlay">
-                <svg width="100%" height="100%">
-                    <filter id="photocopy-noise">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-                        <feColorMatrix type="matrix" values="0 0 0 0 0, 0 0 0 0 0, 0 0 0 0 0, 0 0 0 1 0" />
-                        <feComponentTransfer>
-                            <feFuncA type="table" tableValues="0 0.5" />
-                        </feComponentTransfer>
-                    </filter>
-                    <rect width="100%" height="100%" filter="url(#photocopy-noise)" />
-                </svg>
-            </div>
-            
-            <div className="photostat-root relative w-full h-[100dvh] p-2 grid grid-rows-[50px_1fr_80px_140px] md:grid-rows-[50px_1fr_80px_160px] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333] overflow-hidden transition-all">
-                <div className="scanline"></div>
-                <div className="photocopy-texture"></div>
-
-                {/* 1. HEADER */}
-                <header className="game-header z-10 flex justify-between items-start h-[50px]">
-                    <div className="bg-accent text-black font-bold w-[50px] h-[50px] flex items-center justify-center text-center uppercase leading-none border-2 border-black">
-                        <div className="glitch-text text-xs leading-tight">WERE<br/>WOLF</div>
-                    </div>
+            <div className="werewolf-app bg-bg p-4 flex flex-col items-center justify-center">
+                
+                {/* Max-width container for larger screens */}
+                <div className="w-full max-w-6xl h-full flex flex-col gap-6 relative">
                     
-                    <div className="flex-1 ml-2.5 flex flex-col items-end justify-center h-full">
-                       <div className="flex items-center gap-2">
-                            <div className="status-tag bg-white text-black px-2 py-0.5 font-mono font-bold text-[10px] uppercase [clip-path:polygon(0_0,95%_0,100%_100%,5%_100%)]">
+                    {/* 1. HEADER - Minimalist, No Background */}
+                    <header className="flex justify-between items-end px-2 pt-2 pb-0">
+                        <div className="flex flex-col">
+                             <div className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1 opacity-70">Room {roomId}</div>
+                             <h1 className="text-2xl font-black text-ink tracking-tight">Werewolf</h1>
+                        </div>
+                        
+                        <div className="text-right">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1 opacity-70">{t('round_short')} {gameState.round}</div>
+                            <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                                gameState.phase.includes('NIGHT') ? 'bg-primary/10 text-primary' : 
+                                gameState.phase.includes('DAY') ? 'bg-accent/10 text-accent' : 'bg-surface text-muted'
+                            }`}>
                                 {gameState.phase.replace('_', ' ')}
                             </div>
-                            <div className="font-mono text-[10px] text-[#888]">
-                                {t('room')}: {roomId} // {t('round_short')}: {gameState.round}
+                        </div>
+                    </header>
+
+                    {/* 2. MAIN STAGE (Player Grid) - Floating, no borders */}
+                    <section className="flex-1 overflow-y-auto px-2 scrollbar-hide">
+                         {/* Centered grid with more spacing */}
+                         <div className="grid grid-cols-2 small:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 pb-20">
+                            <PlayerGrid players={otherPlayers} />
+                         </div>
+                    </section>
+                    
+                    {/* 3. FOOTER AREA - Fixed/Sticky Bottom for Mobile Feel, immersive */}
+                    <footer className="shrink-0 grid grid-cols-[100px_1fr] md:grid-cols-[140px_1fr] gap-6 items-end pb-2">
+                        {/* User Avatar (Me) - Floating Card */}
+                        <div className={`transition-all duration-300 ${gameState.me?.status === 'dead' ? 'opacity-50 grayscale' : ''}`}>
+                             <div className="text-[10px] uppercase tracking-wider text-muted text-center mb-2">{t('you')}</div>
+                             <AvatarCard
+                                 player={mePlayer}
+                                 onSelect={null}
+                                 className="h-[120px] md:h-[160px] shadow-2xl !bg-surface"
+                             />
+                        </div>
+
+                        {/* Control Center - Clean, divided into Logs and Actions */}
+                        <div className="flex flex-col gap-4 h-full justify-end">
+                            {/* Logs float above actions, fading out */}
+                            <div className="h-[80px] overflow-hidden relative mask-image-gradient-to-t">
+                                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg/80 to-transparent pointer-events-none h-4 z-10" />
+                                 <ControlPanel onlyLogs={true} />
                             </div>
-                       </div>
-                        <div className="h-[1px] w-full bg-accent mt-1"></div>
-                    </div>
-                </header>
 
-                {/* 2. MAIN STAGE (Others) */}
-                <section className="main-stage overflow-y-auto min-h-0 border-2 border-[#333] bg-[#050505] p-2">
-                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
-                        <PlayerGrid players={otherPlayers} />
-                     </div>
-                </section>
-
-                {/* 3. LOGS (Middle Band) */}
-                <section className="h-[80px] w-full z-10">
-                    <ControlPanel onlyLogs={true} />
-                </section>
-
-                {/* 4. FOOTER (Me + Actions) */}
-                <footer className="h-[160px] grid grid-cols-[120px_1fr] gap-2.5 z-10">
-                    {/* User Avatar (Me) */}
-                    <div className="h-full">
-                         <AvatarCard
-                             player={mePlayer}
-                             onSelect={null}
-                         />
-                    </div>
-
-                    {/* Action Area */}
-                    <div className="h-full">
-                        <ControlPanel onlyActions={true} />
-                    </div>
-                </footer>
+                            {/* Actions - The explicit interaction zone */}
+                            <div className="">
+                                <ControlPanel onlyActions={true} />
+                            </div>
+                        </div>
+                    </footer>
+                </div>
             </div>
-          </div>
         </GameContext.Provider>
     );
 }

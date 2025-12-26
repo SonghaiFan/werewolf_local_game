@@ -6,15 +6,16 @@ export default function Landing() {
     const { t, i18n } = useTranslation();
     const [name, setName] = useState('');
     const [roomId, setRoomId] = useState('');
+    const [latestRoom, setLatestRoom] = useState(null);
     const [error, setError] = useState('');
+    const [view, setView] = useState('home'); // 'home', 'host', 'manual'
     
     // Game Settings State
-    const [showSettings, setShowSettings] = useState(false);
     const [gameConfig, setGameConfig] = useState({
         wolves: 2,
         seer: true,
         witch: true,
-        winCondition: 'wipeout' // Default to Wipeout (屠城) for safety/simple games
+        winCondition: 'wipeout'
     });
 
     const toggleLanguage = () => {
@@ -23,175 +24,194 @@ export default function Landing() {
     };
 
     useEffect(() => {
+        // Parse URL params
         const params = new URLSearchParams(window.location.search);
         const roomParam = params.get('room');
         if (roomParam) {
             setRoomId(roomParam.toUpperCase());
+            setView('manual'); // Go straight to manual join view if room provided
         }
 
+        // Random Name
         const randomId = Math.floor(Math.random() * 9000) + 1000;
         setName(`Player ${randomId}`);
+
+        // Socket Connection for Discovery
+        if (!socket.connected) socket.connect();
+
+        function onLatestRoom({ roomId }) {
+            setLatestRoom(roomId);
+        }
+
+        socket.on('latest_room', onLatestRoom);
+        return () => {
+            socket.off('latest_room', onLatestRoom);
+        };
     }, []);
 
     const handleCreate = () => {
         if (!name) return setError(t('error') + ': Please enter your name'); 
-        
-        socket.connect();
+        if (!socket.connected) socket.connect();
         socket.emit('create_game', { name, config: gameConfig });
     };
 
-    const handleJoin = () => {
+    const handleJoin = (targetRoomId) => {
+        const roomToJoin = targetRoomId || roomId;
         if (!name) return setError(t('error') + ': Please enter your name');
-        if (!roomId) return setError(t('error') + ': Please enter a Room ID');
-        socket.connect();
-        socket.emit('join_game', { roomId, name });
+        if (!roomToJoin) return setError(t('error') + ': Please enter a Room ID');
+        
+        if (!socket.connected) socket.connect();
+        socket.emit('join_game', { roomId: roomToJoin, name });
     };
 
     return (
-        <div className="werewolf-app">
-            {/* Background effects from GameRoom for consistency */}
-            <div className="grain-overlay">
-                <svg width="100%" height="100%">
-                    <filter id="photocopy-noise">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-                        <feColorMatrix type="matrix" values="0 0 0 0 0, 0 0 0 0 0, 0 0 0 0 0, 0 0 0 1 0" />
-                        <feComponentTransfer>
-                            <feFuncA type="table" tableValues="0 0.5" />
-                        </feComponentTransfer>
-                    </filter>
-                    <rect width="100%" height="100%" filter="url(#photocopy-noise)" />
-                </svg>
-            </div>
+        <div className="min-h-screen w-full flex flex-col items-center justify-center p-6 bg-bg text-ink relative overflow-hidden transition-colors duration-500">
+            {/* Minimal Ambient Background */}
+            <div className="absolute inset-0 z-0 bg-gradient-to-b from-transparent via-bg to-bg opacity-80" />
             
-            <div className="photostat-root relative w-full h-full p-4 md:p-10 flex flex-col items-center justify-center gap-5 contrast-125 brightness-110 z-10 transition-all">
-                <div className="scanline"></div>
-                <div className="photocopy-texture"></div>
+            {/* Language Switcher - Very subtle */}
+            <button 
+                onClick={toggleLanguage}
+                className="absolute top-6 right-6 z-50 text-[10px] font-medium text-muted hover:text-ink transition-colors uppercase tracking-widest"
+            >
+                {i18n.language === 'zh' ? 'EN / 中' : '中 / EN'}
+            </button>
 
-                {/* Language Switcher */}
-                <button 
-                    onClick={toggleLanguage}
-                    className="absolute top-5 right-5 z-50 btn-brutal bg-black text-white border-white text-xs px-2 py-1 hover:bg-white hover:text-black transition-colors"
-                >
-                    {i18n.language === 'zh' ? 'EN / 中' : '中 / EN'}
-                </button>
-
-                <div className="max-w-[400px] w-full z-10">
-                    <h1 className="game-title glitch-text text-8xl leading-[0.8] tracking-tighter uppercase mix-blend-difference m-0 text-center mb-10 text-[clamp(3rem,10vw,6rem)]">
-                        WERE
+            <div className="w-full max-w-sm z-10 flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-500">
+                
+                {/* 1. Brand / Identity */}
+                <div className="text-center w-full">
+                    <h1 className="text-4xl font-black tracking-tighter mb-8 opacity-90" style={{ fontFamily: 'var(--font-heading)' }}>
+                        WEREWOLF
                     </h1>
+                    
+                    {/* Name Input - Always visible, clean interaction */}
+                    <div className="relative group w-full max-w-[200px] mx-auto">
+                        <input
+                            type="text"
+                            placeholder={t('enter_name')}
+                            className="w-full bg-transparent border-b border-border/50 text-center text-lg py-2 focus:border-primary outline-none transition-all placeholder:text-muted/30"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                         <div className="absolute inset-x-0 bottom-0 h-[1px] bg-primary scale-x-0 group-focus-within:scale-x-100 transition-transform duration-300" />
+                    </div>
+                </div>
 
-                    <div className="flex flex-col gap-5">
-                        <div>
-                            <label className="font-mono text-xs text-[#666] mb-1.5 block">{t('identity')}</label>
-                            <input
-                                type="text"
-                                placeholder={t('enter_name')}
-                                className="input-brutal"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                            />
+                {/* 2. Dynamic Content Area */}
+                <div className="w-full transition-all duration-300 min-h-[200px] flex flex-col justify-center">
+                    
+                    {/* VIEW: HOME (Default) */}
+                    {view === 'home' && (
+                        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-4">
+                            {/* Primary Action: Join Latest OR Host */}
+                            {latestRoom ? (
+                                <button 
+                                    className="group relative w-full py-5 bg-surface border border-white/5 rounded-[var(--radius-lg)] hover:bg-primary hover:border-primary transition-all duration-300 shadow-lg hover:shadow-primary/20 overflow-hidden"
+                                    onClick={() => handleJoin(latestRoom)}
+                                >
+                                    <div className="relative z-10 flex flex-col items-center gap-1">
+                                        <span className="text-[10px] uppercase tracking-[0.2em] opacity-60 group-hover:text-white transition-colors">Join Found Room</span>
+                                        <span className="text-2xl font-black tracking-tight group-hover:text-white transition-colors">{latestRoom}</span>
+                                    </div>
+                                    <div className="absolute inset-0 bg-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                                </button>
+                            ) : (
+                                <button 
+                                    className="btn-primary py-4 text-sm tracking-widest uppercase font-bold"
+                                    onClick={() => setView('host')}
+                                >
+                                    {t('create_new_game')}
+                                </button>
+                            )}
+
+                            {/* Secondary Actions Links */}
+                            <div className="flex items-center justify-center gap-6 mt-4">
+                                {latestRoom && (
+                                    <button onClick={() => setView('host')} className="text-[10px] uppercase tracking-widest text-muted hover:text-ink transition-colors">
+                                        {t('create_new_game')}
+                                    </button>
+                                )}
+                                <button onClick={() => setView('manual')} className="text-[10px] uppercase tracking-widest text-muted hover:text-ink transition-colors">
+                                    {t('join_with_code')}
+                                </button>
+                            </div>
                         </div>
+                    )}
 
-                        {/* Settings Panel for Create Game */}
-                        <div className="bg-[#1a1a1a] border border-[#333] p-2.5 text-xs mb-2.5">
-                            <div className="flex items-center justify-between font-mono text-[#666] mb-2 cursor-pointer" onClick={() => setShowSettings(!showSettings)}>
-                                <span>{t('settings')}</span>
-                                <span>{showSettings ? '-' : '+'}</span>
+                    {/* VIEW: HOST */}
+                    {view === 'host' && (
+                        <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4">
+                            <div className="bg-surface/30 backdrop-blur-sm p-5 rounded-[var(--radius-lg)] border border-white/5 space-y-4">
+                                {/* Presets */}
+                                <div className="grid grid-cols-3 gap-2">
+                                     {[6, 9, 12].map(num => (
+                                         <button 
+                                            key={num}
+                                            className="py-1.5 text-[10px] font-medium rounded bg-black/20 border border-transparent hover:border-primary/50 hover:text-primary transition-all text-muted"
+                                            onClick={() => {
+                                                if (num === 6) setGameConfig({ wolves: 2, seer: true, witch: true, winCondition: 'wipeout' });
+                                                if (num === 9) setGameConfig({ wolves: 3, seer: true, witch: true, winCondition: 'side_kill' });
+                                                if (num === 12) setGameConfig({ wolves: 4, seer: true, witch: true, winCondition: 'side_kill' });
+                                            }}
+                                         >
+                                             {num} P
+                                         </button>
+                                     ))}
+                                 </div>
+
+                                 {/* Configs */}
+                                 <div className="flex justify-between items-center px-1">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-muted">Wolves</span>
+                                        <div className="flex items-center bg-black/20 rounded">
+                                            <button className="px-2 hover:text-white text-muted" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
+                                            <span className="text-xs font-mono">{gameConfig.wolves}</span>
+                                            <button className="px-2 hover:text-white text-muted" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <button className={`w-2 h-2 rounded-full ${gameConfig.seer ? 'bg-primary shadow-[0_0_5px_currentColor]' : 'bg-muted/20'}`} onClick={() => setGameConfig(p=>({...p, seer: !p.seer}))} />
+                                        <button className={`w-2 h-2 rounded-full ${gameConfig.witch ? 'bg-purple-500 shadow-[0_0_5px_currentColor]' : 'bg-muted/20'}`} onClick={() => setGameConfig(p=>({...p, witch: !p.witch}))} />
+                                    </div>
+                                 </div>
                             </div>
                             
-                            {showSettings && (
-                                <div className="space-y-4 mt-2 pt-2 border-t border-[#333]">
-                                     {/* Presets */}
-                                     <div className="flex gap-2">
-                                         {[6, 9, 12].map(num => (
-                                             <button 
-                                                key={num}
-                                                className="flex-1 bg-[#333] hover:bg-[#444] text-[10px] py-1 text-white border border-transparent hover:border-white transition-all"
-                                                onClick={() => {
-                                                    if (num === 6) setGameConfig({ wolves: 2, seer: true, witch: true, winCondition: 'wipeout' });
-                                                    if (num === 9) setGameConfig({ wolves: 3, seer: true, witch: true, winCondition: 'side_kill' });
-                                                    if (num === 12) setGameConfig({ wolves: 4, seer: true, witch: true, winCondition: 'side_kill' });
-                                                }}
-                                             >
-                                                 {num} {t('players')}
-                                             </button>
-                                         ))}
-                                     </div>
-
-                                     {/* Win Condition */}
-                                     <div className="flex flex-col gap-1">
-                                         <label className="text-[#888] mb-1">{t('win_condition')}</label>
-                                         <div className="flex gap-2">
-                                             <button 
-                                                 className={`flex-1 py-1 text-[10px] border ${gameConfig.winCondition === 'side_kill' ? 'bg-white text-black border-white' : 'bg-black text-[#666] border-[#333]'}`}
-                                                 onClick={() => setGameConfig(p => ({...p, winCondition: 'side_kill'}))}
-                                             >
-                                                 {t('side_kill')} (屠边)
-                                             </button>
-                                             <button 
-                                                 className={`flex-1 py-1 text-[10px] border ${gameConfig.winCondition === 'wipeout' ? 'bg-white text-black border-white' : 'bg-black text-[#666] border-[#333]'}`}
-                                                 onClick={() => setGameConfig(p => ({...p, winCondition: 'wipeout'}))}
-                                             >
-                                                 {t('wipeout')} (屠城)
-                                             </button>
-                                         </div>
-                                     </div>
-
-                                     {/* Roles */}
-                                     <div className="space-y-2 pt-2 border-t border-[#333]"> 
-                                         <div className="flex items-center justify-between">
-                                             <label className="text-[#888]">Wolves: {gameConfig.wolves}</label>
-                                             <div className="flex gap-1">
-                                                 <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
-                                                 <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
-                                             </div>
-                                         </div>
-                                         <div className="flex items-center gap-2">
-                                             <input 
-                                                 type="checkbox" 
-                                                 checked={gameConfig.seer} 
-                                                 onChange={e => setGameConfig(p => ({...p, seer: e.target.checked}))}
-                                             />
-                                             <label className="text-[#888]">Seer ({t('roles.SEER')})</label>
-                                         </div>
-                                         <div className="flex items-center gap-2">
-                                             <input 
-                                                 type="checkbox" 
-                                                 checked={gameConfig.witch} 
-                                                 onChange={e => setGameConfig(p => ({...p, witch: e.target.checked}))}
-                                             />
-                                             <label className="text-[#888]">Witch ({t('roles.WITCH')})</label>
-                                         </div>
-                                    </div>
-                                </div>
-                            )}
+                            <button className="btn-primary" onClick={handleCreate}>{t('create_new_game')}</button>
+                            <button className="text-[10px] uppercase tracking-widest text-muted hover:text-ink text-center mt-2" onClick={() => setView('home')}>{t('cancel')}</button>
                         </div>
+                    )}
 
-                        <button className="btn-brutal btn-start" onClick={handleCreate}>
-                            {t('create_new_game')}
-                        </button>
-
-                        <div className="flex items-center gap-2.5 opacity-50">
-                            <div className="flex-1 h-[1px] bg-[#333]"></div>
-                            <span className="font-mono text-xs">{t('or_join_existing')}</span>
-                            <div className="flex-1 h-[1px] bg-[#333]"></div>
-                        </div>
-
-                        <div className="flex gap-2.5">
-                             <input
+                    {/* VIEW: MANUAL */}
+                    {view === 'manual' && (
+                         <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-right-4">
+                            <input
                                 type="text"
                                 placeholder={t('room_id')}
-                                className="input-brutal flex-1"
+                                className="input-primary text-center font-mono text-2xl uppercase placeholder:text-base placeholder:font-sans"
                                 value={roomId}
                                 onChange={(e) => setRoomId(e.target.value.toUpperCase())}
+                                autoFocus
                             />
-                            <button className="btn-brutal w-auto bg-white text-black" onClick={handleJoin}>
+                            <button className="btn-primary" onClick={() => handleJoin()}>
                                 {t('join')}
                             </button>
-                        </div>
-                    </div>
-                    {error && <p className="text-danger mt-5 font-mono text-center border border-danger p-2.5">{error}</p>}
+                            <button className="text-[10px] uppercase tracking-widest text-muted hover:text-ink text-center mt-2" onClick={() => setView('home')}>{t('cancel')}</button>
+                         </div>
+                    )}
+
                 </div>
+
+                {error && (
+                    <div className="text-danger text-[10px] tracking-wide text-center animate-in fade-in slide-in-from-top-1 bg-danger/10 px-3 py-1 rounded">
+                        {error}
+                    </div>
+                )}
+            </div>
+            
+            {/* Minimal Footer */}
+            <div className="absolute bottom-6 text-[9px] text-muted/20 uppercase tracking-[0.3em]">
+                Local Network v1.1
             </div>
         </div>
     );

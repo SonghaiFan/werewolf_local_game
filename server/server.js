@@ -58,6 +58,13 @@ io.on('connection', (socket) => {
     // Broadcast server IP config to new connection
     socket.emit('server_config', { ip: SERVER_IP });
 
+    // Send latest room for quick join
+    const roomIds = Array.from(games.keys());
+    const latestRoomId = roomIds[roomIds.length - 1]; // Last created is at the end of Map keys array
+    if (latestRoomId) {
+        socket.emit('latest_room', { roomId: latestRoomId });
+    }
+
     // Helper to broadcast state to room
     const broadcastState = (game) => {
         const room = io.in(game.id);

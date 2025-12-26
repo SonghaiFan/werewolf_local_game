@@ -4,25 +4,39 @@
    THEME TOKENS
    ============================================ */
 @theme {
-  --color-bg: #0a0a0a;
-  --color-ink: #ffffff;
-  --color-accent: #e1ff00;
-  --color-danger: #ff4d00;
-  --font-grotesk: "Space Grotesk", sans-serif;
-  --font-mono: "Space Mono", monospace;
+  --color-bg: #09090b; /* Zinc 950 - Darker, more immersive */
+  --color-surface: #18181b; /* Zinc 900 */
+  --color-surface-hover: #27272a; /* Zinc 800 */
+  --color-border: #27272a; /* Zinc 800 - Subtle borders */
+  --color-ink: #fafafa; /* Zinc 50 */
+  --color-muted: #a1a1aa; /* Zinc 400 */
+  
+  --color-primary: #6366f1; /* Indigo 500 */
+  --color-primary-hover: #818cf8; /* Indigo 400 - Lighter on hover for dark mode */
+  
+  --color-accent: #fbbf24; /* Amber 400 */
+  --color-danger: #f87171; /* Red 400 */
+  --color-success: #34d399; /* Emerald 400 */
+
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem; /* More rounded/friendly/modern */
 }
 
 /* ============================================
    BASE STYLES
    ============================================ */
 @layer base {
-  :root {
-    --grain-opacity: 0.15;
+  body {
+    @apply bg-bg text-ink font-sans fixed inset-0 w-full h-full overflow-hidden antialiased;
   }
   
-  body {
-    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] 
-           flex items-center justify-center relative antialiased;
+  /* Selection color */
+  ::selection {
+    @apply bg-primary/30 text-white;
   }
 }
 
@@ -32,190 +46,59 @@
 @layer components {
   /* App Container */
   .werewolf-app {
-    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] 
-           flex items-center justify-center relative;
+    @apply bg-bg text-ink font-sans w-full h-full flex flex-col relative overflow-hidden;
   }
 
-  /* Brutalist Button */
-  .btn-brutal {
-    @apply w-full p-3 md:p-5 bg-danger text-white border-0 font-grotesk 
-           text-lg md:text-2xl font-bold uppercase tracking-tight
-           transition-all duration-150 ease-out cursor-pointer
-           shadow-[3px_3px_0px_rgba(0,0,0,0.3)] md:shadow-[4px_4px_0px_rgba(0,0,0,0.3)];
-    clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+  /* --- SHARED BUTTON BASE --- 
+     Fixes circular dependency/unknown class error by grouping selectors.
+     Design: More whitespace, cleaner look. 
+  */
+  .btn-primary, .btn-danger, .btn-secondary, .btn-outline {
+    @apply flex items-center justify-center w-full px-6 py-4
+           font-sans font-medium text-sm tracking-wide
+           rounded-[var(--radius-lg)] border
+           transition-all duration-300 ease-out cursor-pointer
+           active:scale-[0.98]
+           disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none;
   }
 
-  .btn-brutal:hover {
-    @apply brightness-110 translate-x-[-2px] translate-y-[-2px]
-           shadow-[6px_6px_0px_rgba(0,0,0,0.4)];
+  /* Variations */
+  .btn-primary {
+    @apply bg-primary text-white border-transparent 
+           shadow-[0_4px_20px_-4px_rgba(99,102,241,0.5)]
+           hover:bg-primary-hover hover:shadow-[0_8px_25px_-4px_rgba(99,102,241,0.6)] hover:-translate-y-0.5;
+  }
+  
+  .btn-danger {
+    @apply bg-danger/10 text-danger border-danger/20
+           hover:bg-danger hover:text-white hover:border-danger hover:shadow-[0_8px_25px_-4px_rgba(248,113,113,0.5)];
+  }
+  
+  .btn-secondary {
+    @apply bg-surface text-muted border-transparent
+           hover:bg-surface-hover hover:text-white;
   }
 
-  .btn-brutal:active {
-    @apply scale-[0.98] brightness-125 
-           shadow-[2px_2px_0px_rgba(0,0,0,0.3)];
+  .btn-outline {
+    @apply bg-transparent border-border text-muted
+           hover:border-primary/50 hover:text-primary hover:bg-primary/5;
   }
 
-  .btn-brutal:disabled {
-    @apply bg-[#333] text-[#666] cursor-not-allowed 
-           transform-none shadow-none brightness-100;
+  /* Standard Input - Minimalist */
+  .input-primary {
+    @apply w-full bg-transparent border-b border-border text-ink
+           px-2 py-4 text-base outline-none rounded-none
+           transition-all duration-300
+           focus:border-primary focus:bg-white/5;
   }
 
-  .btn-start {
-    @apply bg-accent text-black;
+  .input-primary::placeholder {
+    @apply text-muted/50 font-light;
   }
-
-  /* Brutalist Input */
-  .input-brutal {
-    @apply w-full bg-[#111] border-2 border-[#333] text-ink 
-           p-4 font-mono text-base outline-none 
-           transition-all duration-200 ease-in-out;
-  }
-
-  .input-brutal:focus {
-    @apply border-accent bg-black shadow-[0_0_0_2px_rgba(225,255,0,0.1)];
-  }
-
-  .input-brutal::placeholder {
-    @apply text-[#555] italic;
-  }
-}
-
-/* ============================================
-   VISUAL EFFECTS
-   ============================================ */
-
-/* Film Grain Overlay */
-.grain-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 100;
-  opacity: var(--grain-opacity);
-  mix-blend-mode: overlay;
-}
-
-/* CRT Scanline Effect */
-.scanline {
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(225, 255, 0, 0.3) 50%,
-    transparent 100%
-  );
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 5;
-  animation: scan 4s linear infinite;
-  pointer-events: none;
-  filter: blur(0.5px);
-}
-
-@keyframes scan {
-  0% { 
-    top: 0; 
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% { 
-    top: 100%; 
-    opacity: 0;
-  }
-}
-
-/* Photocopy Grid Texture */
-.photocopy-texture {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 20px 20px;
-  pointer-events: none;
-  opacity: 0.5;
-}
-
-/* Glitch Text Effect */
-.glitch-text {
-  position: relative;
-  display: inline-block;
-}
-
-.glitch-text::before,
-.glitch-text::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-}
-
-.glitch-text:hover::before {
-  color: var(--color-danger);
-  animation: glitch-1 0.3s infinite;
-  opacity: 0.8;
-  z-index: -1;
-}
-
-.glitch-text:hover::after {
-  color: var(--color-accent);
-  animation: glitch-2 0.3s infinite;
-  opacity: 0.8;
-  z-index: -2;
-}
-
-@keyframes glitch-1 {
-  0%, 100% { 
-    transform: translate(0); 
-    clip-path: inset(0 0 0 0);
-  }
-  20% { 
-    transform: translate(-3px, 2px); 
-    clip-path: inset(10% 0 85% 0);
-  }
-  40% { 
-    transform: translate(-2px, -3px); 
-    clip-path: inset(80% 0 10% 0);
-  }
-  60% { 
-    transform: translate(3px, 1px); 
-    clip-path: inset(50% 0 30% 0);
-  }
-  80% { 
-    transform: translate(2px, -2px); 
-    clip-path: inset(30% 0 70% 0);
-  }
-}
-
-@keyframes glitch-2 {
-  0%, 100% { 
-    transform: translate(0); 
-    clip-path: inset(0 0 0 0);
-  }
-  20% { 
-    transform: translate(2px, -2px); 
-    clip-path: inset(20% 0 60% 0);
-  }
-  40% { 
-    transform: translate(-3px, 3px); 
-    clip-path: inset(60% 0 20% 0);
-  }
-  60% { 
-    transform: translate(1px, -3px); 
-    clip-path: inset(40% 0 40% 0);
-  }
-  80% { 
-    transform: translate(-2px, 2px); 
-    clip-path: inset(70% 0 10% 0);
+  
+  /* Card/Surface - Glass-like, subtle */
+  .card {
+    @apply bg-surface/40 backdrop-blur-md border border-white/5 rounded-[var(--radius-lg)];
   }
 }
 
@@ -223,7 +106,7 @@
    UTILITY CLASSES
    ============================================ */
 
-/* Hide Scrollbar */
+/* Hide Scrollbar but keep functionality */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
@@ -233,7 +116,22 @@
   display: none;
 }
 
-/* Smooth Transitions */
-.transition-smooth {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Animations */
+.animate-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Pulse animation for waiting states */
+.animate-pulse-slow {
+    animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .7; }
 }
