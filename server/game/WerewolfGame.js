@@ -134,6 +134,8 @@ class WerewolfGame {
                      publicState.players[p.id].role = ROLES.WOLF; 
                  }
              });
+             // Expose NightManager Wolf Votes
+             publicState.wolfVotes = this.nightManager.actions.wolfVotes;
         }
         
         // Reveal All if Dead/Finished
@@ -280,7 +282,7 @@ class WerewolfGame {
                  this.advancePhase(PHASES.NIGHT_WOLVES);
              }, 4000); // 4s for closing eyes effect
              
-        }, 5000); // 5s to check role
+        }, 10000); // 10s to check role
     }
 
     // --- Phase Transition ---
@@ -439,6 +441,14 @@ class WerewolfGame {
         const winnerText = winner === 'VILLAGERS' ? 'VILLAGERS (村民)' : 'WEREWOLVES (狼人)';
         this.addLog(`GAME OVER. ${winnerText} WIN! (游戏结束。${winnerText} 胜利！)`);
         if(this.onGameUpdate) this.onGameUpdate(this);
+    }
+
+    handleWolfPropose(playerId, targetId) {
+        // Delegate to NightManager
+        const changed = this.nightManager.handlePropose(this, playerId, targetId);
+        if (changed) {
+            this.onGameUpdate(this);
+        }
     }
 
     reset() {

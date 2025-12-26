@@ -12,7 +12,7 @@ const VOICE_MESSAGES = {
     [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
 
     // Events
-    GAME_START_CONFIRM: "请确认身份。你有5秒钟。", 
+    GAME_START_CONFIRM: "请确认身份。", 
     GAME_START_CLOSE_EYES: "天黑请闭眼。", 
     
     // Dynamic Constructors

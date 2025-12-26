@@ -139,6 +139,14 @@ io.on('connection', (socket) => {
         broadcastState(game);
     });
 
+    socket.on('wolf_propose', ({ roomId, targetId }) => {
+        const game = games.get(roomId);
+        if (!game) return;
+        
+        game.handleWolfPropose(socket.id, targetId);
+        broadcastState(game);
+    });
+
     socket.on('night_action', ({ roomId, action }) => {
         const game = games.get(roomId);
         if (!game) return;

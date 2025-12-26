@@ -71,6 +71,20 @@ class NightManager {
         return false;
     }
 
+    handlePropose(game, playerId, targetId) {
+        const player = game.players[playerId];
+        if (!player || player.status !== 'alive' || player.role !== ROLES.WOLF) return false;
+        if (game.phase !== PHASES.NIGHT_WOLVES) return false;
+
+        // Toggle or Set
+        if (this.actions.wolfVotes[playerId] === targetId) {
+            delete this.actions.wolfVotes[playerId];
+        } else {
+            this.actions.wolfVotes[playerId] = targetId;
+        }
+        return true;
+    }
+
     resolve(game) {
         let deadIds = [];
         const wolfTarget = this.actions.wolfTarget;

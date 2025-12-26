@@ -102,6 +102,13 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
             setInspectedPlayers({});
         },
         onPlayerReady: () => socket.emit('player_ready', { roomId }),
+        onSelect: (targetId) => {
+            if (gameState.phase === 'NIGHT_WOLVES' && gameState.me?.role === 'WOLF') {
+                // Real-time proposal sync
+                socket.emit('wolf_propose', { roomId, targetId });
+            }
+            setSelectedTarget(targetId);
+        },
         onNightAction: () => {
             if (selectedTarget) {
                 const role = gameState.me?.role;
@@ -148,6 +155,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         inspectedPlayers,
         candidates: gameState.candidates || [],
         wolfTarget: gameState.wolfTarget || gameState.me?.wolfTarget,
+        wolfVotes: gameState.wolfVotes, // Exposed from server
         selectedTarget,
         setSelectedTarget,
         role: gameState.me?.role,

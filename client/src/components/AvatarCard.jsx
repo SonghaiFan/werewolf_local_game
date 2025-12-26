@@ -53,8 +53,10 @@ export default function AvatarCard({
         hostId, 
         wolfTarget, 
         inspectedPlayers,
+        wolfVotes, // map: {wolfId: targetId}
         selectedTarget, 
-        setSelectedTarget 
+        setSelectedTarget,
+        actions // Access actions to trigger socket events
     } = useGameContext();
 
     if (!player) return null;
@@ -62,7 +64,8 @@ export default function AvatarCard({
 
     // Derived Selection Logic
     const isSelected = selectedTarget === player.id;
-    const handleSelect = onSelect !== undefined ? onSelect : setSelectedTarget;
+    // Use prop if provided, otherwise use context action (which handles wolf logic), fallback to simple set
+    const handleSelect = onSelect !== undefined ? onSelect : (actions?.onSelect || setSelectedTarget);
     
     // Derived Inspection Logic
     const inspectedRole = inspectedPlayers ? inspectedPlayers[player.id] : null;
@@ -204,6 +207,25 @@ export default function AvatarCard({
                      </div>
                 </div>
             )}
+
+            {/* Wolf Proposal Indicators (Only visible to wolves via context) */}
+            {wolfVotes && Object.entries(wolfVotes).map(([wolfId, targetId]) => {
+                if (String(targetId) === String(player.id)) {
+                    // We need to show WHICH wolf voted. 
+                    // ideally we map wolfId to an Avatar Number if we had full player list in context or passed it down.
+                    // For now, let's just show a small wolf icon or badge.
+                    // Actually, let's try to get the avatar number if possible, or just a generic marker with ID hash if not.
+                    // Simplified: Just show "Wolf Select"
+                    return (
+                        <div key={wolfId} className="absolute bottom-1 right-1 z-40 animate-bounce">
+                           <div className="bg-red-600 text-white text-[8px] font-bold px-1 border border-black shadow-sm">
+                               WOLF SELECT
+                           </div>
+                        </div>
+                    );
+                }
+                return null;
+            })}
         </div>
     );
 }

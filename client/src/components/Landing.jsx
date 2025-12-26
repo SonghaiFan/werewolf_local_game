@@ -75,9 +75,6 @@ export default function Landing() {
                 </button>
 
                 <div className="max-w-[400px] w-full z-10">
-                    <div className="status-tag bg-accent text-black inline-block px-3 py-1 font-mono font-bold text-sm uppercase mb-2.5 [clip-path:polygon(0_0,95%_0,100%_100%,5%_100%)]">
-                        {t('system_ready')}
-                    </div>
                     <h1 className="game-title glitch-text text-8xl leading-[0.8] tracking-tighter uppercase mix-blend-difference m-0 text-center mb-10 text-[clamp(3rem,10vw,6rem)]">
                         WERE
                     </h1>
