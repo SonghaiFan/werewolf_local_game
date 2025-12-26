@@ -20,19 +20,7 @@ class DayManager {
         
         let order = alivePlayers.map(p => p.id);
 
-        // If Sheriff exists and is alive, they speak LAST.
-        if (game.sheriffId && game.players[game.sheriffId]?.status === 'alive') {
-            const sIndex = order.indexOf(game.sheriffId);
-            if (sIndex !== -1) {
-                // Rotate so Sheriff is last: elements after sheriff + elements before sheriff + sheriff
-                // Actually user requested "police the last", implied standard "Clockwise from Sheriff's left/right" style.
-                // Standard: Start from player Next to sheriff. End at Sheriff.
-                const after = order.slice(sIndex + 1);
-                const before = order.slice(0, sIndex);
-                order = [...after, ...before, game.sheriffId];
-            }
-        }
-        
+        // Plain logic: ID sort
         this.speakingOrder = order;
         this.currentSpeakerIndex = 0;
         
@@ -110,7 +98,6 @@ class DayManager {
 
         Object.entries(this.votes).forEach(([voterId, targetId]) => {
              let w = 1;
-             if (voterId === game.sheriffId) w = 1.5;
              voteCounts[targetId] = (voteCounts[targetId] || 0) + w;
         });
 
@@ -130,9 +117,7 @@ class DayManager {
             
             game.executedPlayerId = victim;
 
-            if (victim === game.sheriffId) {
-                 game.addLog(`JUDGE: The Sheriff has been executed!`);
-            }
+
         } else {
             game.addLog("JUDGE: Tie vote. No one gets executed today.");
             game.executedPlayerId = null; 
@@ -144,39 +129,14 @@ class DayManager {
         } else {
              if (game.executedPlayerId) {
                  // Victim Logic
-                 if (game.executedPlayerId === game.sheriffId) {
-                     game.pendingNextPhase = PHASES.DAY_LEAVE_SPEECH;
-                     game.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
-                 } else {
-                     game.advancePhase(PHASES.DAY_LEAVE_SPEECH);
-                 }
+                 game.advancePhase(PHASES.DAY_LEAVE_SPEECH);
              } else {
                  setTimeout(() => game.startNightOrEnd(), 2000);
              }
         }
     }
 
-    handleSheriffHandover(game, playerId, targetId) {
-        if (playerId !== game.sheriffId) return;
 
-        if (targetId && game.players[targetId]?.status === 'alive') {
-            game.sheriffId = targetId;
-            game.addLog(`JUDGE: Sheriff Badge has been passed to ${game.players[targetId].name}.`);
-        } else {
-            game.sheriffId = null;
-            game.addLog("JUDGE: The Sheriff Badge has been torn!");
-        }
-
-        // Resume
-        const next = game.pendingNextPhase;
-        game.pendingNextPhase = null;
-
-        if (next) {
-            game.advancePhase(next);
-        } else {
-            game.startNightOrEnd();
-        }
-    }
 }
 
 module.exports = DayManager;

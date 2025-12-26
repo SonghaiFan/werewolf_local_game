@@ -131,6 +131,14 @@ io.on('connection', (socket) => {
         broadcastState(game);
     });
 
+    socket.on('play_again', ({ roomId }) => {
+        const game = games.get(roomId);
+        if (!game) return;
+        
+        game.reset();
+        broadcastState(game);
+    });
+
     socket.on('night_action', ({ roomId, action }) => {
         const game = games.get(roomId);
         if (!game) return;

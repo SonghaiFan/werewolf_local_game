@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
 export default function ControlPanel(props) {
-    const { roomId, serverIP, logs, phase, role, myStatus, election, isReady, players, isHost, actions, speaking, myId, executedId, amISheriff } = props;
+    const { roomId, serverIP, logs, phase, role, myStatus, isReady, players, isHost, actions, speaking, myId, executedId } = props;
     const logsEndRef = useRef(null);
     const [showQRCode, setShowQRCode] = useState(false);
     
@@ -14,11 +14,7 @@ export default function ControlPanel(props) {
         logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [logs]);
 
-    // Election Vote Tracking
-    const [hasVoted, setHasVoted] = useState(false);
-    useEffect(() => {
-        if (phase !== 'DAY_ELECTION_NOMINATION') setHasVoted(false);
-    }, [phase]);
+
 
     const renderActions = () => {
         if (myStatus === 'dead') {
@@ -138,24 +134,36 @@ export default function ControlPanel(props) {
 
         // --- NIGHT PHASES ---
         
-        // ... (Rest of NIGHT PHASES code logic remains same, just ensuring no syntax breaks)
+        // GENERIC NIGHT WAIT
+        // This block handles players who are not the active role during a night phase
+        if (phase.startsWith('NIGHT_') && role !== 'WOLF' && role !== 'SEER' && role !== 'WITCH') {
+             return (
+                 <div className="mt-auto">
+                    <div className="font-mono text-[11px] mb-2.5 text-[#444] animate-pulse">
+                        &gt;&gt; NIGHT FALLS (入夜)
+                    </div>
+                    <p className="text-xs text-[#666]">Wait for your turn...<br/>请等待...</p>
+                 </div>
+             );
+        }
+
         // WOLVES
         if (phase === 'NIGHT_WOLVES') {
             if (role === 'WOLF') {
                  return (
                      <div className="mt-auto">
                          <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                            &gt;&gt; WAKE UP. CHOOSE A VICTIM.
+                            &gt;&gt; WAKE UP. CHOOSE A VICTIM. <br/> <span className="text-[10px]">狼人请睁眼。选择击杀目标。</span>
                          </div>
-                         <button className="btn-brutal" onClick={actions.onNightAction}>KILL TARGET</button>
+                         <button className="btn-brutal" onClick={actions.onNightAction}>KILL TARGET <br/> <span className="text-[10px]">击杀目标</span></button>
                      </div>
                  );
             }
             // Others
             return (
                  <div className="mt-auto">
-                     <button className="btn-brutal opacity-50" disabled>NIGHT FALLS...</button>
-                     <p className="mt-2.5 text-xs text-[#666]">Wolves are hunting.</p>
+                     <button className="btn-brutal opacity-50" disabled>NIGHT FALLS... <br/> <span className="text-[10px]">夜幕降临...</span></button>
+                     <p className="mt-2.5 text-xs text-[#666]">Wolves are hunting.<br/>狼人正在行动。</p>
                  </div>
             );
         }
@@ -166,20 +174,20 @@ export default function ControlPanel(props) {
                  return (
                     <div className="mt-auto">
                         <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                           &gt;&gt; WAKE UP. POTION READY.
+                           &gt;&gt; WAKE UP. POTION READY. <br/> <span className="text-[10px]">女巫请睁眼。药水已备。</span>
                         </div>
                         <div className="flex flex-col gap-2.5">
-                            <button className="btn-brutal" onClick={() => actions.onWitchAction('save')}>SAVE VICTIM</button>
-                            <button className="btn-brutal bg-[#a020f0]" onClick={() => actions.onWitchAction('poison')}>POISON TARGET</button>
-                            <button className="flex-1 p-2.5 bg-[#222] border border-[#444] text-white font-mono text-[10px] cursor-pointer hover:bg-[#333]" onClick={() => actions.onWitchAction('skip')}>DO NOTHING</button>
+                            <button className="btn-brutal" onClick={() => actions.onWitchAction('save')}>SAVE VICTIM <br/> <span className="text-[10px]">救活目标</span></button>
+                            <button className="btn-brutal bg-[#a020f0]" onClick={() => actions.onWitchAction('poison')}>POISON TARGET <br/> <span className="text-[10px]">毒杀目标</span></button>
+                            <button className="flex-1 p-2.5 bg-[#222] border border-[#444] text-white font-mono text-[10px] cursor-pointer hover:bg-[#333]" onClick={() => actions.onWitchAction('skip')}>DO NOTHING <br/> <span className="text-[10px]">跳过</span></button>
                         </div>
                     </div>
                  );
             }
             return (
                  <div className="mt-auto">
-                     <button className="btn-brutal opacity-50" disabled>SLEEPING...</button>
-                     <p className="mt-2.5 text-xs text-[#666]">Witch is active.</p>
+                     <button className="btn-brutal opacity-50" disabled>SLEEPING... <br/> <span className="text-[10px]">沉睡中...</span></button>
+                     <p className="mt-2.5 text-xs text-[#666]">Witch is active.<br/>女巫正在行动。</p>
                  </div>
             );
         }
@@ -190,104 +198,54 @@ export default function ControlPanel(props) {
                  return (
                     <div className="mt-auto">
                         <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                           &gt;&gt; WAKE UP. REVEAL TRUTH.
+                           &gt;&gt; WAKE UP. REVEAL TRUTH. <br/> <span className="text-[10px]">预言家请睁眼。揭示真相。</span>
                         </div>
-                        <button className="btn-brutal" onClick={actions.onNightAction}>CHECK IDENTITY</button>
+                        <button className="btn-brutal" onClick={actions.onNightAction}>CHECK IDENTITY <br/> <span className="text-[10px]">查验身份</span></button>
                     </div>
                  );
             }
             return (
                  <div className="mt-auto">
-                     <button className="btn-brutal opacity-50" disabled>SLEEPING...</button>
-                     <p className="mt-2.5 text-xs text-[#666]">Seer is active.</p>
+                     <button className="btn-brutal opacity-50" disabled>SLEEPING... <br/> <span className="text-[10px]">沉睡中...</span></button>
+                     <p className="mt-2.5 text-xs text-[#666]">Seer is active.<br/>预言家正在行动。</p>
                  </div>
             );
         }
 
         // --- DAY PHASES ---
 
-        // ELECTION NOMINATION
-        if (phase === 'DAY_ELECTION_NOMINATION') {
-
-             return (
-                 <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                        &gt;&gt; ELECTION: RUN FOR SHERIFF?
-                     </div>
-                     
-                     {!hasVoted ? (
-                         <>
-                            <p className="text-xs text-[#666] mb-2.5">All alive players must choose.</p>
-                            <div className="flex gap-2.5 mb-2.5">
-                                <button className="btn-brutal bg-accent text-black flex-1" onClick={() => { setHasVoted(true); actions.onElectionNominate(); }}>RUN</button>
-                                <button className="btn-brutal border-white text-white flex-1 hover:bg-[#333]" onClick={() => { setHasVoted(true); actions.onElectionPass(); }}>DECLINE</button>
-                            </div>
-                         </>
-                     ) : (
-                        <div className="text-xs text-[#666] text-center mb-2.5 animate-pulse border border-[#333] p-2.5">
-                             CHOICE RECORDED. <br/> WAITING FOR OTHERS...
-                        </div>
-                     )}
-                     
-                     <div className="text-[10px] text-[#444] text-center font-mono">
-                         {election?.participants?.length || 0} players decided.
-                     </div>
-                 </div>
-             );
-        }
-
-        // ELECTION VOTE
-        if (phase === 'DAY_ELECTION_VOTE') {
-             return (
-                 <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                        &gt;&gt; VOTE FOR SHERIFF
-                     </div>
-                     <button className="btn-brutal" onClick={actions.onDayVote}>VOTE TARGET</button>
-                      <button 
-                        className="flex-1 p-2.5 mt-2.5 w-full bg-[#222] border border-[#444] text-white font-mono text-[10px] cursor-pointer"
-                        onClick={actions.onResolvePhase}
-                     >
-                        [ADMIN] END ELECTION
-                     </button>
-                 </div>
-             );
-        }
-
         // LEAVE SPEECH (LAST WORDS)
         if (phase === 'DAY_LEAVE_SPEECH') {
              const isMeDying = executedId === myId;
-             const victimName = executedId && players && players[executedId] ? players[executedId].name : 'Victim';
              
+             if (isMeDying) {
+                 return (
+                    <div className="mt-auto">
+                        <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
+                           &gt;&gt; LAST WORDS (遗言)
+                        </div>
+                        <p className="text-xs text-[#666] mb-2">You have been executed.<br/>你已被放逐。</p>
+                        <button className="btn-brutal" onClick={actions.onEndSpeech}>END SPEECH <br/><span className="text-[10px]">结束发言</span></button>
+                    </div>
+                 );
+             }
+
              return (
                  <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                        &gt;&gt; LAST WORDS
+                     <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
+                        &gt;&gt; EXECUTION (处决)
                      </div>
-                     <div className="text-xs text-[#666] mb-2.5 text-center">
-                        {isMeDying ? "You have been executed. Leave your last words." : `${victimName} is leaving their last words.`}
-                     </div>
-
-                     {isMeDying ? (
-                        <button 
-                            className="btn-brutal w-full mt-2.5 bg-accent text-black"
-                            onClick={actions.onEndSpeech}
-                        >
-                            END MY SPEECH
-                        </button>
-                     ) : (
-                         <div className="text-[10px] text-[#444] text-center border border-[#333] p-1">
-                             LISTENING...
-                         </div>
-                     )}
+                     <p className="text-xs text-[#666]">
+                        {props.players?.[executedId]?.name || 'Player'} is leaving last words...<br/>发表遗言中...
+                     </p>
                      
-                     {/* Admin Override if stuck */}
-                     {isHost && !isMeDying && (
+                     {/* Admin Skip */}
+                     {isHost && (
                          <button 
                              className="text-[9px] text-[#444] mt-2 underline block mx-auto hover:text-white"
                              onClick={actions.onEndSpeech}
                          >
-                             (Admin Force Skip)
+                             (Admin Force Skip / 管理员跳过)
                          </button>
                      )}
                  </div>
@@ -297,7 +255,7 @@ export default function ControlPanel(props) {
         if (phase === 'DAY_ANNOUNCE' || phase === 'DAY_ELIMINATION') {
              return (
                  <div className="mt-auto">
-                     <button className="btn-brutal" disabled>JUDGE SPEAKING...</button>
+                     <button className="btn-brutal" disabled>JUDGE SPEAKING... <br/> 法官发言中...</button>
                  </div>
              );
         }
@@ -314,76 +272,38 @@ export default function ControlPanel(props) {
              return (
                  <div className="mt-auto">
                      <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                        &gt;&gt; DISCUSSIONS OPEN
+                        &gt;&gt; DISCUSSIONS OPEN (讨论)
                      </div>
                      
-                     {currentSpeakerId ? (
-                         <div className="mb-2.5 p-2.5 border border-[#333] bg-[#111]">
-                            <div className="text-[9px] text-[#666] uppercase mb-1">CURRENT SPEAKER</div>
-                            <div className="font-bold text-lg text-white">{speakerName}</div>
-                         </div>
-                     ) : (
-                         <div className="text-xs text-[#666] mb-2.5">Preparing speaking order...</div>
-                     )}
+                     <div className="mb-2.5 text-center">
+                        <div className="text-[10px] text-[#666] mb-1">CURRENT SPEAKER (当前发言)</div>
+                        <div className={`text-sm font-bold ${isMyTurn ? 'text-accent' : 'text-white'}`}>
+                            {isMyTurn ? 'YOU (你)' : speakerName}
+                        </div>
+                     </div>
 
                      {isMyTurn ? (
-                         <button className="btn-brutal bg-accent text-black animate-pulse" onClick={actions.onEndSpeech}>
-                             END SPEECH
+                         <button className="btn-brutal bg-accent text-black w-full" onClick={actions.onEndSpeech}>
+                             END SPEECH <br/><span className="text-[10px]">结束发言</span>
                          </button>
                      ) : (
-                         <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>
-                             WAITING FOR TURN...
-                         </button>
+                         <div className="text-xs text-[#444] text-center border border-[#333] p-2">
+                             LISTENING... (聆听中...)
+                         </div>
                      )}
                      
                       <div className="mt-2.5 text-xs text-[#666]">
                         {props.speaking?.currentSpeakerId ? 'Listen explicitly.' : 'Judge is determining order...'}
                      </div>
-                 </div>
-             );
-        }
-
-        // SHERIFF SPEECH
-        if (phase === 'DAY_SHERIFF_SPEECH') {
-             return (
-                 <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                        &gt;&gt; SHERIFF SUMMARY
-                     </div>
-                     <button className="btn-brutal opacity-50 w-full cursor-not-allowed" disabled>SHERIFF IS SPEAKING...</button>
-                     <div className="mt-2.5 text-xs text-[#666]">
-                        Please wait for voting.
-                     </div>
-                 </div>
-             );
-        }
-
-        // SHERIFF HANDOVER
-        // SHERIFF HANDOVER
-        if (phase === 'DAY_SHERIFF_HANDOVER') {
-             // Only show controls for the dying Sheriff
-             if (!amISheriff) {
-                 return (
-                     <div className="mt-auto">
-                        <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                            &gt;&gt; SHERIFF DIED
-                        </div>
-                        <p className="text-xs text-[#666]">Waiting for Sheriff to decide...</p>
-                     </div>
-                 );
-             }
-
-            return (
-                 <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                        &gt;&gt; SHERIFF DIED
-                     </div>
-                     <p className="text-xs text-[#666] mb-2.5">Choose successor or tear badge.</p>
-                     
-                     <div className="flex flex-col gap-2.5">
-                        <button className="btn-brutal bg-accent text-black" onClick={() => actions.onSheriffHandover(null)}>TEAR BADGE</button>
-                        <button className="btn-brutal" onClick={() => actions.onSheriffHandover('USE_SELECTED')}>PASS TO SELECTED</button>
-                     </div>
+                     {/* Host Skip */}
+                     {isHost && !isMyTurn && (
+                         <button 
+                             className="text-[9px] text-[#444] mt-2 underline block mx-auto hover:text-white"
+                             onClick={actions.onEndSpeech}
+                         >
+                             (Admin Skip / 跳过)
+                         </button>
+                     )}
                  </div>
              );
         }
@@ -392,17 +312,31 @@ export default function ControlPanel(props) {
              return (
                  <div className="mt-auto">
                      <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                        &gt;&gt; VOTE FOR ELIMINATION
+                        &gt;&gt; VOTE FOR ELIMINATION (投票)
                      </div>
-                     <button className="btn-brutal" onClick={actions.onDayVote}>CONFIRM VOTE</button>
+                     <button className="btn-brutal" onClick={actions.onDayVote}>CONFIRM VOTE <br/><span className="text-[10px]">确认投票</span></button>
                  </div>
              );
         }
 
+        if (phase === 'FINISHED') {
+         return (
+             <div className="flex flex-col items-center justify-center h-full">
+                 <div className="text-xl font-bold mb-4 glitch-text">GAME OVER <br/> 游戏结束</div>
+                 {isHost && (
+                     <button className="btn-brutal bg-white text-black pl-5 pr-5" onClick={actions.onPlayAgain}>
+                         PLAY AGAIN <br/><span className="text-[10px]">再来一局</span>
+                     </button>
+                 )}
+                 {!isHost && <div className="text-xs text-[#666]">Waiting for host... <br/>等待房主...</div>}
+             </div>
+         );
+    }        
+
         // FINISHED
         return (
             <div className="mt-auto">
-                <button className="btn-brutal btn-start" onClick={() => window.location.reload()}>REBOOT SYSTEM</button>
+                <button className="btn-brutal btn-start" onClick={() => window.location.reload()}>REBOOT SYSTEM <br/> <span className="text-[10px]">重启系统</span></button>
             </div>
         );
     };

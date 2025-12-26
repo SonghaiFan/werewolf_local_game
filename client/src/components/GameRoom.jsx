@@ -91,25 +91,13 @@ export default function GameRoom({ roomId, myId, onExit }) {
     };
 
     const handleDayVote = () => {
-        if (gameState.phase !== 'DAY_VOTE' && gameState.phase !== 'DAY_ELECTION_VOTE') {
+        if (gameState.phase !== 'DAY_VOTE') {
             alert("Voting is not open yet!");
             return;
         }
         if (!selectedTarget) return;
         
-        if (gameState.phase === 'DAY_ELECTION_VOTE') {
-            socket.emit('election_vote', { roomId, targetId: selectedTarget });
-        } else {
-            socket.emit('day_vote', { roomId, targetId: selectedTarget });
-        }
-    };
-
-    const handleElectionNominate = () => {
-        socket.emit('election_nominate', { roomId });
-    };
-
-    const handleElectionPass = () => {
-        socket.emit('election_pass', { roomId });
+        socket.emit('day_vote', { roomId, targetId: selectedTarget });
     };
     
     const handlePlayerReady = () => {
@@ -124,13 +112,20 @@ export default function GameRoom({ roomId, myId, onExit }) {
     useEffect(() => {
         function onVoiceCue({ text }) {
              // Only Host plays audio
-             // We need to know who host is. 
-             // Backend sends hostId in game_state.
              if (gameState.hostId === myId) {
                  const utterance = new SpeechSynthesisUtterance(text);
+                 // Force Chinese
+                 utterance.lang = 'zh-CN';
+                 
+                 // Try to pick a Chinese voice
+                 const voices = window.speechSynthesis.getVoices();
+                 const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
+                 if (zhVoice) {
+                     utterance.voice = zhVoice;
+                 }
+
                  utterance.rate = 0.9;
-                 utterance.pitch = 0.8; // Lower pitch for authority
-                 // utterance.voice = ... (could pick specific voice)
+                 utterance.pitch = 0.8; 
                  window.speechSynthesis.speak(utterance);
              }
         }
@@ -138,23 +133,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
         return () => socket.off('voice_cue', onVoiceCue);
     }, [gameState.hostId, myId]);
 
-    const handleSheriffHandover = (targetId) => {
-        // If targetId is explicitly 'USE_SELECTED' or null/undefined, use state
-        const finalTarget = (targetId === 'USE_SELECTED' || !targetId) ? selectedTarget : targetId;
-        
-        // Allow passing explicit null for "Tear Badge"
-        if (targetId === null) {
-             socket.emit('sheriff_handover', { roomId, targetId: null });
-             return;
-        }
 
-        if (finalTarget) {
-            socket.emit('sheriff_handover', { roomId, targetId: finalTarget });
-            setSelectedTarget(null); // Reset selection
-        } else {
-            alert("Please select a player first!");
-        }
-    };
 
     const mePlayer = gameState.players[myId] || { ...gameState.me, name: 'YOU', id: myId, avatar: 1 };
     const otherPlayers = Object.values(gameState.players).filter(p => p.id !== myId);
@@ -216,7 +195,8 @@ export default function GameRoom({ roomId, myId, onExit }) {
             },
             onResolvePhase: handleResolvePhase,
             onSkipTurn: () => setSelectedTarget(null),
-            onEndSpeech: () => socket.emit('end_speech', { roomId })
+            onEndSpeech: () => socket.emit('end_speech', { roomId }),
+            onPlayAgain: () => socket.emit('play_again', { roomId })
         }
     };
 
@@ -304,4 +284,3 @@ export default function GameRoom({ roomId, myId, onExit }) {
         </div>
     );
 }
-

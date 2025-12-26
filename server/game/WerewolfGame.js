@@ -1,7 +1,7 @@
 const { ROLES, PHASES } = require('./constants');
 const NightManager = require('./managers/NightManager');
-const ElectionManager = require('./managers/ElectionManager');
 const DayManager = require('./managers/DayManager');
+const VOICE_MESSAGES = require('./voiceMessages');
 
 class WerewolfGame {
     constructor(id, hostId, onVoiceCue, onGameUpdate) {
@@ -14,13 +14,11 @@ class WerewolfGame {
         this.phase = PHASES.WAITING;
         this.round = 0;
         this.logs = [];
-        this.sheriffId = null;
         this.pendingNextPhase = null;
         this.executedPlayerId = null;
         this.pendingDeaths = [];
 
         this.nightManager = new NightManager();
-        this.electionManager = new ElectionManager();
         this.dayManager = new DayManager();
     }
 
@@ -35,14 +33,9 @@ class WerewolfGame {
                 status: p.status,
                 avatar: p.avatar,
                 isReady: p.isReady,
-                isSheriff: (pid === this.sheriffId),
+                isReady: p.isReady,
                 isVoting: !!this.dayManager.votes[pid]
             };
-        }
-        
-        let electionData = null;
-        if (this.phase === PHASES.DAY_ELECTION_NOMINATION || this.phase === PHASES.DAY_ELECTION_VOTE) {
-            electionData = { candidates: this.electionManager.candidates };
         }
 
         // Add Speaking Data
@@ -60,7 +53,6 @@ class WerewolfGame {
             round: this.round,
             players: publicPlayers,
             logs: this.logs,
-            election: electionData,
             speaking: speakingData,
             executedId: this.executedPlayerId, // Expose executed player ID
             hostId: this.hostId
@@ -97,7 +89,10 @@ class WerewolfGame {
                 info.wolfVotes = this.nightManager.actions.wolfVotes;
             }
             if (me.role === ROLES.WITCH && this.phase === PHASES.NIGHT_WITCH) {
-                 info.wolfTarget = this.nightManager.actions.wolfTarget;
+                 // Only reveal victim if Witch has Antidote (save not used)
+                 if (!this.nightManager.witchState.saveUsed) {
+                     info.wolfTarget = this.nightManager.actions.wolfTarget;
+                 }
             }
             
             publicState.me = info;
@@ -196,12 +191,7 @@ class WerewolfGame {
         
         this.addLog("JUDGE: Game Starting... Roles assigned.");
         
-        // New Sequence: 
-        // 1. Roles assigned -> Notify clients (handled by game update loop? we need to trigger update explicitly or let next tick handle it)
-        // 2. Audio "Confirm Identity" -> Wait 5s
-        // 3. Audio "Close Eyes" -> Wait -> Night
-        
-        const confirmText = "Confirm your identity. You have 5 seconds.";
+        const confirmText = VOICE_MESSAGES.GAME_START_CONFIRM;
         this.addLog(`JUDGE: ${confirmText}`);
         this.triggerVoice(confirmText);
         
@@ -209,7 +199,7 @@ class WerewolfGame {
         if(this.onGameUpdate) this.onGameUpdate(this);
 
         setTimeout(() => {
-             const closeText = "Everyone, close your eyes.";
+             const closeText = VOICE_MESSAGES.GAME_START_CLOSE_EYES;
              this.triggerVoice(closeText);
              this.addLog(`JUDGE: ${closeText}`);
              
@@ -248,45 +238,19 @@ class WerewolfGame {
                 // Check if Seer exists and is alive
                 this.checkActiveRole(ROLES.SEER, () => this.resolveNight());
                 break;
-            case PHASES.DAY_ELECTION_NOMINATION:
-                this.addLog("JUDGE: It is now time for the Sheriff Election. Please declare if you wish to run.");
-                this.electionManager.reset();
-                break;
-            case PHASES.DAY_ELECTION_VOTE:
-                const cIds = this.electionManager.candidates;
-                if (cIds.length === 0) {
-                     this.addLog("JUDGE: No candidates. Cancelling Election.");
-                     setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 2000);
-                } else if (cIds.length === 1) {
-                     this.sheriffId = cIds[0];
-                     this.addLog(`JUDGE: Only one candidate. Player ${this.players[cIds[0]].name} is automatically the Sheriff!`);
-                     setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000);
-                } else {
-                     const names = cIds.map(id => this.players[id].name).join(", ");
-                     this.addLog(`JUDGE: Candidates are: ${names}. Voters, please cast your vote.`);
-                }
-                break;
+
             case PHASES.DAY_ANNOUNCE:
                 this.applyPendingDeaths();
                 break;
             case PHASES.DAY_DISCUSSION:
                 this.dayManager.startDiscussion(this);
                 break;
-            case PHASES.DAY_SHERIFF_SPEECH:
-                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
-                    this.addLog(`JUDGE: Discussion over. Sheriff ${this.players[this.sheriffId].name}, please make your summary speech.`);
-                } else {
-                    this.addLog("JUDGE: Discussion over. (No Sheriff for summary).");
-                    setTimeout(() => this.advancePhase(PHASES.DAY_VOTE), 2000);
-                }
-                break;
+
             case PHASES.DAY_VOTE:
                 this.addLog("JUDGE: Speech over. Please cast your votes now.");
                 this.dayManager.resetVotes(); 
                 break;
-            case PHASES.DAY_SHERIFF_HANDOVER:
-                this.addLog(`JUDGE: Sheriff has died. Please wait for them to handover the badge or tear it.`);
-                break;
+
             case PHASES.DAY_LEAVE_SPEECH:
                 if (this.executedPlayerId && this.players[this.executedPlayerId]) {
                     this.addLog(`JUDGE: ${this.players[this.executedPlayerId].name} has been executed. Please leave your last words.`);
@@ -297,20 +261,9 @@ class WerewolfGame {
         }
     }
 
-    triggerVoice(phase) {
-        let text = "";
-        if (phase === PHASES.NIGHT_WOLVES) text = "It is night. Everyone close your eyes. Wolves, wake up.";
-        else if (phase === PHASES.NIGHT_WITCH) text = "Wolves, close your eyes. Witch, wake up.";
-        else if (phase === PHASES.NIGHT_SEER) text = "Witch, close your eyes. Seer, wake up.";
-        else if (phase === PHASES.DAY_ANNOUNCE) text = "The sun rises. Everyone wake up.";
-        else if (phase === PHASES.DAY_ELECTION_NOMINATION) text = "Election for Sheriff has started. Candidates, step forward.";
-        else if (phase === PHASES.DAY_ELECTION_VOTE) text = "Speeches over. Please vote for Sheriff.";
-        else if (phase === PHASES.DAY_DISCUSSION) text = "Discuss today's events.";
-        else if (phase === PHASES.DAY_SHERIFF_SPEECH) text = "Sheriff, please summarize.";
-        else if (phase === PHASES.DAY_VOTE) text = "Discussion End. Please vote for elimination.";
-        else if (phase === PHASES.DAY_SHERIFF_HANDOVER) text = "Sheriff has died. Pass the badge.";
-        else if (phase === PHASES.DAY_LEAVE_SPEECH) text = "Please leave your last words.";
-        
+    triggerVoice(phaseOrText) {
+        // Look up by phase, or use text directly if not found
+        let text = VOICE_MESSAGES[phaseOrText] || phaseOrText;
         if(text) this.onVoiceCue(text);
     }
 
@@ -335,27 +288,12 @@ class WerewolfGame {
         if (this.pendingDeaths.length > 0) {
             const names = this.pendingDeaths.map(id => this.players[id].name).join(", ");
             this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died: ${names}.`);
-            
-            if (this.sheriffId && this.pendingDeaths.includes(this.sheriffId)) {
-                // Night Death -> Handover -> Next Phase
-                // If Round 1, Next Phase = Election
-                // If Round > 1, Next Phase = Discussion
-                this.pendingNextPhase = (this.round === 1) ? PHASES.DAY_ELECTION_NOMINATION : PHASES.DAY_DISCUSSION;
-                this.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
-                return;
-            }
         } else {
             this.addLog("JUDGE: Sun rises. It was a peaceful night.");
         }
 
         // Proceed to next phase
-        if (this.round === 1) {
-            // Round 1: Deaths -> Election
-             setTimeout(() => this.advancePhase(PHASES.DAY_ELECTION_NOMINATION), 3000);
-        } else {
-            // Round > 1: Deaths -> Discussion
-             setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000);
-        }
+        setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000);
         this.pendingDeaths = [];
     }
     
@@ -383,27 +321,39 @@ class WerewolfGame {
 
     finishGame(winner) {
         this.phase = PHASES.FINISHED;
-        this.addLog(`GAME OVER. ${winner} WIN!`);
+        const winnerText = winner === 'VILLAGERS' ? 'VILLAGERS (村民)' : 'WEREWOLVES (狼人)';
+        this.addLog(`GAME OVER. ${winnerText} WIN! (游戏结束。${winnerText} 胜利！)`);
+    }
+
+    reset() {
+        this.phase = PHASES.WAITING;
+        // ... (reset state)
+        this.round = 0;
+        this.logs = [];
+        this.pendingNextPhase = null;
+        this.executedPlayerId = null;
+        this.pendingDeaths = [];
+        
+        // Reset Managers
+        this.nightManager = new NightManager();
+        this.dayManager = new DayManager();
+        
+        // Reset Players (Keep connections/names, clear roles/status)
+        Object.values(this.players).forEach(p => {
+            p.role = null;
+            p.status = 'alive';
+            p.isReady = false; // Require ready again
+        });
+        
+        this.addLog("JUDGE: Game has been reset. Please get ready. (游戏已重置，请准备。)");
     }
 
     // Handlers delegated to managers
     handleNightAction(playerId, action) {
         return this.nightManager.handleAction(this, playerId, action);
     }
-    handleElectionNominate(playerId) {
-        this.electionManager.handleNominate(this, playerId);
-    }
-    handleElectionPass(playerId) {
-        this.electionManager.handlePass(this, playerId);
-    }
-    handleElectionVote(playerId, targetId) {
-        this.electionManager.handleVote(this, playerId, targetId);
-    }
     handleDayVote(playerId, targetId) {
         this.dayManager.handleVote(this, playerId, targetId);
-    }
-    handleSheriffHandover(playerId, targetId) {
-        this.dayManager.handleSheriffHandover(this, playerId, targetId);
     }
 
     handleEndSpeech(playerId) {

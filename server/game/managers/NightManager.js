@@ -2,35 +2,13 @@ const { ROLES, PHASES } = require('../constants');
 
 class NightManager {
     constructor() {
-        this.reset();
-    }
-
-    reset() {
-        this.actions = {
-            wolfTarget: null,
-            wolfVotes: {}, // wolfId -> targetId
-            witchSaveUsed: this.actions ? this.actions.witchSaveUsed : false, // Persist across nights? No, usage persists
-            witchPoisonUsed: this.actions ? this.actions.witchPoisonUsed : false,
-            witchAction: null, // { type: 'save'|'poison'|'skip', targetId }
-            seerTarget: null,
+        // Game-long state
+        this.witchState = {
+            saveUsed: false,
+            poisonUsed: false
         };
-        // Fix: witch usage should persist game-long, but actions reset nightly.
-        // We'll handle persistence by checking if we are constructing fresh or resetting.
-        // Actually best to store "Used" flags separately or handle carefully.
-        // Let's rely on the Game to persist the "Used" flags or store them here permanently?
-        // In original code: `this.nightActions = { ... witchSaveUsed: false ... }` in constructor.
-        // Then in `resetNightState`, it resets `wolfVotes`, `wolfTarget`, `witchAction`.
-        // It does NOT reset `witchSaveUsed`.
-        
-        // So we need distinct state for "Round State" vs "Game State".
-        // Let's store Game State properties on the instance, and Round State in a resetable object.
-        
-        if (!this.witchState) {
-            this.witchState = {
-                saveUsed: false,
-                poisonUsed: false
-            };
-        }
+        // Nightly state
+        this.resetNight();
     }
 
     resetNight() {
@@ -38,7 +16,8 @@ class NightManager {
             wolfTarget: null,
             wolfVotes: {},
             witchAction: null,
-            seerTarget: null
+            seerTarget: null,
+            seerResult: null // Explicitly field for Seer result
         };
     }
 
