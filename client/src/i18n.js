@@ -77,7 +77,11 @@ const resources = {
         "scanned": "SCANNED",
         "UNKNOWN": "???",
         "settings": "SETTINGS"
-      }
+      },
+      "wolves": "WOLVES",
+      "win_condition": "WIN CONDITION",
+      "side_kill": "SIDE KILL",
+      "wipeout": "WIPEOUT"
     }
   },
   zh: {
@@ -155,7 +159,11 @@ const resources = {
         "WITCH": "女巫",
         "scanned": "已扫描",
         "UNKNOWN": "???"
-      }
+      },
+      "wolves": "狼人数量",
+      "win_condition": "胜利条件",
+      "side_kill": "屠边",
+      "wipeout": "屠城"
     }
   }
 };
