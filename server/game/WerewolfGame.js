@@ -410,8 +410,8 @@ class WerewolfGame {
         let hasDeaths = this.pendingDeaths.length > 0;
 
         if (hasDeaths) {
-             const namesCN = this.pendingDeaths.map(pid => this.players[pid]?.name || '未知').join(', ');
-             announcement = VOICE_MESSAGES.DEATH_ANNOUNCE(namesCN);
+             const indices = this.pendingDeaths.map(pid => `${this.players[pid]?.avatar || '?' }号玩家`).join(', ');
+             announcement = VOICE_MESSAGES.DEATH_ANNOUNCE(indices);
              this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died.`);
         } else {
              announcement = VOICE_MESSAGES.DEATH_PEACEFUL();

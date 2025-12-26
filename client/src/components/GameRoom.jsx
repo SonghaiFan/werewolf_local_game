@@ -130,6 +130,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         hostId: gameState.hostId,
         executedId: gameState.executedId,
         actions,
+        onExit, // Expose exit to context
         inspectedPlayers,
         candidates: gameState.candidates || [],
         wolfTarget: gameState.wolfTarget || gameState.me?.wolfTarget,
@@ -150,9 +151,14 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                 <div className="w-full max-w-6xl h-full flex flex-col relative transition-colors duration-700" data-theme={gameState.phase.startsWith('DAY_') || gameState.phase === 'FINISHED' ? 'light' : 'dark'}>
                     
                     {/* 1. HEADER - Minimalist, No Background */}
-                    <header className="flex justify-between items-end px-4 pt-4 pb-0">
+                    <header className="flex justify-between items-start px-4 pt-4 pb-0">
                         <div className="flex flex-col">
-                             <div className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1 opacity-70">Room {roomId}</div>
+                             <div className="flex items-center gap-2">
+                                <div className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1 opacity-70">Room {roomId}</div>
+                                <button onClick={onExit} className="text-[10px] uppercase tracking-wider text-danger/50 hover:text-danger mb-1 transition-colors flex items-center gap-1">
+                                    <span>•</span> {t('leave_room', 'Leave')}
+                                </button>
+                             </div>
                              <h1 className="text-2xl font-black text-ink tracking-tight">Werewolf</h1>
                         </div>
                         

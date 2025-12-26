@@ -17,16 +17,16 @@ const VOICE_MESSAGES = {
     GAME_START_CLOSE_EYES: "天黑请闭眼。", 
     
     // Dynamic Constructors
-    DEATH_ANNOUNCE: (names) => `昨晚死亡的玩家是 ${names}。`,
+    DEATH_ANNOUNCE: (indices) => `昨晚死亡的是 ${indices}。`,
     DEATH_PEACEFUL: () => "昨晚是个平安夜。",
     
-    DEATH_LAST_WORDS: (announcement) => `${announcement} 请昨晚死亡的玩家发表遗言。`,
+    DEATH_LAST_WORDS: (announcement) => `${announcement} 请发表遗言。`,
     NIGHT_DISCUSSION: (announcement) => `${announcement} 请开始讨论昨晚发生的事情。`,
     
-    BANISH_LEAVE_SPEECH: (idOrCode) => `${idOrCode}号玩家出局，请${idOrCode}号玩家发表遗言。`,
-    BANISH_GENERIC: (idOrCode) => `${idOrCode}号玩家出局。`,
+    BANISH_LEAVE_SPEECH: (index) => `${index}号玩家出局，请发表遗言。`,
+    BANISH_GENERIC: (index) => `${index}号玩家出局。`,
     
-    NEXT_SPEAKER: (idOrName) => `请${idOrName}号玩家发言`,
+    NEXT_SPEAKER: (index) => `请${index}号玩家发言。`,
 };
 
 module.exports = VOICE_MESSAGES;
