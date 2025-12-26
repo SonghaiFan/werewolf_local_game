@@ -27,6 +27,9 @@ const VOICE_MESSAGES = {
     BANISH_GENERIC: (index) => `${index}号玩家出局。`,
     
     NEXT_SPEAKER: (index) => `请${index}号玩家发言。`,
+
+    WINNER_VILLAGERS: "游戏结束。好人阵营胜利。",
+    WINNER_WEREWOLVES: "游戏结束。狼人阵营胜利。",
 };
 
 module.exports = VOICE_MESSAGES;

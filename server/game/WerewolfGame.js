@@ -521,6 +521,11 @@ class WerewolfGame {
         this.winner = winner;
         const winnerText = winner === 'VILLAGERS' ? 'VILLAGERS (村民)' : 'WEREWOLVES (狼人)';
         this.addLog(`GAME OVER. ${winnerText} WIN! (游戏结束。${winnerText} 胜利！)`);
+        
+        // Play Winner Voice
+        const voiceKey = winner === 'VILLAGERS' ? 'WINNER_VILLAGERS' : 'WINNER_WEREWOLVES';
+        this.onVoiceCue(VOICE_MESSAGES[voiceKey]);
+
         if(this.onGameUpdate) this.onGameUpdate(this);
     }
 
