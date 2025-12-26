@@ -4,7 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
 const os = require('os');
-const { WerewolfGame, PHASES } = require('./werewolfLogic');
+const { WerewolfGame, PHASES } = require('./game');
 
 // Helper to get Local LAN IP
 function getLocalExternalIP() {

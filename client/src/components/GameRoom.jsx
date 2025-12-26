@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../socket';
-import Sidebar from './Sidebar';
+import ControlPanel from './ControlPanel';
 import PlayerGrid from './PlayerGrid';
 
 export default function GameRoom({ roomId, myId, onExit }) {
@@ -153,8 +153,8 @@ export default function GameRoom({ roomId, myId, onExit }) {
     const mePlayer = gameState.players[myId] || { ...gameState.me, name: 'YOU', id: myId, avatar: 1 };
     const otherPlayers = Object.values(gameState.players).filter(p => p.id !== myId);
 
-    // Sidebar props object for reuse
-    const sidebarProps = {
+    // ControlPanel props object for reuse
+    const ControlPanelProps = {
         roomId, serverIP, logs: gameState.logs, phase: gameState.phase,
         role: gameState.me?.role, myStatus: gameState.me?.status, election: gameState.election,
         isReady: gameState.players[myId]?.isReady || false,
@@ -233,7 +233,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
 
                 {/* 3. LOGS (Middle Band) */}
                 <section className="h-[80px] w-full z-10">
-                    <Sidebar {...sidebarProps} actions={{...sidebarProps.actions, onlyLogs: true}} />
+                    <ControlPanel {...ControlPanelProps} actions={{...ControlPanelProps.actions, onlyLogs: true}} />
                 </section>
 
                 {/* 4. FOOTER (Me + Actions) */}
@@ -255,7 +255,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
 
                     {/* Action Area */}
                     <div className="h-full">
-                        <Sidebar {...sidebarProps} actions={{...sidebarProps.actions, onlyActions: true}} />
+                        <ControlPanel {...ControlPanelProps} actions={{...ControlPanelProps.actions, onlyActions: true}} />
                     </div>
                 </footer>
             </div>

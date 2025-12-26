@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus, election, isReady, players, isHost, actions }) {
+export default function ControlPanel({ roomId, serverIP, logs, phase, role, myStatus, election, isReady, players, isHost, actions }) {
     const logsEndRef = useRef(null);
     const [showQRCode, setShowQRCode] = useState(false);
     
@@ -156,15 +156,15 @@ export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus,
         if (phase === 'DAY_ELECTION_NOMINATION') {
              // We need to know if I have acted.
              // election.participants is array of IDs.
-             // We need my ID. Sidebar doesn't have `myId` prop directly... wait, GameRoom passes it?
-             // Checking GameRoom: <Sidebar ... />. It passes `roomId`, `serverIP`, `logs`, `phase`, `role`, `myStatus`, `election`, `actions`.
+             // We need my ID. ControlPanel doesn't have `myId` prop directly... wait, GameRoom passes it?
+             // Checking GameRoom: <ControlPanel ... />. It passes `roomId`, `serverIP`, `logs`, `phase`, `role`, `myStatus`, `election`, `actions`.
              // It does NOT pass `myId`. 
              // BAD: I need my ID to know if I have voted.
-             // QUICK FIX: Pass `myId` to Sidebar in GameRoom. (Will do in next step).
+             // QUICK FIX: Pass `myId` to ControlPanel in GameRoom. (Will do in next step).
              // For now assuming we have `myId` in props (I will add it).
              
              // Wait, let's verify if GameRoom passes myId.
-             // Step 380: `Sidebar` usage: `<Sidebar ... />` no `myId`.
+             // Step 380: `ControlPanel` usage: `<ControlPanel ... />` no `myId`.
              
              // I will assume `actions` prop can pass the check, or I just render buttons and let Server ignore?
              // Use UI state to hide after click? Optimistic UI?
@@ -256,7 +256,7 @@ export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus,
         if (phase === 'DAY_DISCUSSION') {
              const isSheriff = (role && false) || (myStatus && false); // Logic needs checking props. 
              // We need to know if I am sheriff.
-             // We didn't pass "isSheriff" explicitly to Sidebar, but we have "election" props? No.
+             // We didn't pass "isSheriff" explicitly to ControlPanel, but we have "election" props? No.
              // Best way: GameRoom passes "amISheriff".
              // For now, let's use the ADMIN/SKIP button below for everyone, 
              // BUT we can custom render if we knew. 
@@ -293,12 +293,12 @@ export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus,
         // SHERIFF HANDOVER
         if (phase === 'DAY_SHERIFF_HANDOVER') {
              // We need to know if I am the sheriff (dead or alive, but effectively dead)
-             // Sidebar props don't explicitly have isSheriff. 
+             // ControlPanel props don't explicitly have isSheriff. 
              // IMPORTANT: We need access to `selectedTarget` (which is in GameRoom) OR we can use built-in selector?
              // GameRoom passes `gameState.me.isSheriff`. Wait, `gameState.me` in `getPlayerState` has `isSheriff`?
              // Let's check logic: `getPublicState` adds `isSheriff` to public players. `getPlayerState` wraps `me`. 
              // We need access to "Am I Sheriff?" here. 
-             // Since `myStatus` is passed, but `isSheriff` is not passed as a direct prop to Sidebar in GameRoom (except inside `role` maybe?).
+             // Since `myStatus` is passed, but `isSheriff` is not passed as a direct prop to ControlPanel in GameRoom (except inside `role` maybe?).
              // `GameRoom.jsx` passes: `role={gameState.me?.role}`. 
              // We need `isSheriff`. 
              
@@ -317,17 +317,17 @@ export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus,
                         <button className="btn-brutal bg-accent text-black" onClick={() => actions.onSheriffHandover(null)}>TEAR BADGE</button>
                         <button className="btn-brutal" onClick={() => {
                              // This relies on GameRoom having a selectedTarget state that we can't see here easily?
-                             // Actually Sidebar DOES NOT have access to `selectedTarget` from GameRoom.
-                             // We need to change GameRoom to pass `selectedTarget` OR Sidebar to `request` handover.
+                             // Actually ControlPanel DOES NOT have access to `selectedTarget` from GameRoom.
+                             // We need to change GameRoom to pass `selectedTarget` OR ControlPanel to `request` handover.
                              // But wait, `actions.onSheriffHandover` in `GameRoom` calls `socket.emit` with `roomId`. 
                              // It doesn't use `selectedTarget` from GameRoom state in the wrapper I wrote earlier?
                              // Correction: Step 315 code: `const handleSheriffHandover = (targetId) => ...`.
-                             // So Sidebar needs to Provide the ID. But Sidebar doesn't know who is selected on Grid.
+                             // So ControlPanel needs to Provide the ID. But ControlPanel doesn't know who is selected on Grid.
                              
                              // FIX: Simple "Pass to..." requires UI to pick. 
                              // Alternative: "PASS TO SELECTED" button where GameRoom handles the ID?
                              // We should update GameRoom wrapper to use its `selectedTarget` if no arg provided?
-                             // Let's assume we update Sidebar to call `actions.onSheriffHandover('SELECTED_TARGET')` and GameRoom handles it.
+                             // Let's assume we update ControlPanel to call `actions.onSheriffHandover('SELECTED_TARGET')` and GameRoom handles it.
                              actions.onSheriffHandover('USE_SELECTED');
                         }}>PASS TO SELECTED</button>
                      </div>
@@ -368,8 +368,8 @@ export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus,
     // If onlyLogs is true, we ONLY render the logs
     if (actions.onlyLogs) { 
         // Note: passing flags via 'actions' prop is a hack, but keeps signature same. 
-        // Better to destructure from props but Sidebar signature is fixed in GameRoom usage.
-        // Actually I can just add props to Sidebar function signature.
+        // Better to destructure from props but ControlPanel signature is fixed in GameRoom usage.
+        // Actually I can just add props to ControlPanel function signature.
         return (
             <div className={`
                 flex-grow font-mono text-[13px] list-none overflow-y-auto border-y-2 border-[#333] bg-[#111] p-2.5 h-full
@@ -384,7 +384,7 @@ export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus,
         );
     }
 
-    // Legacy / Fallback View (Full Sidebar)
+    // Legacy / Fallback View (Full ControlPanel)
     return (
         <aside className="border-[5px] border-ink p-5 bg-black flex flex-col relative h-full overflow-hidden">
             
