@@ -4,25 +4,31 @@
    THEME TOKENS
    ============================================ */
 @theme {
-  --color-bg: #0a0a0a;
-  --color-ink: #ffffff;
-  --color-accent: #e1ff00;
-  --color-danger: #ff4d00;
-  --font-grotesk: "Space Grotesk", sans-serif;
-  --font-mono: "Space Mono", monospace;
+  --color-bg: #121212;
+  --color-surface: #1e1e1e;
+  --color-surface-hover: #2a2a2a;
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #a1a1aa;
+  --color-accent: #3b82f6; /* Soft Blue */
+  --color-accent-hover: #2563eb;
+  --color-danger: #ef4444;
+  --color-success: #22c55e;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-mono: "Fira Code", monospace;
+  
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-full: 9999px;
 }
 
 /* ============================================
    BASE STYLES
    ============================================ */
 @layer base {
-  :root {
-    --grain-opacity: 0.15;
-  }
-  
   body {
-    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] 
-           flex items-center justify-center relative antialiased;
+    @apply bg-bg text-text-primary font-sans antialiased w-screen h-[100dvh] 
+           flex items-center justify-center overflow-hidden;
   }
 }
 
@@ -32,195 +38,47 @@
 @layer components {
   /* App Container */
   .werewolf-app {
-    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] 
-           flex items-center justify-center relative;
+    @apply bg-bg text-text-primary font-sans w-full h-full 
+           flex items-center justify-center relative overflow-hidden;
   }
 
-  /* Brutalist Button */
-  .btn-brutal {
-    @apply w-full p-3 md:p-5 bg-danger text-white border-0 font-grotesk 
-           text-lg md:text-2xl font-bold uppercase tracking-tight
-           transition-all duration-150 ease-out cursor-pointer
-           shadow-[3px_3px_0px_rgba(0,0,0,0.3)] md:shadow-[4px_4px_0px_rgba(0,0,0,0.3)];
-    clip-path: polygon(5% 0, 100% 0, 95% 100%, 0 100%);
+  /* Primary Button */
+  .btn-primary {
+    @apply w-full px-4 py-3 bg-accent text-white border-none font-sans 
+           text-base font-medium rounded-lg shadow-sm
+           transition-all duration-200 ease-out cursor-pointer
+           hover:bg-accent-hover active:scale-[0.98]
+           disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
   }
 
-  .btn-brutal:hover {
-    @apply brightness-110 translate-x-[-2px] translate-y-[-2px]
-           shadow-[6px_6px_0px_rgba(0,0,0,0.4)];
+  .btn-secondary {
+    @apply w-full px-4 py-3 bg-surface text-text-secondary border border-transparent 
+           font-sans text-base font-medium rounded-lg
+           transition-all duration-200 ease-out cursor-pointer
+           hover:bg-surface-hover hover:text-white active:scale-[0.98];
   }
 
-  .btn-brutal:active {
-    @apply scale-[0.98] brightness-125 
-           shadow-[2px_2px_0px_rgba(0,0,0,0.3)];
+  .btn-ghost {
+    @apply px-3 py-1.5 text-sm text-text-secondary hover:text-white rounded-md
+           transition-colors duration-200 cursor-pointer;
   }
 
-  .btn-brutal:disabled {
-    @apply bg-[#333] text-[#666] cursor-not-allowed 
-           transform-none shadow-none brightness-100;
+  /* Input */
+  .input-primary {
+    @apply w-full bg-surface border border-transparent text-text-primary 
+           p-3 rounded-lg font-sans text-base outline-none 
+           transition-all duration-200 ease-in-out
+           placeholder:text-text-secondary focus:ring-2 focus:ring-accent/50 focus:bg-surface-hover;
   }
-
-  .btn-start {
-    @apply bg-accent text-black;
-  }
-
-  /* Brutalist Input */
-  .input-brutal {
-    @apply w-full bg-[#111] border-2 border-[#333] text-ink 
-           p-4 font-mono text-base outline-none 
-           transition-all duration-200 ease-in-out;
-  }
-
-  .input-brutal:focus {
-    @apply border-accent bg-black shadow-[0_0_0_2px_rgba(225,255,0,0.1)];
-  }
-
-  .input-brutal::placeholder {
-    @apply text-[#555] italic;
+  
+  /* Card */
+  .card {
+    @apply bg-surface rounded-xl p-6 shadow-xl border border-white/5;
   }
 }
 
 /* ============================================
-   VISUAL EFFECTS
-   ============================================ */
-
-/* Film Grain Overlay */
-.grain-overlay {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 100;
-  opacity: var(--grain-opacity);
-  mix-blend-mode: overlay;
-}
-
-/* CRT Scanline Effect */
-.scanline {
-  width: 100%;
-  height: 2px;
-  background: linear-gradient(
-    to bottom,
-    transparent 0%,
-    rgba(225, 255, 0, 0.3) 50%,
-    transparent 100%
-  );
-  position: absolute;
-  top: 0;
-  left: 0;
-  z-index: 5;
-  animation: scan 4s linear infinite;
-  pointer-events: none;
-  filter: blur(0.5px);
-}
-
-@keyframes scan {
-  0% { 
-    top: 0; 
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% { 
-    top: 100%; 
-    opacity: 0;
-  }
-}
-
-/* Photocopy Grid Texture */
-.photocopy-texture {
-  position: absolute;
-  inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 20px 20px;
-  pointer-events: none;
-  opacity: 0.5;
-}
-
-/* Glitch Text Effect */
-.glitch-text {
-  position: relative;
-  display: inline-block;
-}
-
-.glitch-text::before,
-.glitch-text::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-}
-
-.glitch-text:hover::before {
-  color: var(--color-danger);
-  animation: glitch-1 0.3s infinite;
-  opacity: 0.8;
-  z-index: -1;
-}
-
-.glitch-text:hover::after {
-  color: var(--color-accent);
-  animation: glitch-2 0.3s infinite;
-  opacity: 0.8;
-  z-index: -2;
-}
-
-@keyframes glitch-1 {
-  0%, 100% { 
-    transform: translate(0); 
-    clip-path: inset(0 0 0 0);
-  }
-  20% { 
-    transform: translate(-3px, 2px); 
-    clip-path: inset(10% 0 85% 0);
-  }
-  40% { 
-    transform: translate(-2px, -3px); 
-    clip-path: inset(80% 0 10% 0);
-  }
-  60% { 
-    transform: translate(3px, 1px); 
-    clip-path: inset(50% 0 30% 0);
-  }
-  80% { 
-    transform: translate(2px, -2px); 
-    clip-path: inset(30% 0 70% 0);
-  }
-}
-
-@keyframes glitch-2 {
-  0%, 100% { 
-    transform: translate(0); 
-    clip-path: inset(0 0 0 0);
-  }
-  20% { 
-    transform: translate(2px, -2px); 
-    clip-path: inset(20% 0 60% 0);
-  }
-  40% { 
-    transform: translate(-3px, 3px); 
-    clip-path: inset(60% 0 20% 0);
-  }
-  60% { 
-    transform: translate(1px, -3px); 
-    clip-path: inset(40% 0 40% 0);
-  }
-  80% { 
-    transform: translate(-2px, 2px); 
-    clip-path: inset(70% 0 10% 0);
-  }
-}
-
-/* ============================================
-   UTILITY CLASSES
+   UTILITIES & ANIMATIONS
    ============================================ */
 
 /* Hide Scrollbar */
@@ -233,7 +91,12 @@
   display: none;
 }
 
-/* Smooth Transitions */
-.transition-smooth {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Fade In */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
 }

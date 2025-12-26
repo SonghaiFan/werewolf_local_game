@@ -49,24 +49,23 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
             const isVillagersWin = winner === 'VILLAGERS';
             
             // Construct message
-            // We use simple fallback if t() keys missing, but assuming they exist from context
             const winnerName = isVillagersWin ? t('roles.VILLAGER') : t('roles.WOLF');
             
             return (
-                <div className="flex flex-col items-center justify-center h-full w-full animate-in zoom-in duration-300">
-                    <div className={`p-5 border-4 border-current mb-4 text-center ${isVillagersWin ? 'bg-accent text-black' : 'bg-danger text-white'}`}>
-                        <div className="text-sm font-mono font-bold uppercase mb-1">{t('game_over')}</div>
-                        <div className="text-3xl font-black uppercase leading-none tracking-tighter">
+                <div className="flex flex-col items-center justify-center h-full w-full animate-in zoom-in duration-300 gap-4">
+                    <div className={`p-6 rounded-xl text-center shadow-lg ${isVillagersWin ? 'bg-success/20 text-success border border-success/30' : 'bg-danger/20 text-danger border border-danger/30'}`}>
+                        <div className="text-xs font-bold uppercase mb-2 tracking-widest">{t('game_over')}</div>
+                        <div className="text-2xl font-bold uppercase">
                             {winnerName} {t('win')}!
                         </div>
                     </div>
                     
                     {isHost && (
-                        <button className="btn-brutal bg-white text-black pl-8 pr-8 text-lg" onClick={actions.onPlayAgain}>
+                        <button className="btn-primary w-auto px-8" onClick={actions.onPlayAgain}>
                             {t('play_again')}
                         </button>
                     )}
-                    {!isHost && <div className="text-xs text-[#666]">{t('waiting_for_host')}</div>}
+                    {!isHost && <div className="text-sm text-text-secondary">{t('waiting_for_host')}</div>}
                 </div>
             );
        }
@@ -76,7 +75,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         const isMyLastWords = phase === 'DAY_LEAVE_SPEECH' && executedId === myId;
         
         if (myStatus === 'dead' && !isMyLastWords) {
-             return <div className="mt-auto"><button className="btn-brutal" disabled>{t('you_are_dead')}</button></div>;
+             return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed w-full" disabled>{t('you_are_dead')}</button></div>;
         }
 
         if (phase === 'WAITING') {
@@ -89,18 +88,18 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              const joinUrl = `${window.location.protocol}//${effectiveHost}:${window.location.port}/?room=${roomId}`;
              
              return (
-                 <div className="mt-auto flex flex-col gap-2.5">
+                 <div className="mt-auto flex flex-col gap-3">
                      {showQRCode && (
-                        <div className="absolute inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-5 text-center">
-                            <div className="font-mono text-accent mb-5 text-lg">{t('scan_to_join')}</div>
-                            <div className="bg-white p-2.5 border-2 border-accent">
-                                <QRCodeSVG value={joinUrl} size={150} level="H" />
+                        <div className="absolute inset-0 bg-surface/95 backdrop-blur z-50 flex flex-col items-center justify-center p-6 text-center animate-fade-in">
+                            <div className="text-accent font-bold mb-6 text-lg tracking-wide">{t('scan_to_join')}</div>
+                            <div className="bg-white p-4 rounded-xl shadow-2xl">
+                                <QRCodeSVG value={joinUrl} size={160} level="H" />
                             </div>
-                            <div className="font-mono text-xs text-[#666] mt-5 break-all">
+                            <div className="font-mono text-xs text-text-secondary mt-6 break-all bg-black/20 px-3 py-1 rounded">
                                 {joinUrl}
                             </div>
                             <button 
-                                className="mt-5 btn-brutal border-white text-white hover:bg-white hover:text-black"
+                                className="mt-6 btn-secondary w-full max-w-xs"
                                 onClick={() => setShowQRCode(false)}
                             >
                                 {t('close')}
@@ -111,7 +110,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                      {/* Ready Toggle - Only for non-host */}
                      {!isHost && (
                          <button 
-                             className={`btn-brutal w-full ${isReady ? 'bg-[#333] text-[#888]' : 'bg-transparent border-white text-white animate-pulse'}`} 
+                             className={`w-full py-3 rounded-lg font-medium transition-all ${isReady ? 'bg-surface text-text-secondary border border-white/5' : 'btn-primary animate-pulse'}`} 
                              onClick={actions.onPlayerReady}
                          >
                              {isReady ? t('waiting_for_others') : t('click_when_ready')}
@@ -120,72 +119,59 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
 
                      {/* Host Start Button & Settings */}
                      {isHost && (
-                        <div className="pt-2.5 border-t border-[#333]">
+                        <div className="pt-3 border-t border-white/5">
                              {(() => {
                                  const canStart = players && Object.values(players).every(p => p.id === myId || p.isReady);
-                                 
-                                 // Settings State (Defined inside render for simplicity or moved up?)
-                                 // React Hooks must be at top level. Let's rely on component state defined at top.
-                                 // Since we can't add hooks here, we'll assume we added them at the top.
-                                 // WAIT: We need to add the state at the top of the component.
-                                 // I will use a multi-step approach or just assume I can edit the whole file?
-                                 // I'm in a replace_content block. I should have added the state first? 
-                                 // Actually, I can use a local component or just standard React state.
-                                 // Let's modify the top of the file to add state first in a separate call? 
-                                 // No, I can try to do it all if I edit the validation logic later.
-                                 // But for now, let's just add the UI here and refer to state that I will add in the next step.
-                                 
-                                 // ACTUAL PLAN: I will replace the Host block to include the UI. 
-                                 // AND I will need to add the state at the top. 
-                                 // I will do the state addition in a separate call to be safe using multi_replace.
                                  
                                  return (
                                     <div className="w-full">
                                          {/* Simple Settings Toggle */}
-                                         <div className="mb-2 flex items-center justify-between text-xs text-[#666]">
-                                             <span>{t('settings')}</span>
+                                         <div className="mb-3 flex items-center justify-between text-xs text-text-secondary">
+                                             <span className="uppercase tracking-wider font-bold">{t('settings')}</span>
                                              <button 
-                                                 className={`px-2 py-0.5 border ${showSettings ? 'bg-white text-black border-white' : 'border-[#444] text-[#888]'}`}
+                                                 className={`w-6 h-6 flex items-center justify-center rounded-full transition-colors ${showSettings ? 'bg-white text-black' : 'bg-surface hover:bg-surface-hover text-text-secondary'}`}
                                                  onClick={() => setShowSettings(!showSettings)}
                                              >
-                                                 {showSettings ? '-' : '+'}
+                                                 {showSettings ? '−' : '+'}
                                              </button>
                                          </div>
 
                                          {showSettings && (
-                                             <div className="mb-2.5 p-2 bg-[#1a1a1a] border border-[#333] text-xs">
-                                                 <div className="flex items-center justify-between mb-1">
-                                                     <label>Wolves: {gameConfig.wolves}</label>
-                                                     <div className="flex gap-1">
-                                                         <button className="px-1.5 bg-[#333]" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
-                                                         <button className="px-1.5 bg-[#333]" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
-                                                     </div>
-                                                 </div>
-                                                 <div className="flex items-center gap-2 mb-1">
-                                                     <input 
-                                                         type="checkbox" 
-                                                         checked={gameConfig.seer} 
-                                                         onChange={e => setGameConfig(p => ({...p, seer: e.target.checked}))}
-                                                     />
-                                                     <label>Seer</label>
-                                                 </div>
-                                                 <div className="flex items-center gap-2 mb-2">
-                                                     <input 
-                                                         type="checkbox" 
-                                                         checked={gameConfig.witch} 
-                                                         onChange={e => setGameConfig(p => ({...p, witch: e.target.checked}))}
-                                                     />
-                                                     <label>Witch</label>
-                                                 </div>
-                                                 
-                                                 <div className="pt-1 border-t border-[#333] text-[#888]">
-                                                     Villagers: {playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0)}
-                                                 </div>
-                                             </div>
+                                              <div className="mb-3 p-3 bg-white/5 rounded-lg text-xs border border-white/5 space-y-2 animate-in slide-in-from-top-2">
+                                                  <div className="flex items-center justify-between">
+                                                      <label className="text-text-secondary">Wolves: {gameConfig.wolves}</label>
+                                                      <div className="flex gap-2">
+                                                          <button className="w-5 h-5 flex items-center justify-center bg-white/10 rounded hover:bg-white/20" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>−</button>
+                                                          <button className="w-5 h-5 flex items-center justify-center bg-white/10 rounded hover:bg-white/20" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
+                                                      </div>
+                                                  </div>
+                                                  <div className="flex items-center gap-2">
+                                                      <input 
+                                                          type="checkbox" 
+                                                          className="rounded border-white/20 bg-black/20 text-accent focus:ring-accent"
+                                                          checked={gameConfig.seer} 
+                                                          onChange={e => setGameConfig(p => ({...p, seer: e.target.checked}))}
+                                                      />
+                                                      <label className="text-text-secondary">Seer</label>
+                                                  </div>
+                                                  <div className="flex items-center gap-2">
+                                                      <input 
+                                                          type="checkbox" 
+                                                          className="rounded border-white/20 bg-black/20 text-accent focus:ring-accent"
+                                                          checked={gameConfig.witch} 
+                                                          onChange={e => setGameConfig(p => ({...p, witch: e.target.checked}))}
+                                                      />
+                                                      <label className="text-text-secondary">Witch</label>
+                                                  </div>
+                                                  
+                                                  <div className="pt-2 border-t border-white/10 text-text-secondary">
+                                                      Villagers: {playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0)}
+                                                  </div>
+                                              </div>
                                          )}
 
                                          <button 
-                                            className={`btn-brutal bg-accent text-black w-full ${(!canStart || (playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0) < 0)) && 'opacity-50 cursor-not-allowed'}`}
+                                            className={`btn-primary w-full ${(!canStart || (playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0) < 0)) && 'opacity-50 cursor-not-allowed'}`}
                                             onClick={() => { 
                                                 if(canStart && (playerCount - gameConfig.wolves - (gameConfig.seer?1:0) - (gameConfig.witch?1:0) >= 0)) {
                                                     actions.onStartGame(gameConfig);
@@ -202,12 +188,12 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                      )}
                      
                      <button 
-                        className="btn-brutal bg-[#222] border-[#444] text-xs py-2 hover:bg-[#333]"
+                        className="btn-ghost text-xs w-full py-2 mt-2"
                         onClick={() => setShowQRCode(true)}
                      >
                         {t('show_qr')}
                      </button>
-                     <p className="mt-2 text-xs text-[#666] text-center">{t('lobby')}</p>
+                     <p className="mt-1 text-[10px] text-text-secondary/50 text-center uppercase tracking-widest">{t('lobby')}</p>
                  </div>
              );
         }
@@ -217,12 +203,10 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         // GENERIC NIGHT WAIT
         if (phase.startsWith('NIGHT_') && role !== 'WOLF' && role !== 'SEER' && role !== 'WITCH') {
              return (
-                 <div className="mt-auto">
-                    <div className="font-mono text-[11px] mb-2.5 text-[#444] animate-pulse">
-                        &gt;&gt; {t('night_falls')}
-                    </div>
-                    <p className="text-xs text-[#666]">{t('wait_turn')}</p>
-                 </div>
+                  <div className="mt-auto text-center p-4">
+                      <div className="text-sm font-medium text-text-secondary mb-1 animate-pulse">{t('night_falls')}...</div>
+                      <p className="text-xs text-text-secondary opacity-60">{t('wait_turn')}</p>
+                  </div>
              );
         }
 
@@ -232,28 +216,28 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                  if (hasActed) {
                      return (
                          <div className="mt-auto">
-                              <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                                 &gt;&gt; {t('wolf_wake')}
+                              <div className="text-xs font-bold mb-2 text-danger animate-pulse flex items-center gap-2">
+                                 <div className="w-2 h-2 rounded-full bg-danger"></div> {t('wolf_wake')}
                               </div>
-                              <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                              <button className="btn-secondary opacity-50 cursor-not-allowed w-full" disabled>{t('waiting_for_others')}</button>
                          </div>
                      );
                  }
                  return (
-                     <div className="mt-auto">
-                         <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                            &gt;&gt; {t('wolf_wake')}
-                         </div>
-                         <button className="btn-brutal" onClick={actions.onNightAction}>{t('kill_target')}</button>
-                     </div>
+                      <div className="mt-auto">
+                          <div className="text-xs font-bold mb-2 text-danger animate-pulse flex items-center gap-2">
+                             <div className="w-2 h-2 rounded-full bg-danger"></div> {t('wolf_wake')}
+                          </div>
+                          <button className="btn-primary bg-danger hover:bg-danger/90 border-transparent text-white" onClick={actions.onNightAction}>{t('kill_target')}</button>
+                      </div>
                  );
             }
             // Others
             return (
-                 <div className="mt-auto">
-                     <button className="btn-brutal opacity-50" disabled>{t('night_falls')}...</button>
-                     <p className="mt-2.5 text-xs text-[#666]">{t('wolves_hunting')}</p>
-                 </div>
+                  <div className="mt-auto text-center p-4">
+                      <div className="text-sm font-medium text-text-secondary mb-1">{t('night_falls')}...</div>
+                      <p className="text-xs text-text-secondary opacity-60">{t('wolves_hunting')}</p>
+                  </div>
             );
         }
 
@@ -263,31 +247,31 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                  if (hasActed) {
                      return (
                         <div className="mt-auto">
-                            <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                               &gt;&gt; {t('witch_wake')}
+                            <div className="text-xs font-bold mb-2 text-purple-400 animate-pulse flex items-center gap-2">
+                               <div className="w-2 h-2 rounded-full bg-purple-400"></div> {t('witch_wake')}
                             </div>
-                            <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                            <button className="btn-secondary opacity-50 cursor-not-allowed w-full" disabled>{t('waiting_for_others')}</button>
                         </div>
                      );
                  }
                  return (
-                    <div className="mt-auto">
-                        <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                           &gt;&gt; {t('witch_wake')}
+                    <div className="mt-auto space-y-3">
+                        <div className="text-xs font-bold mb-2 text-purple-400 animate-pulse flex items-center gap-2">
+                           <div className="w-2 h-2 rounded-full bg-purple-400"></div> {t('witch_wake')}
                         </div>
-                        <div className="flex flex-col gap-2.5">
-                            <button className="btn-brutal" onClick={() => actions.onWitchAction('save')}>{t('save_victim')}</button>
-                            <button className="btn-brutal bg-[#a020f0]" onClick={() => actions.onWitchAction('poison')}>{t('poison_target')}</button>
-                            <button className="flex-1 p-2.5 bg-[#222] border border-[#444] text-white font-mono text-[10px] cursor-pointer hover:bg-[#333]" onClick={() => actions.onWitchAction('skip')}>{t('do_nothing')}</button>
+                        <div className="flex flex-col gap-2">
+                            <button className="btn-primary bg-purple-600 hover:bg-purple-500 border-transparent text-white" onClick={() => actions.onWitchAction('save')}>{t('save_victim')}</button>
+                            <button className="btn-primary bg-purple-800 hover:bg-purple-700 border-transparent text-white" onClick={() => actions.onWitchAction('poison')}>{t('poison_target')}</button>
+                            <button className="btn-secondary text-xs py-2" onClick={() => actions.onWitchAction('skip')}>{t('do_nothing')}</button>
                         </div>
                     </div>
                  );
             }
             return (
-                 <div className="mt-auto">
-                     <button className="btn-brutal opacity-50" disabled>SLEEPING...</button>
-                     <p className="mt-2.5 text-xs text-[#666]">{t('witch_active')}</p>
-                 </div>
+                  <div className="mt-auto text-center p-4">
+                      <div className="text-sm font-medium text-text-secondary mb-1">...</div>
+                      <p className="text-xs text-text-secondary opacity-60">{t('witch_active')}</p>
+                  </div>
             );
         }
 
@@ -297,27 +281,27 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                  if (hasActed) {
                      return (
                         <div className="mt-auto">
-                            <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                               &gt;&gt; {t('seer_wake')}
+                            <div className="text-xs font-bold mb-2 text-accent animate-pulse flex items-center gap-2">
+                               <div className="w-2 h-2 rounded-full bg-accent"></div> {t('seer_wake')}
                             </div>
-                            <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                            <button className="btn-secondary opacity-50 cursor-not-allowed w-full" disabled>{t('waiting_for_others')}</button>
                         </div>
                      );
                  }
                  return (
                     <div className="mt-auto">
-                        <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                           &gt;&gt; {t('seer_wake')}
+                        <div className="text-xs font-bold mb-2 text-accent animate-pulse flex items-center gap-2">
+                           <div className="w-2 h-2 rounded-full bg-accent"></div> {t('seer_wake')}
                         </div>
-                        <button className="btn-brutal" onClick={actions.onNightAction}>{t('check_identity')}</button>
+                        <button className="btn-primary" onClick={actions.onNightAction}>{t('check_identity')}</button>
                     </div>
                  );
             }
             return (
-                 <div className="mt-auto">
-                     <button className="btn-brutal opacity-50" disabled>SLEEPING...</button>
-                     <p className="mt-2.5 text-xs text-[#666]">{t('seer_active')}</p>
-                 </div>
+                  <div className="mt-auto text-center p-4">
+                      <div className="text-sm font-medium text-text-secondary mb-1">...</div>
+                      <p className="text-xs text-text-secondary opacity-60">{t('seer_active')}</p>
+                  </div>
             );
         }
 
@@ -330,28 +314,28 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              if (isMeDying) {
                  return (
                     <div className="mt-auto">
-                        <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                           &gt;&gt; {t('last_words')}
+                        <div className="text-xs font-bold mb-2 text-danger animate-pulse flex items-center gap-2">
+                           <div className="w-2 h-2 rounded-full bg-danger"></div> {t('last_words')}
                         </div>
-                        <p className="text-xs text-[#666] mb-2">{t('you_executed')}</p>
-                        <button className="btn-brutal" onClick={actions.onEndSpeech}>{t('end_speech')}</button>
+                        <p className="text-xs text-text-secondary mb-3">{t('you_executed')}</p>
+                        <button className="btn-secondary border border-danger/20 text-danger hover:bg-danger/10 w-full" onClick={actions.onEndSpeech}>{t('end_speech')}</button>
                     </div>
                  );
              }
 
              return (
                  <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                        &gt;&gt; {t('execution')}
+                     <div className="text-xs font-bold mb-2 text-danger animate-pulse flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-danger"></div> {t('execution')}
                      </div>
-                     <p className="text-xs text-[#666]">
+                     <p className="text-xs text-text-secondary">
                         {t('leaving_words', { name: players?.[executedId]?.name || 'Player' })}
                      </p>
                      
                      {/* Admin Skip */}
                      {isHost && (
                          <button 
-                             className="text-[9px] text-[#444] mt-2 underline block mx-auto hover:text-white"
+                             className="text-[10px] text-text-secondary mt-3 underline block mx-auto hover:text-white"
                              onClick={actions.onEndSpeech}
                          >
                              {t('admin_skip')}
@@ -364,7 +348,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         if (phase === 'DAY_ANNOUNCE' || phase === 'DAY_ELIMINATION') {
              return (
                  <div className="mt-auto">
-                     <button className="btn-brutal" disabled>{t('judge_speaking')}</button>
+                     <button className="btn-secondary opacity-50 cursor-not-allowed w-full" disabled>{t('judge_speaking')}</button>
                  </div>
              );
         }
@@ -380,34 +364,34 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
 
              return (
                  <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
-                        &gt;&gt; {t('discussions_open')}
+                     <div className="text-xs font-bold mb-2 text-accent animate-pulse flex items-center gap-2">
+                        <div className="w-2 h-2 rounded-full bg-accent"></div> {t('discussions_open')}
                      </div>
                      
-                     <div className="mb-2.5 text-center">
-                        <div className="text-[10px] text-[#666] mb-1">{t('current_speaker')}</div>
-                        <div className={`text-sm font-bold ${isMyTurn ? 'text-accent' : 'text-white'}`}>
+                     <div className="mb-3 text-center bg-white/5 rounded-lg p-3 border border-white/5">
+                        <div className="text-[10px] text-text-secondary uppercase tracking-widest mb-1">{t('current_speaker')}</div>
+                        <div className={`text-sm font-bold ${isMyTurn ? 'text-accent' : 'text-text-primary'}`}>
                             {isMyTurn ? t('you') : speakerName}
                         </div>
                      </div>
 
                      {isMyTurn ? (
-                         <button className="btn-brutal bg-accent text-black w-full" onClick={actions.onEndSpeech}>
+                         <button className="btn-primary w-full" onClick={actions.onEndSpeech}>
                              {t('end_speech')}
                          </button>
                      ) : (
-                         <div className="text-xs text-[#444] text-center border border-[#333] p-2">
+                         <div className="text-xs text-text-secondary text-center bg-white/5 rounded-lg p-2 border border-white/5 italic">
                              {t('listening')}
                          </div>
                      )}
                      
-                      <div className="mt-2.5 text-xs text-[#666]">
-                        {speaking?.currentSpeakerId ? 'Listen explicitly.' : 'Judge is determining order...'}
+                      <div className="mt-2.5 text-xs text-text-secondary/50 text-center">
+                        {speaking?.currentSpeakerId ? 'Mic Check Active' : 'Determining order...'}
                      </div>
                      {/* Host Skip */}
                      {isHost && !isMyTurn && (
                          <button 
-                             className="text-[9px] text-[#444] mt-2 underline block mx-auto hover:text-white"
+                             className="text-[10px] text-text-secondary mt-2 underline block mx-auto hover:text-white"
                              onClick={actions.onEndSpeech}
                          >
                              {t('admin_skip')}
@@ -421,29 +405,27 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              if (hasActed) {
                  return (
                      <div className="mt-auto">
-                         <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                            &gt;&gt; {t('vote_required')}
-                         </div>
-                         <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button>
+                        <div className="text-xs font-bold mb-2 text-danger animate-pulse flex items-center gap-2">
+                           <div className="w-2 h-2 rounded-full bg-danger"></div> {t('vote_required')}
+                        </div>
+                         <button className="btn-secondary opacity-50 cursor-not-allowed w-full" disabled>{t('waiting_for_others')}</button>
                      </div>
                  );
              }
              return (
                  <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-danger animate-pulse">
-                        &gt;&gt; {t('vote_required')}
-                     </div>
-                     <button className="btn-brutal" onClick={actions.onDayVote}>{t('confirm_vote')}</button>
+                    <div className="text-xs font-bold mb-2 text-danger animate-pulse flex items-center gap-2">
+                       <div className="w-2 h-2 rounded-full bg-danger"></div> {t('vote_required')}
+                    </div>
+                     <button className="btn-primary bg-danger hover:bg-danger/90 border-transparent text-white" onClick={actions.onDayVote}>{t('confirm_vote')}</button>
                  </div>
              );
         }
 
-
-
         // FINISHED
         return (
             <div className="mt-auto">
-                <button className="btn-brutal btn-start" onClick={() => window.location.reload()}>{t('reboot')}</button>
+                <button className="btn-secondary w-full" onClick={() => window.location.reload()}>{t('reboot')}</button>
             </div>
         );
     };
@@ -453,7 +435,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
     // If onlyActions is true, we ONLY render the action buttons (no container styles, no logs)
     if (onlyActions) {
          return (
-             <div className="flex flex-col h-full justify-end bg-black border-t-2 border-ink p-2.5">
+             <div className="flex flex-col h-full justify-end">
                   {renderActions()}
              </div>
          );
@@ -463,10 +445,10 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
     if (onlyLogs) { 
         return (
             <div className={`
-                flex-grow font-mono text-[13px] list-none overflow-y-auto border-y-2 border-[#333] bg-[#111] p-2.5 h-full
+                flex-grow font-mono text-[11px] list-none overflow-y-auto bg-black/40 rounded-lg p-3 h-full space-y-2
             `}>
                 {logs.map((log, i) => (
-                    <div key={i} className={`py-1 border-b border-dashed border-[#333] ${i === logs.length - 1 ? 'text-accent border-b-0' : 'text-[#888]'}`}>
+                    <div key={i} className={`pb-1 border-b border-white/5 last:border-0 ${i === logs.length - 1 ? 'text-accent font-bold' : 'text-text-secondary'}`}>
                         {log}
                     </div>
                 ))}
@@ -477,14 +459,14 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
 
     // Legacy / Fallback View (Full ControlPanel)
     return (
-        <aside className="border-[5px] border-ink p-5 bg-black flex flex-col relative h-full overflow-hidden">
+        <aside className="border border-white/5 p-4 bg-surface rounded-xl flex flex-col relative h-full overflow-hidden shadow-lg">
             
             <div className={`
-                flex-grow font-mono text-[13px] list-none overflow-y-auto border-b-2 border-[#333] mb-5 transition-all duration-300
-                ${showLogsMobile ? 'h-[150px]' : 'h-0 border-b-0 mb-0'}
+                flex-grow font-mono text-[11px] list-none overflow-y-auto bg-black/20 rounded-lg p-3 mb-4 transition-all duration-300 border border-white/5
+                ${showLogsMobile ? 'h-[150px]' : 'h-0 mb-0 border-0 p-0'}
             `}>
                 {logs.map((log, i) => (
-                    <div key={i} className={`py-2 border-b border-dashed border-[#333] ${i === logs.length - 1 ? 'text-accent border-b-0' : 'text-[#888]'}`}>
+                    <div key={i} className={`pb-1 border-b border-white/5 last:border-0 ${i === logs.length - 1 ? 'text-accent font-bold' : 'text-text-secondary'}`}>
                         {log}
                     </div>
                 ))}
@@ -494,12 +476,12 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
             {renderActions()}
 
             {/* Admin/Debug Resolve Button (Still kept for manual override if needed) */}
-            <div className="mt-5 border-t border-dashed border-[#333] pt-2.5 opacity-50 hover:opacity-100">
+            <div className="mt-4 pt-3 border-t border-white/5 opacity-30 hover:opacity-100 transition-opacity">
                <button 
                   onClick={actions.onResolvePhase} 
-                  className="bg-transparent border border-[#333] text-[#666] w-full text-[10px] p-[5px] cursor-pointer hover:bg-[#111]"
+                  className="w-full text-[9px] text-text-secondary uppercase tracking-widest hover:text-white"
                >
-                  [ADMIN] SKIP PHASE / FORCE RESOLVE
+                  [ADMIN] FORCE RESOLVE
                </button>
             </div>
         </aside>

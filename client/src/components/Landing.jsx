@@ -50,43 +50,33 @@ export default function Landing() {
     return (
         <div className="werewolf-app">
             {/* Background effects from GameRoom for consistency */}
-            <div className="grain-overlay">
-                <svg width="100%" height="100%">
-                    <filter id="photocopy-noise">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-                        <feColorMatrix type="matrix" values="0 0 0 0 0, 0 0 0 0 0, 0 0 0 0 0, 0 0 0 1 0" />
-                        <feComponentTransfer>
-                            <feFuncA type="table" tableValues="0 0.5" />
-                        </feComponentTransfer>
-                    </filter>
-                    <rect width="100%" height="100%" filter="url(#photocopy-noise)" />
-                </svg>
-            </div>
+            {/* Background Container - Clean minimalist background */}
+            <div className="absolute inset-0 bg-bg z-0 pointer-events-none"></div>
+
             
-            <div className="photostat-root relative w-full h-full p-4 md:p-10 flex flex-col items-center justify-center gap-5 contrast-125 brightness-110 z-10 transition-all">
-                <div className="scanline"></div>
-                <div className="photocopy-texture"></div>
+            <div className="relative w-full max-w-md h-full md:h-auto p-6 md:p-8 flex flex-col items-center justify-center gap-6 z-10 animate-fade-in">
+
 
                 {/* Language Switcher */}
                 <button 
                     onClick={toggleLanguage}
-                    className="absolute top-5 right-5 z-50 btn-brutal bg-black text-white border-white text-xs px-2 py-1 hover:bg-white hover:text-black transition-colors"
+                    className="absolute top-6 right-6 z-50 btn-ghost text-xs"
                 >
                     {i18n.language === 'zh' ? 'EN / 中' : '中 / EN'}
                 </button>
 
-                <div className="max-w-[400px] w-full z-10">
-                    <h1 className="game-title glitch-text text-8xl leading-[0.8] tracking-tighter uppercase mix-blend-difference m-0 text-center mb-10 text-[clamp(3rem,10vw,6rem)]">
-                        WERE
+                <div className="w-full z-10 space-y-8">
+                    <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-center mb-8 text-text-primary">
+                        WEREWOLF
                     </h1>
 
                     <div className="flex flex-col gap-5">
                         <div>
-                            <label className="font-mono text-xs text-[#666] mb-1.5 block">{t('identity')}</label>
+                            <label className="text-sm font-medium text-text-secondary mb-2 block">{t('identity')}</label>
                             <input
                                 type="text"
                                 placeholder={t('enter_name')}
-                                className="input-brutal"
+                                className="input-primary"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                             />
@@ -167,30 +157,30 @@ export default function Landing() {
                             )}
                         </div>
 
-                        <button className="btn-brutal btn-start" onClick={handleCreate}>
+                        <button className="btn-primary" onClick={handleCreate}>
                             {t('create_new_game')}
                         </button>
 
-                        <div className="flex items-center gap-2.5 opacity-50">
-                            <div className="flex-1 h-[1px] bg-[#333]"></div>
-                            <span className="font-mono text-xs">{t('or_join_existing')}</span>
-                            <div className="flex-1 h-[1px] bg-[#333]"></div>
+                        <div className="flex items-center gap-4 opacity-30 my-2">
+                            <div className="flex-1 h-[1px] bg-white"></div>
+                            <span className="text-xs text-white  uppercase tracking-widest">{t('or_join_existing')}</span>
+                            <div className="flex-1 h-[1px] bg-white"></div>
                         </div>
 
-                        <div className="flex gap-2.5">
+                        <div className="flex gap-3">
                              <input
                                 type="text"
                                 placeholder={t('room_id')}
-                                className="input-brutal flex-1"
+                                className="input-primary flex-1"
                                 value={roomId}
                                 onChange={(e) => setRoomId(e.target.value.toUpperCase())}
                             />
-                            <button className="btn-brutal w-auto bg-white text-black" onClick={handleJoin}>
+                            <button className="btn-secondary w-auto whitespace-nowrap" onClick={handleJoin}>
                                 {t('join')}
                             </button>
                         </div>
                     </div>
-                    {error && <p className="text-danger mt-5 font-mono text-center border border-danger p-2.5">{error}</p>}
+                    {error && <div className="text-danger mt-4 text-center text-sm bg-danger/10 p-3 rounded-lg border border-danger/20">{error}</div>}
                 </div>
             </div>
         </div>

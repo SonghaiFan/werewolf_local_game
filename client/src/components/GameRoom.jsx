@@ -168,71 +168,67 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         <GameContext.Provider value={contextValue}>
             <div className="werewolf-app">
             {/* Background effects */}
-            <div className="grain-overlay">
-                <svg width="100%" height="100%">
-                    <filter id="photocopy-noise">
-                        <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch" />
-                        <feColorMatrix type="matrix" values="0 0 0 0 0, 0 0 0 0 0, 0 0 0 0 0, 0 0 0 1 0" />
-                        <feComponentTransfer>
-                            <feFuncA type="table" tableValues="0 0.5" />
-                        </feComponentTransfer>
-                    </filter>
-                    <rect width="100%" height="100%" filter="url(#photocopy-noise)" />
-                </svg>
-            </div>
+            {/* Background Container - Clean minimalist background */}
+            <div className="absolute inset-0 bg-bg z-0 pointer-events-none"></div>
+
             
-            <div className="photostat-root relative w-full h-[100dvh] p-2 grid grid-rows-[50px_1fr_80px_140px] md:grid-rows-[50px_1fr_80px_160px] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333] overflow-hidden transition-all">
-                <div className="scanline"></div>
-                <div className="photocopy-texture"></div>
+            <div className="relative w-full h-[100dvh] max-w-4xl mx-auto flex flex-col p-4 md:p-6 gap-4 z-10 animate-fade-in">
+
 
                 {/* 1. HEADER */}
-                <header className="game-header z-10 flex justify-between items-start h-[50px]">
-                    <div className="bg-accent text-black font-bold w-[50px] h-[50px] flex items-center justify-center text-center uppercase leading-none border-2 border-black">
-                        <div className="glitch-text text-xs leading-tight">WERE<br/>WOLF</div>
+                <header className="flex justify-between items-center h-[60px] bg-surface rounded-xl px-4 border border-white/5 shadow-sm shrink-0">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-accent/10 text-accent font-bold p-2 rounded-lg">
+                            <span className="text-sm tracking-widest uppercase">WEREWOLF</span>
+                        </div>
+                        <div className="h-6 w-[1px] bg-white/10"></div>
+                        <div className="flex flex-col">
+                            <span className="text-xs text-text-secondary uppercase tracking-wider">{t('room')}</span>
+                            <span className="text-sm font-mono font-bold text-text-primary">{roomId}</span>
+                        </div>
                     </div>
                     
-                    <div className="flex-1 ml-2.5 flex flex-col items-end justify-center h-full">
-                       <div className="flex items-center gap-2">
-                            <div className="status-tag bg-white text-black px-2 py-0.5 font-mono font-bold text-[10px] uppercase [clip-path:polygon(0_0,95%_0,100%_100%,5%_100%)]">
-                                {gameState.phase.replace('_', ' ')}
-                            </div>
-                            <div className="font-mono text-[10px] text-[#888]">
-                                {t('room')}: {roomId} // {t('round_short')}: {gameState.round}
-                            </div>
-                       </div>
-                        <div className="h-[1px] w-full bg-accent mt-1"></div>
+                    <div className="flex items-center gap-3">
+                        <div className="text-right">
+                             <div className="text-xs text-text-secondary uppercase tracking-wider">{t('round_short')}</div>
+                             <div className="font-mono font-bold text-text-primary">{gameState.round}</div>
+                        </div>
+                        <div className="px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-text-primary uppercase tracking-wide">
+                            {gameState.phase.replace('_', ' ')}
+                        </div>
                     </div>
                 </header>
 
                 {/* 2. MAIN STAGE (Others) */}
-                <section className="main-stage overflow-y-auto min-h-0 border-2 border-[#333] bg-[#050505] p-2">
-                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
+                <section className="flex-1 overflow-y-auto min-h-0 bg-surface/50 rounded-xl p-4 border border-white/5 scrollbar-hide">
+                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
                         <PlayerGrid players={otherPlayers} />
                      </div>
                 </section>
 
-                {/* 3. LOGS (Middle Band) */}
-                <section className="h-[80px] w-full z-10">
+                {/* 3. LOGS (Middle Band) - now integrated or cleaner */}
+                <section className="h-[80px] w-full shrink-0">
                     <ControlPanel onlyLogs={true} />
                 </section>
 
                 {/* 4. FOOTER (Me + Actions) */}
-                <footer className="h-[160px] grid grid-cols-[120px_1fr] gap-2.5 z-10">
+                <footer className="h-[140px] grid grid-cols-[110px_1fr] gap-4 shrink-0">
                     {/* User Avatar (Me) */}
                     <div className="h-full">
                          <AvatarCard
                              player={mePlayer}
                              onSelect={null}
+                             className="!min-h-full" 
                          />
                     </div>
 
                     {/* Action Area */}
-                    <div className="h-full">
+                    <div className="h-full bg-surface rounded-xl border border-white/5 overflow-hidden">
                         <ControlPanel onlyActions={true} />
                     </div>
                 </footer>
             </div>
-          </div>
+            </div>
         </GameContext.Provider>
     );
 }

@@ -101,26 +101,26 @@ export default function AvatarCard({
     return (
         <div 
             className={`
-                relative bg-[#151515] border-2 h-full min-h-[120px] md:min-h-[140px] 
-                transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col
-                ${canInteract ? 'cursor-pointer' : ''}
+                relative bg-surface border h-full min-h-[140px] rounded-xl
+                transition-all duration-300 ease-out overflow-hidden flex flex-col
+                ${canInteract ? 'cursor-pointer hover:border-accent/50 hover:shadow-lg hover:-translate-y-1' : ''}
                 ${!canInteract && !isMe ? 'opacity-90' : ''}
                 ${!isSelectable && !isMe ? 'opacity-50 grayscale cursor-not-allowed' : ''}
-                ${isSelected ? 'bg-accent text-black border-black -rotate-1 -translate-x-1 -translate-y-1 shadow-[8px_8px_0px_#fff]' : 'border-[#333] text-ink'}
-                ${isDead ? 'opacity-40 grayscale blur-[0.5px] pointer-events-none border-dashed' : ''}
-                ${isVictim ? 'ring-4 ring-offset-2 ring-purple-600 border-purple-600 bg-purple-900/20' : ''}
-                ${inspectedRole === 'WOLF' ? 'shadow-[inset_0_0_20px_rgba(255,0,0,0.2)] border-danger/50' : ''}
-                ${inspectedRole && inspectedRole !== 'WOLF' ? 'shadow-[inset_0_0_20px_rgba(0,255,0,0.2)] border-green-500/50' : ''}
+                ${isSelected ? 'border-accent ring-2 ring-accent/30 shadow-xl scale-[1.02]' : 'border-white/5'}
+                ${isDead ? 'opacity-40 grayscale blur-[1px] pointer-events-none' : ''}
+                ${isVictim ? 'ring-2 ring-purple-500 border-purple-500 bg-purple-900/10' : ''}
+                ${inspectedRole === 'WOLF' ? 'ring-2 ring-danger border-danger bg-danger/10' : ''}
+                ${inspectedRole && inspectedRole !== 'WOLF' ? 'ring-2 ring-success border-success bg-success/10' : ''}
                 ${className}
             `}
             onClick={() => canInteract && handleSelect(player.id)}
         >
             {/* Top Bar: Player Name & Status */}
-            <div className={`p-2 border-b border-current flex justify-between items-center text-[10px] font-mono tracking-wider ${isSelected ? 'border-black' : 'border-[#333]'}`}>
-                <span className="truncate max-w-[80px] font-bold">{player.name} {isMe && `(${t('you')})`}</span>
+            <div className={`px-3 py-2 border-b border-white/5 flex justify-between items-center text-xs backdrop-blur-sm bg-black/20 ${isSelected ? 'bg-accent/10' : ''}`}>
+                <span className={`truncate max-w-[80px] font-medium ${isSelected ? 'text-accent' : 'text-text-secondary'}`}>{player.name} {isMe && `(${t('you')})`}</span>
                  {/* Ready Status */}
                  {phase === 'WAITING' && (
-                    <span className={player.isReady ? 'text-accent' : 'text-[#444]'}>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-medium ${player.isReady ? 'text-success bg-success/10' : 'text-text-secondary bg-white/5'}`}>
                         {player.isReady ? t('ready_short') : t('not_ready_short')}
                     </span>
                 )}
@@ -129,7 +129,7 @@ export default function AvatarCard({
             {/* Main Content Area */}
             <div className="flex-1 relative flex items-center justify-center p-2">
                 {/* PERSISTENT PLAYER NUMBER BADGE */}
-                <div className="absolute top-0 right-0 z-50 bg-black text-white text-xs font-mono font-bold px-1.5 py-0.5 border-l border-b border-white shadow-sm select-none">
+                <div className="absolute top-2 right-2 z-20 bg-surface/80 backdrop-blur-md text-text-secondary text-xs font-mono px-2 py-1 rounded-md border border-white/10 shadow-sm select-none">
                     {String(player.avatar || '0').padStart(2, '0')}
                 </div>
 
@@ -147,17 +147,17 @@ export default function AvatarCard({
                         <div className="w-10 h-10 md:w-16 md:h-16 mb-2">
                             {roleIcon}
                         </div>
-                        <div className="text-sm md:text-xl font-bold uppercase tracking-widest leading-none">
+                        <div className="text-sm md:text-lg font-bold uppercase tracking-wider text-text-primary">
                             {/* Translate Role */}
                             {roleKey ? t(`roles.${roleKey}`, roleKey) : t('unknown_role')}
                         </div>
-                         {isDead && <div className="text-danger font-mono text-[10px] bg-black px-1 mt-1">{t('deceased')}</div>}
+                         {isDead && <div className="text-danger font-medium text-xs bg-danger/10 px-2 py-0.5 rounded-full mt-2">{t('deceased')}</div>}
                     </div>
                 ) : (
                     // --- BACK (Hidden / Number) ---
                     <div className="w-full h-full flex items-center justify-center relative">
                         {/* Player Number (Avatar ID as visual identifier) */}
-                        <div className="font-mono text-4xl md:text-6xl font-bold opacity-20 select-none">
+                        <div className="font-mono text-4xl md:text-6xl font-bold opacity-[0.03] select-none text-white">
                             {String(player.avatar || '00').padStart(2, '0')}
                         </div>
                         
@@ -166,9 +166,9 @@ export default function AvatarCard({
                              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center transition-colors cursor-pointer"
                                  onClick={(e) => { e.stopPropagation(); setIsRevealed(true); }}
                              >
-                                <div className="bg-[#222] border border-[#444] px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                                     <span className="text-[10px] font-mono tracking-wider">{t('reveal')}</span>
-                                </div>
+                                 <div className="bg-surface/90 backdrop-blur border border-white/10 px-4 py-2 rounded-full shadow-lg flex items-center gap-2 group-hover:bg-surface text-text-primary transition-colors">
+                                     <span className="text-xs font-medium tracking-wide">{t('reveal')}</span>
+                                 </div>
                             </div>
                         )}
                     </div>
@@ -179,21 +179,22 @@ export default function AvatarCard({
          
             
             {/* Victim Badge (Witch Vision) */}
-            {isVictim && <div className="absolute top-0 left-0 bg-purple-600 text-white text-[9px] font-bold px-1 py-0.5 z-20 animate-pulse shadow-lg">{t('victim')}</div>}
+            {isVictim && <div className="absolute top-2 left-2 bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-md z-20 shadow-lg">{t('victim')}</div>}
             
             {/* Host Badge - Bottom Right */}
             {player.id === hostId && (
-                 <div className="absolute bottom-2 right-2 bg-accent text-black text-[8px] px-1 font-bold border border-black z-20">
+                 <div className="absolute bottom-2 left-2 bg-text-secondary/20 text-text-secondary backdrop-blur-sm text-[10px] px-2 py-0.5 rounded-full font-medium z-20">
                      {t('host')}
                  </div>
             )}
             
             {/* Inspected Faction Badge (Seer Vision) - Replaces basic 'scanned' or accompanies it? User asked for Good/Bad. */}
             {/* We overlay this CLEARLY on top if inspected */}
+            {/* Inspected Faction Badge (Seer Vision) */}
             {inspectedRole && (
                 <div className={`
-                    absolute top-0 left-0 text-white text-[9px] font-bold px-1 z-30 shadow-md border
-                    ${inspectedRole === 'WOLF' ? 'bg-danger border-white' : 'bg-green-600 border-white'}
+                    absolute top-2 left-2 text-white text-[10px] font-bold px-2 py-0.5 rounded-md z-30 shadow-lg
+                    ${inspectedRole === 'WOLF' ? 'bg-danger' : 'bg-success'}
                 `}>
                     {inspectedRole === 'WOLF' ? t('identity_bad') : t('identity_good')}
                 </div>
@@ -202,7 +203,7 @@ export default function AvatarCard({
              {/* Voting Indicator */}
              {player.isVoting && phase === 'DAY_VOTE' && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
-                     <div className="bg-black text-white text-[10px] font-bold px-2 py-1 border border-white -rotate-12 shadow-[4px_4px_0px_var(--color-danger)]">
+                     <div className="bg-black/80 backdrop-blur text-white text-xs font-bold px-3 py-1.5 rounded-full border border-white/20 shadow-lg">
                         {t('voted')}
                      </div>
                 </div>
@@ -217,8 +218,8 @@ export default function AvatarCard({
                     // Actually, let's try to get the avatar number if possible, or just a generic marker with ID hash if not.
                     // Simplified: Just show "Wolf Select"
                     return (
-                        <div key={wolfId} className="absolute bottom-1 right-1 z-40 animate-bounce">
-                           <div className="bg-red-600 text-white text-[8px] font-bold px-1 border border-black shadow-sm">
+                        <div key={wolfId} className="absolute bottom-2 right-2 z-40">
+                           <div className="bg-danger text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-lg">
                                WOLF SELECT
                            </div>
                         </div>
