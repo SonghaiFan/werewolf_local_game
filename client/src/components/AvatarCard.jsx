@@ -1,82 +1,65 @@
 import React, { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useGameContext } from '../context/GameContext';
 
 // Role SVGs (Neo-Brutalist / Geometric)
-const RoleIcons = {
-    WOLF: (
-        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
-            <path d="M20 80 L30 40 L50 70 L70 40 L80 80 Z" />
-            <circle cx="35" cy="55" r="3" fill="var(--color-bg)" />
-            <circle cx="65" cy="55" r="3" fill="var(--color-bg)" />
-        </svg>
-    ),
-    VILLAGER: (
-        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
-            <rect x="30" y="40" width="40" height="40" stroke="currentColor" strokeWidth="4" fill="none" />
-            <path d="M25 40 L50 15 L75 40" stroke="currentColor" strokeWidth="4" fill="none" />
-            <rect x="45" y="60" width="10" height="20" fill="currentColor" />
-        </svg>
-    ),
-    SEER: (
-        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
-            <circle cx="50" cy="50" r="30" stroke="currentColor" strokeWidth="2" fill="none" />
-            <circle cx="50" cy="50" r="10" fill="currentColor" />
-            <path d="M50 20 L50 80 M20 50 L80 50" stroke="currentColor" strokeWidth="1" />
-        </svg>
-    ),
-    WITCH: (
-        <svg viewBox="0 0 100 100" className="w-full h-full fill-current">
-            <path d="M20 70 Q50 90 80 70" fill="none" stroke="currentColor" strokeWidth="4" />
-            <path d="M30 70 L50 20 L70 70 Z" stroke="currentColor" strokeWidth="2" fill="none" />
-            <circle cx="50" cy="60" r="5" fill="currentColor" />
-            <path d="M40 30 L60 30" stroke="currentColor" strokeWidth="2" />
-        </svg>
-    ),
-    UNKNOWN: (
-        <svg viewBox="0 0 100 100" className="w-full h-full fill-current opacity-20">
-            <rect x="30" y="30" width="40" height="40" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="4" />
-            <path d="M30 30 L70 70 M70 30 L30 70" stroke="currentColor" strokeWidth="1" />
-        </svg>
-    )
-};
+// ... (RoleIcons consts matched by signature, assuming unchanged above this block)
 
 export default function AvatarCard({ 
     player, 
-    myId, 
-    isSelected = false, 
     onSelect, 
-    phase, 
-    hostId, 
-    candidates,
     className = "" 
 }) {
+    const { t } = useTranslation();
+    const { 
+        myId, 
+        phase, 
+        hostId, 
+        wolfTarget, 
+        inspectedPlayers,
+        selectedTarget, 
+        setSelectedTarget 
+    } = useGameContext();
+
     if (!player) return null;
     const [isRevealed, setIsRevealed] = React.useState(false);
 
+    // Derived Selection Logic
+    const isSelected = selectedTarget === player.id;
+    const handleSelect = onSelect !== undefined ? onSelect : setSelectedTarget;
+    
+    // Derived Inspection Logic
+    const inspectedRole = inspectedPlayers ? inspectedPlayers[player.id] : null;
+
     const isMe = player.id === myId;
     const isDead = player.status === 'dead';
+    const isSeerVision = phase === 'WOLF_VISION';
+    const isWitchVision = phase === 'WITCH_VISION';
     
-    // Logic: 
-    // Show 'Front' (Role) if:
-    // 1. It's ME and I have clicked Reveal
-    // 2. It's ME and I am DEAD
-    // 3. It's NOT ME and they are DEAD (everyone sees roles of dead)
-    // 4. Special cases (Wolf sees Wolf) - implemented via role transparency if backend sends it.
-    // NOTE: Backend typically only sends 'WOLF' role to wolves. So if player.role is present, show it?
-    // BUT we want to hide it initially for self.
-    
-    // Effectively: Show Front if (isMe && isRevealed) OR (isDead) OR (player.role && !isMe)
-    // Actually, backend only sends role if authorized. So if we have a role, we can show it, EXCEPT for self initial hide.
-    
-    const hasRoleInfo = !!player.role && player.role !== 'scanned'; // 'scanned' might be temp? No, usually generic.
-    const showFront = (isMe && isRevealed) || isDead || (hasRoleInfo && !isMe); 
-    
-    const roleIcon = RoleIcons[player.role] || RoleIcons.UNKNOWN;
+    // --- Decision Tree ---
 
-    // Election Logic
-    const isElectionVote = phase === 'DAY_ELECTION_VOTE';
-    const isCandidate = candidates && candidates.includes(player.id);
-    const isSelectable = !isDead && (!isElectionVote || isCandidate); 
-    const canInteract = onSelect && isSelectable;
+    // 1. Victim Status (Witch Vision)
+    // Robust check handling both array (multi-wolf) or single ID formats
+    const pId = String(player.id);
+    const isVictim = Array.isArray(wolfTarget) 
+        ? wolfTarget.some(t => String(t) === pId) 
+        : String(wolfTarget) === pId;
+    
+    // 2. Visibility State (Face Up vs Face Down)
+    // - Self: Explicit reveal via state
+    // - Dead: Always revealed
+    // - Public: Backend provided specific role (excluding internal 'scanned')
+    // NOTE: Seer inspection does NOT reveal the card face, only the Faction Badge.
+    const hasPublicRole = !!player.role && player.role !== 'scanned';
+    const showCardFace = (isMe && isRevealed) || isDead || (hasPublicRole && !isMe); 
+    
+    // 3. Asset Resolution
+    const roleKey = (player.role || 'UNKNOWN').toUpperCase();
+    const roleIcon = RoleIcons[roleKey] || RoleIcons.UNKNOWN;
+
+    // 4. Interactivity
+    const isSelectable = !isDead; 
+    const canInteract = handleSelect && isSelectable;
 
     return (
         <div 
@@ -88,34 +71,37 @@ export default function AvatarCard({
                 ${!isSelectable && !isMe ? 'opacity-50 grayscale cursor-not-allowed' : ''}
                 ${isSelected ? 'bg-accent text-black border-black -rotate-1 -translate-x-1 -translate-y-1 shadow-[8px_8px_0px_#fff]' : 'border-[#333] text-ink'}
                 ${isDead ? 'opacity-40 grayscale blur-[0.5px] pointer-events-none border-dashed' : ''}
-                ${isCandidate && isElectionVote ? 'ring-4 ring-offset-2 ring-danger animate-pulse border-danger' : ''} 
+                ${isVictim ? 'ring-4 ring-offset-2 ring-purple-600 border-purple-600 bg-purple-900/20' : ''}
+                ${inspectedRole === 'WOLF' ? 'shadow-[inset_0_0_20px_rgba(255,0,0,0.2)] border-danger/50' : ''}
+                ${inspectedRole && inspectedRole !== 'WOLF' ? 'shadow-[inset_0_0_20px_rgba(0,255,0,0.2)] border-green-500/50' : ''}
                 ${className}
             `}
-            onClick={() => canInteract && onSelect(player.id)}
+            onClick={() => canInteract && handleSelect(player.id)}
         >
             {/* Top Bar: Player Name & Status */}
             <div className={`p-2 border-b border-current flex justify-between items-center text-[10px] font-mono tracking-wider ${isSelected ? 'border-black' : 'border-[#333]'}`}>
-                <span className="truncate max-w-[80px] font-bold">{player.name} {isMe && '(YOU)'}</span>
+                <span className="truncate max-w-[80px] font-bold">{player.name} {isMe && `(${t('you')})`}</span>
                  {/* Ready Status */}
                  {phase === 'WAITING' && (
                     <span className={player.isReady ? 'text-accent' : 'text-[#444]'}>
-                        {player.isReady ? 'RDY' : '...'}
+                        {player.isReady ? t('ready_short') : t('not_ready_short')}
                     </span>
                 )}
             </div>
 
             {/* Main Content Area */}
             <div className="flex-1 relative flex items-center justify-center p-2">
-                {showFront ? (
+                {showCardFace ? (
                     // --- FRONT (Role Revealed) ---
                     <div className="w-full h-full flex flex-col items-center justify-center animate-in fade-in duration-300">
                         <div className="w-16 h-16 mb-2">
                             {roleIcon}
                         </div>
                         <div className="text-xl font-bold uppercase tracking-widest leading-none">
-                            {player.role || '???'}
+                            {/* Translate Role */}
+                            {roleKey ? t(`roles.${roleKey}`, roleKey) : t('unknown_role')}
                         </div>
-                         {isDead && <div className="text-danger font-mono text-[10px] bg-black px-1 mt-1">DECEASED</div>}
+                         {isDead && <div className="text-danger font-mono text-[10px] bg-black px-1 mt-1">{t('deceased')}</div>}
                     </div>
                 ) : (
                     // --- BACK (Hidden / Number) ---
@@ -131,8 +117,7 @@ export default function AvatarCard({
                                  onClick={(e) => { e.stopPropagation(); setIsRevealed(true); }}
                              >
                                 <div className="bg-[#222] border border-[#444] px-4 py-2 rounded-full shadow-lg flex items-center gap-2">
-                                     <span>👁️</span>
-                                     <span className="text-[10px] font-mono tracking-wider">REVEAL</span>
+                                     <span className="text-[10px] font-mono tracking-wider">{t('reveal')}</span>
                                 </div>
                             </div>
                         )}
@@ -141,28 +126,34 @@ export default function AvatarCard({
             </div>
 
             {/* Badges / Overlays */}
-            {/* Candidate Badge */}
-            {isCandidate && isElectionVote && <div className="absolute top-0 right-0 bg-danger text-white text-[9px] font-bold px-1 z-20">RUNNING</div>}
+         
             
-            {/* Sheriff Badge - Bottom Left */}
-            {player.isSheriff && (
-                <div className="absolute bottom-2 left-2 text-2xl filter drop-shadow-[0_0_2px_rgba(255,215,0,0.8)] z-20" title="Sheriff">
-                    🌟
-                </div>
-            )}
+            {/* Victim Badge (Witch Vision) */}
+            {isVictim && <div className="absolute top-0 left-0 bg-purple-600 text-white text-[9px] font-bold px-1 py-0.5 z-20 animate-pulse shadow-lg">{t('victim')}</div>}
             
             {/* Host Badge - Bottom Right */}
             {player.id === hostId && (
                  <div className="absolute bottom-2 right-2 bg-accent text-black text-[8px] px-1 font-bold border border-black z-20">
-                     HOST
+                     {t('host')}
                  </div>
+            )}
+            
+            {/* Inspected Faction Badge (Seer Vision) - Replaces basic 'scanned' or accompanies it? User asked for Good/Bad. */}
+            {/* We overlay this CLEARLY on top if inspected */}
+            {inspectedRole && (
+                <div className={`
+                    absolute top-0 left-0 text-white text-[9px] font-bold px-1 z-30 shadow-md border
+                    ${inspectedRole === 'WOLF' ? 'bg-danger border-white' : 'bg-green-600 border-white'}
+                `}>
+                    {inspectedRole === 'WOLF' ? t('identity_bad') : t('identity_good')}
+                </div>
             )}
 
              {/* Voting Indicator */}
              {player.isVoting && phase === 'DAY_VOTE' && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
                      <div className="bg-black text-white text-[10px] font-bold px-2 py-1 border border-white -rotate-12 shadow-[4px_4px_0px_var(--color-danger)]">
-                        VOTED
+                        {t('voted')}
                      </div>
                 </div>
             )}

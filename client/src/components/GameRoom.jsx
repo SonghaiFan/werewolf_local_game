@@ -3,8 +3,11 @@ import { socket } from '../socket';
 import ControlPanel from './ControlPanel';
 import PlayerGrid from './PlayerGrid';
 import AvatarCard from './AvatarCard';
+import { useTranslation } from 'react-i18next';
+import GameContext from '../context/GameContext';
 
 export default function GameRoom({ roomId, myId, onExit }) {
+    const { t } = useTranslation();
     const [gameState, setGameState] = useState({
         phase: 'WAITING',
         players: {},
@@ -15,6 +18,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
     
     const [selectedTarget, setSelectedTarget] = useState(null);
     const [serverIP, setServerIP] = useState(null);
+    const [inspectedPlayers, setInspectedPlayers] = useState({});
 
     useEffect(() => {
         socket.on('server_config', ({ ip }) => {
@@ -25,6 +29,11 @@ export default function GameRoom({ roomId, myId, onExit }) {
                 ...prev,
                 ...state
             }));
+            // Clear inspections on new game (round 0 or 1 restart?)
+            // Simple check: if round changes to 0 or 1 from high number? 
+            // Better: reset on start_game event or clean manual reset?
+            // For now, let's just keep valid. User usually refreshes or we can clear on 'FINISHED' -> 'WAITING' transition?
+            // Let's listen to game over or reset explicitly if possible or just let it be for now.
         }
 
         function onNotification(msg) {
@@ -33,7 +42,13 @@ export default function GameRoom({ roomId, myId, onExit }) {
         }
 
         function onSeerResult({ targetId, role }) {
-             alert(`Analysis Complete: Player is ${role}`);
+             // Update local state to show on card
+             // Normalize role to uppercase to match RoleIcons keys
+             const normalizedRole = role ? role.toUpperCase() : 'UNKNOWN';
+             setInspectedPlayers(prev => ({
+                 ...prev,
+                 [targetId]: normalizedRole
+             }));
         }
 
         socket.on('game_state', onGameState);
@@ -47,66 +62,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
             socket.off('notification', onNotification);
             socket.off('seer_result', onSeerResult);
         };
-    }, []);
-
-    // Actions
-    const handleStartGame = () => {
-        socket.emit('start_game', { roomId });
-    };
-
-    const handleNightAction = () => {
-        if (!selectedTarget) {
-            alert("Select a target first!");
-            return;
-        }
-        
-        let type = 'kill'; // default wolf
-        if (gameState.me.role === 'SEER') type = 'check';
-        
-        socket.emit('night_action', { 
-            roomId, 
-            action: { type, targetId: selectedTarget } 
-        });
-        
-        // Optimistic UI or wait for update?
-        setSelectedTarget(null);
-    };
-
-    const handleWitchAction = (type) => {
-        // For 'save', target is implied from state (wolf target) usually, 
-        // but here we might need manual selection if simple logic.
-        // Logic in back: save targetId is from `wolfTarget`.
-        // Poison requires selection.
-        
-        if (type === 'poison' && !selectedTarget) {
-             alert("Select a target to poison!");
-             return;
-        }
-        
-        socket.emit('night_action', {
-            roomId,
-            action: { type, targetId: selectedTarget }
-        });
-        setSelectedTarget(null);
-    };
-
-    const handleDayVote = () => {
-        if (gameState.phase !== 'DAY_VOTE') {
-            alert("Voting is not open yet!");
-            return;
-        }
-        if (!selectedTarget) return;
-        
-        socket.emit('day_vote', { roomId, targetId: selectedTarget });
-    };
-    
-    const handlePlayerReady = () => {
-        socket.emit('player_ready', { roomId });
-    };
-
-    const handleResolvePhase = () => {
-        socket.emit('resolve_phase', { roomId });
-    };
+    }, [t]);
 
     // Voice Judge Effect
     useEffect(() => {
@@ -135,73 +91,72 @@ export default function GameRoom({ roomId, myId, onExit }) {
 
 
 
-    const mePlayer = gameState.players[myId] || { ...gameState.me, name: 'YOU', id: myId, avatar: 1 };
+    const mePlayer = gameState.players[myId] || { ...gameState.me, name: t('you'), id: myId, avatar: 1 };
     const otherPlayers = Object.values(gameState.players).filter(p => p.id !== myId);
 
-    const amISheriff = gameState.players[myId]?.isSheriff || false;
-
-    // ControlPanel props object for reuse
-    const ControlPanelProps = {
-        roomId, serverIP, logs: gameState.logs, phase: gameState.phase,
-        role: gameState.me?.role, myStatus: gameState.me?.status, election: gameState.election,
-        isReady: gameState.players[myId]?.isReady || false,
-        speaking: gameState.speaking, // Pass speaking state
-        executedId: gameState.executedId, // Pass executed ID
-        myId, // Pass my ID
-        amISheriff, // Pass explicit Sheriff status
-        players: gameState.players, 
-        isHost: gameState.hostId === myId,
-        actions: {
-            onStartGame: () => socket.emit('start_game', { roomId }),
-            onPlayerReady: () => socket.emit('player_ready', { roomId }),
-            onNightAction: () => {
-                if (selectedTarget) {
-                    // For Wolf/Seer, type is implied by role, but passing 'kill'/'check' doesn't hurt if backend checks it.
-                    // Actually, backend might rely on type.
-                    // Wolf -> kill, Seer -> check.
-                    // Let's deduce type or send generic and let backend switch? 
-                    // Current Server `NightManager` checks `action.type`.
-                    // So we MUST send `type`.
-                    // Since this callback is used for "Primary Action", let's depend on Role?
-                    // But we don't have role explicitly inside closure easily (it's in props).
-                    // Actually we do: `gameState.me.role`.
+    const actions = {
+        onStartGame: () => {
+            socket.emit('start_game', { roomId });
+            setInspectedPlayers({});
+        },
+        onPlayerReady: () => socket.emit('player_ready', { roomId }),
+        onNightAction: () => {
+            if (selectedTarget) {
+                const role = gameState.me?.role;
+                let type = 'kill'; 
+                if (role === 'SEER') type = 'check';
                     
-                    const role = gameState.me?.role;
-                    let type = 'kill'; // default
-                    if (role === 'SEER') type = 'check';
-                    // Witch doesn't use this generic handler usually, uses onWitchAction.
-                     
-                    socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
-                    setSelectedTarget(null);
-                } else {
-                    alert("Select a target first!");
-                }
-            },
-            onWitchAction: (type) => { // type: 'save' | 'poison' | 'skip'
-                 if (type === 'poison' && !selectedTarget) {
-                     alert("Select a target to poison!");
-                     return;
-                 }
-                 socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
-                 setSelectedTarget(null);
-            },
-            onDayVote: () => {
-                if(selectedTarget) {
-                    socket.emit('day_vote', { roomId, targetId: selectedTarget });
-                    setSelectedTarget(null);
-                } else {
-                    alert("Select a player to vote for!");
-                }
-            },
-            onResolvePhase: handleResolvePhase,
-            onSkipTurn: () => setSelectedTarget(null),
-            onEndSpeech: () => socket.emit('end_speech', { roomId }),
-            onPlayAgain: () => socket.emit('play_again', { roomId })
+                socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
+                setSelectedTarget(null);
+            } else {
+                alert(t('select_target_first'));
+            }
+        },
+        onWitchAction: (type) => { 
+            if (type === 'poison' && !selectedTarget) {
+                alert(t('select_poison_target'));
+                return;
+            }
+            socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
+            setSelectedTarget(null);
+        },
+        onDayVote: () => {
+            if(selectedTarget) {
+                socket.emit('day_vote', { roomId, targetId: selectedTarget });
+                setSelectedTarget(null);
+            } else {
+                alert(t('select_vote_target'));
+            }
+        },
+        onResolvePhase: () => socket.emit('resolve_phase', { roomId }),
+        onSkipTurn: () => setSelectedTarget(null),
+        onEndSpeech: () => socket.emit('end_speech', { roomId }),
+        onPlayAgain: () => {
+            socket.emit('play_again', { roomId });
+            setInspectedPlayers({});
         }
     };
 
+    const contextValue = {
+        gameState,
+        myId,
+        hostId: gameState.hostId,
+        executedId: gameState.executedId,
+        actions,
+        inspectedPlayers,
+        candidates: gameState.candidates || [],
+        wolfTarget: gameState.wolfTarget || gameState.me?.wolfTarget,
+        selectedTarget,
+        setSelectedTarget,
+        role: gameState.me?.role,
+        phase: gameState.phase,
+        roomId,
+        serverIP
+    };
+
     return (
-        <div className="werewolf-app">
+        <GameContext.Provider value={contextValue}>
+            <div className="werewolf-app">
             {/* Background effects */}
             <div className="grain-overlay">
                 <svg width="100%" height="100%">
@@ -232,7 +187,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
                         </div>
                         <div className="h-[2px] w-full bg-accent my-1"></div>
                         <div className="font-mono text-xs text-[#888]">
-                            ROOM: {roomId} // R: {gameState.round}
+                            {t('room')}: {roomId} // {t('round_short')}: {gameState.round}
                         </div>
                     </div>
                 </header>
@@ -245,20 +200,13 @@ export default function GameRoom({ roomId, myId, onExit }) {
                             Wait, `PlayerGrid` is just `map`. The container grid is here.
                             User wanted 4 columns? "others avatar" box suggests small icons.
                         */}
-                        <PlayerGrid 
-                            players={otherPlayers} 
-                            myId={myId} 
-                            selectedId={selectedTarget}
-                            onSelect={setSelectedTarget}
-                            phase={gameState.phase}
-                            hostId={gameState.hostId}
-                        />
+                        <PlayerGrid players={otherPlayers} />
                      </div>
                 </section>
 
                 {/* 3. LOGS (Middle Band) */}
                 <section className="h-[80px] w-full z-10">
-                    <ControlPanel {...ControlPanelProps} onlyLogs={true} />
+                    <ControlPanel onlyLogs={true} />
                 </section>
 
                 {/* 4. FOOTER (Me + Actions) */}
@@ -267,20 +215,17 @@ export default function GameRoom({ roomId, myId, onExit }) {
                     <div className="h-full">
                          <AvatarCard
                              player={mePlayer}
-                             myId={myId}
-                             phase={gameState.phase}
-                             hostId={gameState.hostId}
-                             // Disable interaction for self
-                             onSelect={null} 
+                             onSelect={null}
                          />
                     </div>
 
                     {/* Action Area */}
                     <div className="h-full">
-                        <ControlPanel {...ControlPanelProps} onlyActions={true} />
+                        <ControlPanel onlyActions={true} />
                     </div>
                 </footer>
             </div>
-        </div>
+          </div>
+        </GameContext.Provider>
     );
 }

@@ -144,8 +144,9 @@ io.on('connection', (socket) => {
         if (!game) return;
         
         const result = game.handleNightAction(socket.id, action);
-        if (result && typeof result === 'string') {
-            socket.emit('seer_result', { role: result });
+        if (result && typeof result === 'object' && result.role) {
+            // Seer check result
+            socket.emit('seer_result', { targetId: action.targetId, role: result.role });
         }
         broadcastState(game);
     });
