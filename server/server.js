@@ -121,8 +121,28 @@ io.on('connection', (socket) => {
     });
 
     socket.on('start_game', ({ roomId }) => {
+        const game = games.get(roomId);
+        if (!game) return;
+        
+        game.startGame();
+        broadcastState(game);
+    });
 
-    // ... (Night/Resolve same)
+    socket.on('night_action', ({ roomId, action }) => {
+        const game = games.get(roomId);
+        if (!game) return;
+        
+        game.handleNightAction(socket.id, action);
+        broadcastState(game);
+    });
+
+    socket.on('resolve_phase', ({ roomId }) => {
+        const game = games.get(roomId);
+        if (!game) return;
+        
+        game.resolveNight(); 
+        broadcastState(game);
+    });
 
     // --- Election Events ---
     socket.on('election_nominate', ({ roomId }) => {

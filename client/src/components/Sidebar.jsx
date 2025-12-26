@@ -52,7 +52,7 @@ export default function Sidebar({ roomId, serverIP, logs, phase, role, myStatus,
                          className={`btn-brutal w-full ${isReady ? 'bg-[#333] text-[#888]' : 'bg-transparent border-white text-white animate-pulse'}`} 
                          onClick={actions.onPlayerReady}
                      >
-                         {isReady ? 'WAITING FOR HOST...' : 'CLICK WHEN READY'}
+                         {isReady ? (isHost ? 'WAITING FOR OTHERS...' : 'WAITING FOR HOST...') : 'CLICK WHEN READY'}
                      </button>
 
                      {/* Host Start Button */}

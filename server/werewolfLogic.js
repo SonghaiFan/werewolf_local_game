@@ -560,23 +560,8 @@ class WerewolfGame {
         // Handover check
         if (victim && victim === this.sheriffId) {
              this.pendingNextPhase = this.checkWinCondition() ? PHASES.FINISHED : PHASES.NIGHT_WOLVES;
-             // If game over, does handover matter? Usually yes for lore, but system wise NO.
-             // If Win condition met, we should probably just end. 
-             // But if we want full fidelity, do handover first.
-             // Let's check win AFTER handover?
-             // Actually if Sheriff dies, Wolves might win immediately if he was last villager?
-             // Let's do: Handover Phase -> Then Check Next Round Logic (which includes Win Check)
-             // Store "NextStep: CheckWinAndNight"
-             
-             // Issue: 'pendingNextPhase' expects a specific PHASE string usually.
-             // We'll create a special internal handling or just generic next-night func.
-             // Let's use 'NIGHT_WOLVES' as target, but the `advancePhase` will handle round increment...
-             // Wait, `resolveDay` handled round increment logic manually before.
-             
-             // Let's refactor: `startNightCycle()`.
-             this.pendingNextPhase = 'START_NIGHT'; // Magic string to interpret in handleSheriffHandover? 
-             // Or just set it to NIGHT_WOLVES and handle round++ in that trans?
-             // Simplify: Just go to Handover. Handle logic there.
+           
+             this.pendingNextPhase = 'START_NIGHT'; 
              this.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
              return;
         }
@@ -595,12 +580,6 @@ class WerewolfGame {
             return null;
         }
     }
-    
-    // Override simple handover resume to handle Night Transition logic if needed
-    // ... Actually we can put the "Check Win" logic INSIDE handleSheriffHandover resume block?
-    // OR we put `pendingNextPhase` = 'CHECK_WIN_THEN_NIGHT'.
-    
-    // Updated handleSheriffHandover for special resume
     handleSheriffHandover(playerId, targetId) {
         if (this.phase !== PHASES.DAY_SHERIFF_HANDOVER) return;
         if (playerId !== this.sheriffId) return;
@@ -667,6 +646,15 @@ class WerewolfGame {
 
     startGame() {
         if (this.phase !== PHASES.WAITING) return;
+        
+        // Enforce Readiness
+        const allReady = Object.values(this.players).every(p => p.isReady);
+        if (!allReady) {
+            // Optional: Log/Error? For now just return or log.
+            // this.addLog("SYSTEM: Cannot start. Not all players are ready."); 
+            // Better to strictly return so UI syncs.
+            return;
+        }
         
         const playerIds = Object.keys(this.players);
         const count = playerIds.length;
@@ -757,10 +745,6 @@ class WerewolfGame {
                     this.addLog(`JUDGE: Sheriff ${this.players[this.sheriffId].name}, please direct discussion starting from ${nextPlayer.name} (Next Player).`);
                 }
                 
-                // Auto-advance to Sheriff Speech or Vote after delay?
-                // Real game: Sheriff hits "Next" or timer. For now, use Timer -> Speech
-                // setTimeout(() => this.advancePhase(PHASES.DAY_SHERIFF_SPEECH), 60000); // 60s Discussion? 
-                // Let's rely on Admin Force OR just set a long timer.
                 break;
             case PHASES.DAY_SHERIFF_SPEECH:
                 if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
@@ -1134,7 +1118,8 @@ class WerewolfGame {
                 status: p.status,
                 avatar: p.avatar,
                 isVoting: !!this.votes[p.id],
-                isSheriff: p.id === this.sheriffId
+                isSheriff: p.id === this.sheriffId,
+                isReady: p.isReady
             };
         });
 
