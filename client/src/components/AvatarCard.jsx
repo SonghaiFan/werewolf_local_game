@@ -209,7 +209,7 @@ export default function AvatarCard({
             )}
 
             {/* Wolf Proposal Indicators (Only visible to wolves via context) */}
-            {wolfVotes && Object.entries(wolfVotes).map(([wolfId, targetId]) => {
+            {wolfVotes && phase === 'NIGHT_WOLVES' && Object.entries(wolfVotes).map(([wolfId, targetId]) => {
                 if (String(targetId) === String(player.id)) {
                     // We need to show WHICH wolf voted. 
                     // ideally we map wolfId to an Avatar Number if we had full player list in context or passed it down.

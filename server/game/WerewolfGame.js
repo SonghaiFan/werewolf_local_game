@@ -134,8 +134,10 @@ class WerewolfGame {
                      publicState.players[p.id].role = ROLES.WOLF; 
                  }
              });
-             // Expose NightManager Wolf Votes
-             publicState.wolfVotes = this.nightManager.actions.wolfVotes;
+             // Expose NightManager Wolf Votes ONLY during Night Wolf Phase
+             if (this.phase === PHASES.NIGHT_WOLVES) {
+                 publicState.wolfVotes = this.nightManager.actions.wolfVotes;
+             }
         }
         
         // Reveal All if Dead/Finished
