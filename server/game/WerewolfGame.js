@@ -39,7 +39,6 @@ class WerewolfGame {
                 status: p.status,
                 avatar: p.avatar,
                 isReady: p.isReady,
-                isReady: p.isReady,
                 isVoting: !!this.dayManager.votes[pid]
             };
         }
@@ -143,11 +142,10 @@ class WerewolfGame {
              }
         }
         
-        // Reveal All if Dead/Finished
-        // EXCEPTION: If I am currently executed and giving last words, hide roles until I am done.
+        const isDead = me && me.status === 'dead';
         const isMyLastWords = this.phase === PHASES.DAY_LEAVE_SPEECH && this.executedPlayerId === playerId;
         
-        if (((me && me.status !== 'alive' && !isMyLastWords) || this.phase === PHASES.FINISHED)) {
+        if ((isDead && !isMyLastWords) || this.phase === PHASES.FINISHED) {
              Object.values(this.players).forEach(p => {
                  publicState.players[p.id].role = p.role;
              });
@@ -182,6 +180,7 @@ class WerewolfGame {
             name: name,
             role: null,
             status: 'alive',
+            previousStatus: 'alive',
             avatar: seatNumber,
             isReady: false
         };
@@ -196,7 +195,8 @@ class WerewolfGame {
 
         // Update with new socket
         player.socketId = socketId;
-        player.status = (player.status === 'disconnected') ? 'alive' : player.status; // Revive if disconnected status (logic dependent)
+        // Restore status from before disconnection
+        player.status = player.previousStatus; 
         
         // Update map
         // Remove old socket mapping if exists? Hard to know old socket, but clean up potentially? 
@@ -283,8 +283,22 @@ class WerewolfGame {
 
         // Fill rest with Villagers
         while (roles.length < count) roles.push(ROLES.VILLAGER);
-        // Truncate if overflow (shouldn't happen with above logic but safe)
-        while (roles.length > count) roles.pop();
+        
+        // Truncate/Balance if overflow (e.g. 6P preset used for 3 players)
+        if (roles.length > count) {
+            this.addLog("JUDGE: Player count lower than rules require. Adjusting roles for balance.");
+            // 1. If wolves exceed 1/2 of players, reduce them
+            const maxWolves = Math.max(1, Math.floor(count / 3)); 
+            while (roles.filter(r => r === ROLES.WOLF).length > maxWolves && roles.length > count) {
+                const idx = roles.indexOf(ROLES.WOLF);
+                roles.splice(idx, 1);
+            }
+            // 2. Still too many? Remove specials
+            while (roles.length > count && roles.indexOf(ROLES.WITCH) !== -1) roles.splice(roles.indexOf(ROLES.WITCH), 1);
+            while (roles.length > count && roles.indexOf(ROLES.SEER) !== -1) roles.splice(roles.indexOf(ROLES.SEER), 1);
+            // 3. Last resort, pop from end
+            while (roles.length > count) roles.pop();
+        }
         
         // Shuffle
         roles.sort(() => Math.random() - 0.5);

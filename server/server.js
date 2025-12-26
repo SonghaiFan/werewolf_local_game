@@ -234,8 +234,10 @@ io.on('connection', (socket) => {
         for (const [roomId, game] of games.entries()) {
             const pid = game.socketToPid.get(socket.id);
             if (pid && game.players[pid]) {
-                game.players[pid].status = 'disconnected'; 
-                game.addLog(`Player ${game.players[pid].name} disconnected.`);
+                const player = game.players[pid];
+                player.previousStatus = player.status; // Backup status
+                player.status = 'disconnected'; 
+                game.addLog(`Player ${player.name} disconnected.`);
                 
                 // Do NOT remove player logic. Just mark disconnected.
                 // Cleanup logic could be a timeout if needed, but for accidental refresh, keep it.

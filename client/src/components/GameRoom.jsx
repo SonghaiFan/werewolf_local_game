@@ -144,12 +144,10 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
 
     return (
         <GameContext.Provider value={contextValue}>
-            <div className="werewolf-app bg-bg p-4 flex flex-col items-center justify-center">
+            <div className="werewolf-app bg-bg flex flex-col items-center justify-center h-[100dvh] w-full overflow-hidden">
                 
                 {/* Max-width container for larger screens */}
-                {/* Max-width container for larger screens */}
-                {/* Max-width container for larger screens */}
-                <div className="w-full max-w-6xl h-full flex flex-col gap-4 relative transition-colors duration-700" data-theme={gameState.phase.startsWith('DAY_') || gameState.phase === 'FINISHED' ? 'light' : 'dark'}>
+                <div className="w-full max-w-6xl h-full flex flex-col relative transition-colors duration-700" data-theme={gameState.phase.startsWith('DAY_') || gameState.phase === 'FINISHED' ? 'light' : 'dark'}>
                     
                     {/* 1. HEADER - Minimalist, No Background */}
                     <header className="flex justify-between items-end px-4 pt-4 pb-0">
@@ -169,10 +167,9 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                         </div>
                     </header>
 
-                    {/* 2. MAIN STAGE (Player Grid) - Floating, no borders */}
-                    <section className="flex-1 overflow-y-auto px-4 scrollbar-hide flex items-center justify-center">
+                    <section className="flex-1 overflow-y-auto px-4 scrollbar-hide flex items-start justify-center">
                          {/* Responsive grid using rem for dynamic columns */}
-                         <div className="w-full grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-3 pb-20 pt-4">
+                         <div className="w-full grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-3 pt-6 pb-6">
                             <PlayerGrid players={otherPlayers} />
                          </div>
                     </section>
