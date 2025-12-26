@@ -173,7 +173,10 @@ class DayManager {
 
         } else {
             // TIE / DRAW
-            game.addLog("JUDGE: Tie vote. Please vote again. (平票，请重新投票)");
+            const text = VOICE_MESSAGES.DAY_VOTE_TIE;
+            game.addLog(`JUDGE: ${text}`);
+            game.onVoiceCue(text);
+
             game.executedPlayerId = null; 
             
             // Broadcast the tie message
@@ -183,7 +186,7 @@ class DayManager {
                 game.addLog("JUDGE: Re-opening voting...");
                 this.resetVotes();
                 game.advancePhase(PHASES.DAY_VOTE); // Go back to voting
-            }, 3000);
+            }, 5000); // 5s delay to allow voice to finish
         }
     }
 

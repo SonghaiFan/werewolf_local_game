@@ -13,7 +13,8 @@ export default function Landing() {
     const [gameConfig, setGameConfig] = useState({
         wolves: 2,
         seer: true,
-        witch: true
+        witch: true,
+        winCondition: 'wipeout' // Default to Wipeout (屠城) for safety/simple games
     });
 
     const toggleLanguage = () => {
@@ -99,30 +100,69 @@ export default function Landing() {
                             </div>
                             
                             {showSettings && (
-                                <div className="space-y-2 mt-2 pt-2 border-t border-[#333]">
-                                     <div className="flex items-center justify-between">
-                                         <label className="text-[#888]">Wolves: {gameConfig.wolves}</label>
-                                         <div className="flex gap-1">
-                                             <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
-                                             <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
+                                <div className="space-y-4 mt-2 pt-2 border-t border-[#333]">
+                                     {/* Presets */}
+                                     <div className="flex gap-2">
+                                         {[6, 9, 12].map(num => (
+                                             <button 
+                                                key={num}
+                                                className="flex-1 bg-[#333] hover:bg-[#444] text-[10px] py-1 text-white border border-transparent hover:border-white transition-all"
+                                                onClick={() => {
+                                                    if (num === 6) setGameConfig({ wolves: 2, seer: true, witch: true, winCondition: 'wipeout' });
+                                                    if (num === 9) setGameConfig({ wolves: 3, seer: true, witch: true, winCondition: 'side_kill' });
+                                                    if (num === 12) setGameConfig({ wolves: 4, seer: true, witch: true, winCondition: 'side_kill' });
+                                                }}
+                                             >
+                                                 {num} {t('players')}
+                                             </button>
+                                         ))}
+                                     </div>
+
+                                     {/* Win Condition */}
+                                     <div className="flex flex-col gap-1">
+                                         <label className="text-[#888] mb-1">{t('win_condition')}</label>
+                                         <div className="flex gap-2">
+                                             <button 
+                                                 className={`flex-1 py-1 text-[10px] border ${gameConfig.winCondition === 'side_kill' ? 'bg-white text-black border-white' : 'bg-black text-[#666] border-[#333]'}`}
+                                                 onClick={() => setGameConfig(p => ({...p, winCondition: 'side_kill'}))}
+                                             >
+                                                 {t('side_kill')} (屠边)
+                                             </button>
+                                             <button 
+                                                 className={`flex-1 py-1 text-[10px] border ${gameConfig.winCondition === 'wipeout' ? 'bg-white text-black border-white' : 'bg-black text-[#666] border-[#333]'}`}
+                                                 onClick={() => setGameConfig(p => ({...p, winCondition: 'wipeout'}))}
+                                             >
+                                                 {t('wipeout')} (屠城)
+                                             </button>
                                          </div>
                                      </div>
-                                     <div className="flex items-center gap-2">
-                                         <input 
-                                             type="checkbox" 
-                                             checked={gameConfig.seer} 
-                                             onChange={e => setGameConfig(p => ({...p, seer: e.target.checked}))}
-                                         />
-                                         <label className="text-[#888]">Seer ({t('roles.SEER')})</label>
-                                     </div>
-                                     <div className="flex items-center gap-2">
-                                         <input 
-                                             type="checkbox" 
-                                             checked={gameConfig.witch} 
-                                             onChange={e => setGameConfig(p => ({...p, witch: e.target.checked}))}
-                                         />
-                                         <label className="text-[#888]">Witch ({t('roles.WITCH')})</label>
-                                     </div>
+
+                                     {/* Roles */}
+                                     <div className="space-y-2 pt-2 border-t border-[#333]"> 
+                                         <div className="flex items-center justify-between">
+                                             <label className="text-[#888]">Wolves: {gameConfig.wolves}</label>
+                                             <div className="flex gap-1">
+                                                 <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
+                                                 <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
+                                             </div>
+                                         </div>
+                                         <div className="flex items-center gap-2">
+                                             <input 
+                                                 type="checkbox" 
+                                                 checked={gameConfig.seer} 
+                                                 onChange={e => setGameConfig(p => ({...p, seer: e.target.checked}))}
+                                             />
+                                             <label className="text-[#888]">Seer ({t('roles.SEER')})</label>
+                                         </div>
+                                         <div className="flex items-center gap-2">
+                                             <input 
+                                                 type="checkbox" 
+                                                 checked={gameConfig.witch} 
+                                                 onChange={e => setGameConfig(p => ({...p, witch: e.target.checked}))}
+                                             />
+                                             <label className="text-[#888]">Witch ({t('roles.WITCH')})</label>
+                                         </div>
+                                    </div>
                                 </div>
                             )}
                         </div>

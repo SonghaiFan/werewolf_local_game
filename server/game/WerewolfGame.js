@@ -428,12 +428,46 @@ class WerewolfGame {
     }
 
     checkWinCondition() {
+        // 1. Snapshot counts
         const alive = Object.values(this.players).filter(p => p.status === 'alive');
-        const wolves = alive.filter(p => p.role === ROLES.WOLF).length;
-        const villagers = alive.filter(p => p.role !== ROLES.WOLF).length;
+        
+        const wolfCount = alive.filter(p => p.role === ROLES.WOLF).length;
+        const goodCount = alive.filter(p => p.role !== ROLES.WOLF).length;
+        
+        const villagerCount = alive.filter(p => p.role === ROLES.VILLAGER).length;
+        // Gods = Good - Villagers (Seer, Witch, Hunter etc)
+        const godCount = goodCount - villagerCount;
 
-        if (wolves === 0) return 'VILLAGERS';
-        if (wolves >= villagers) return 'WEREWOLVES';
+        const winCondition = this.initialConfig?.winCondition || 'wipeout';
+
+        this.addLog(`DEBUG: Win Check [${winCondition}] - W:${wolfCount} G:${goodCount} (V:${villagerCount}/God:${godCount})`);
+
+        // 2. Villager Win: No Wolves left
+        if (wolfCount === 0) return 'VILLAGERS';
+
+        // 3. Wolf Win: Majority (Vote Dominance)
+        // If Wolves > Good, they can force any vote during the day.
+        // We only check this STRICTLY >. Parity (==) allows game to continue (e.g., 2v2).
+        if (wolfCount > goodCount) {
+             this.addLog("JUDGE: Wolves have taken control of the village (Majority).");
+             return 'WEREWOLVES';
+        }
+
+        // 4. Wolf Win: Kill Condition
+        if (winCondition === 'side_kill') {
+            // Side Victory: Kill ALL Villagers OR Kill ALL Gods
+            if (villagerCount === 0 || godCount === 0) {
+                 this.addLog(`JUDGE: Wolves have slaughtered a side (${villagerCount===0 ? 'Villagers' : 'Gods'}).`);
+                 return 'WEREWOLVES';
+            }
+        } else {
+            // Wipeout (Default): Kill ALL Good players
+            if (goodCount === 0) {
+                 this.addLog("JUDGE: Wolves have slaughtered everyone.");
+                 return 'WEREWOLVES';
+            }
+        }
+
         return null;
     }
 

@@ -9,6 +9,7 @@ const VOICE_MESSAGES = {
     [PHASES.DAY_ANNOUNCE]: "天亮了。所有人都醒过来。",
     [PHASES.DAY_DISCUSSION]: "请开始讨论昨晚发生的事情。",
     [PHASES.DAY_VOTE]: "讨论结束。请投票放逐玩家。",
+    DAY_VOTE_TIE: "平票。请重新投票。",
     [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
 
     // Events
