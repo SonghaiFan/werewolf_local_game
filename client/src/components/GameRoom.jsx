@@ -236,7 +236,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
                 </svg>
             </div>
             
-            <div className="photostat-root relative w-full h-full p-2 grid grid-rows-[auto_1fr_auto_auto] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333]">
+            <div className="photostat-root relative w-full h-full p-2 grid grid-rows-[100px_1fr_80px_160px] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333]">
                 <div className="scanline"></div>
                 <div className="photocopy-texture"></div>
 
@@ -271,7 +271,6 @@ export default function GameRoom({ roomId, myId, onExit }) {
                             selectedId={selectedTarget}
                             onSelect={setSelectedTarget}
                             phase={gameState.phase}
-                            hostId={gameState.hostId}
                             hostId={gameState.hostId}
                         />
                      </div>

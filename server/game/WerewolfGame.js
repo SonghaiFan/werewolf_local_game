@@ -132,12 +132,19 @@ class WerewolfGame {
     addPlayer(socketId, name) {
         if (this.phase !== PHASES.WAITING) return false;
         
+        // Find first available seat number (1-based)
+        const usedNumbers = new Set(Object.values(this.players).map(p => p.avatar));
+        let seatNumber = 1;
+        while (usedNumbers.has(seatNumber)) {
+            seatNumber++;
+        }
+
         this.players[socketId] = {
             id: socketId,
             name: name,
             role: null,
             status: 'alive',
-            avatar: Math.floor(Math.random() * 6) + 1,
+            avatar: seatNumber, // Use sequential seat number
             isReady: false
         };
         return true;
