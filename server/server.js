@@ -85,7 +85,7 @@ io.on('connection', (socket) => {
 
     socket.on('create_game', ({ name, config, pid }) => {
         const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
-        const effectivePid = pid || Math.random().toString(36).substring(2, 10);
+        const effectivePid = pid || socket.id;
 
         // Pass callback for voice cues
         const onVoiceCue = (text) => {
@@ -109,7 +109,7 @@ io.on('connection', (socket) => {
 
     socket.on('join_game', ({ roomId, name, pid }) => {
         const game = games.get(roomId);
-        const effectivePid = pid || Math.random().toString(36).substring(2, 10);
+        const effectivePid = pid || socket.id;
 
         if (!game) {
             socket.emit('error', 'Room not found');

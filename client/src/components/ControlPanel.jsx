@@ -11,6 +11,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         actions,
         myId,
         executedId,
+        onExit,
         hostId,
         serverIP
     } = useGameContext();
@@ -49,7 +50,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
             const winnerName = isVillagersWin ? t('roles.VILLAGER') : t('roles.WOLF');
             
             return (
-                <div className="flex flex-col items-center justify-center animate-in">
+                <div className="flex flex-col items-center justify-center animate-in overflow-hidden">
                     <div className={`w-full p-6 rounded-[var(--radius-lg)] mb-4 text-center border bg-surface/50 backdrop-blur-sm ${isVillagersWin ? 'border-primary/20 text-ink' : 'border-danger/20 text-ink'}`}>
                         <div className="text-xs font-bold uppercase mb-2 tracking-widest opacity-60">{t('game_over')}</div>
                         <div className={`text-4xl font-black tracking-tighter ${isVillagersWin ? 'text-primary' : 'text-danger'}`}>
@@ -58,12 +59,16 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                         <div className="text-sm tracking-widest uppercase mt-1 opacity-80">{t('win')}</div>
                     </div>
                     
-                    {isHost && (
-                        <button className="btn-primary w-full shadow-xl" onClick={actions.onPlayAgain}>
-                            {t('play_again')}
+                    <div className="w-full flex flex-col gap-2">
+                        {isHost && (
+                            <button className="btn-primary w-full shadow-xl" onClick={actions.onPlayAgain}>
+                                {t('play_again')}
+                            </button>
+                        )}
+                        <button className="btn-secondary w-full" onClick={onExit}>
+                            {t('back_to_menu', 'Back to Home')}
                         </button>
-                    )}
-                    {!isHost && <div className="text-xs text-muted font-medium text-center animate-pulse">{t('waiting_for_host')}</div>}
+                    </div>
                 </div>
             );
        }

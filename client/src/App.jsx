@@ -38,8 +38,8 @@ function App() {
        });
        
        const saveSession = (rid, pid) => {
-           localStorage.setItem('werewolf_room', rid);
-           localStorage.setItem('werewolf_pid', pid);
+           sessionStorage.setItem('werewolf_room', rid);
+           sessionStorage.setItem('werewolf_pid', pid);
            setRoomId(rid);
            setMyId(pid); // Use PID as the permanent ID for game logic
            setInGame(true);
@@ -67,12 +67,18 @@ function App() {
        });
 
        socket.on('error', (alertMsg) => {
+           console.error('[App] Error:', alertMsg);
            alert(alertMsg);
-           // If it's a "not found" error, clear the local stale session
-           if (alertMsg === 'Room not found') {
-               localStorage.removeItem('werewolf_room');
-               localStorage.removeItem('werewolf_pid');
+           
+           // If it's a "not found" or "already in progress" error when rejoining, clear the local stale session
+           const roomErrors = ['Room not found', 'Game already in progress', 'Invalid PID'];
+           if (roomErrors.includes(alertMsg)) {
+               sessionStorage.removeItem('werewolf_room');
+               sessionStorage.removeItem('werewolf_pid');
                setInGame(false);
+               setRoomId(null);
+               // Re-sync with Landing by forcing it to not be in rejoining state if it was
+               window.location.reload(); 
            }
        });
        
@@ -88,8 +94,8 @@ function App() {
   }, []);
 
   const handleExit = () => {
-      localStorage.removeItem('werewolf_room');
-      localStorage.removeItem('werewolf_pid');
+      sessionStorage.removeItem('werewolf_room');
+      sessionStorage.removeItem('werewolf_pid');
       setInGame(false);
       setRoomId(null);
       window.location.reload();

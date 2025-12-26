@@ -31,8 +31,8 @@ export default function Landing() {
 
     useEffect(() => {
         // Auto-Rejoin Logic
-        const storedRoom = localStorage.getItem('werewolf_room');
-        const storedPid = localStorage.getItem('werewolf_pid');
+        const storedRoom = sessionStorage.getItem('werewolf_room');
+        const storedPid = sessionStorage.getItem('werewolf_pid');
         
         if (storedRoom && storedPid) {
             setIsRejoining(true);
@@ -76,7 +76,7 @@ export default function Landing() {
     }, []);
 
     if (isRejoining) {
-        return <RejoinLoading t={t} roomId={localStorage.getItem('werewolf_room')} />;
+        return <RejoinLoading t={t} roomId={sessionStorage.getItem('werewolf_room')} />;
     }
 
     const handleCreate = () => {
