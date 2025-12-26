@@ -38,7 +38,7 @@ const Avatars = [
     )
 ];
 
-export default function PlayerGrid({ players, myId, selectedId, onSelect, phase }) {
+export default function PlayerGrid({ players, myId, selectedId, onSelect, phase, hostId }) {
     return (
         <>
             {Object.values(players).map(player => {
@@ -100,6 +100,13 @@ export default function PlayerGrid({ players, myId, selectedId, onSelect, phase 
                     <div className="absolute top-2 left-2 text-xl filter drop-shadow-[0_0_5px_rgba(255,215,0,0.8)] z-20">
                         👮
                     </div>
+                )}
+                
+                {/* Host Badge */}
+                {player.id === hostId && (
+                     <div className="absolute bottom-2 left-2 bg-accent text-black text-[9px] px-1 font-bold border border-black z-20">
+                         HOST
+                     </div>
                 )}
                     </div>
                 );

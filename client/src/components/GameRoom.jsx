@@ -220,13 +220,12 @@ export default function GameRoom({ roomId, myId, onExit }) {
                             User wanted 4 columns? "others avatar" box suggests small icons.
                         */}
                         <PlayerGrid 
-                            players={otherPlayers} // Array works? PlayerGrid expects Object usually?
-                            // Checking PlayerGrid: `Object.values(players).map` -> It handles array or object values basically if keys are ids.
-                            // Actually it uses `Object.values(players)`. If I pass array, Object.values(array) is array. Works.
+                            players={otherPlayers} 
                             myId={myId} 
                             selectedId={selectedTarget}
                             onSelect={setSelectedTarget}
                             phase={gameState.phase}
+                            hostId={gameState.hostId}
                         />
                      </div>
                 </section>
