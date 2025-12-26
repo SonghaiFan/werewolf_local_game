@@ -1,5 +1,7 @@
 const { PHASES } = require('./constants');
 
+// Centralized voice messages configuration
+const VOICE_MESSAGES = {
     // Phases
     [PHASES.NIGHT_WOLVES]: "狼人请睁眼。",
     [PHASES.NIGHT_WITCH]: "狼人请闭眼。女巫请睁眼。",
