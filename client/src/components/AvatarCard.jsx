@@ -127,7 +127,15 @@ export default function AvatarCard({
             <div className="flex-1 relative flex items-center justify-center p-2">
                 {showCardFace ? (
                     // --- FRONT (Role Revealed) ---
-                    <div className="w-full h-full flex flex-col items-center justify-center animate-in fade-in duration-300">
+                    <div 
+                        className="w-full h-full flex flex-col items-center justify-center animate-in fade-in duration-300 cursor-pointer"
+                        onClick={(e) => {
+                            if (isMe && !isDead) { // Allow hiding if alive and it's me
+                                e.stopPropagation();
+                                setIsRevealed(false);
+                            }
+                        }}
+                    >
                         <div className="w-16 h-16 mb-2">
                             {roleIcon}
                         </div>

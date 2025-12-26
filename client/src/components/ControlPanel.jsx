@@ -86,47 +86,16 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                      {/* Host Start Button */}
                      {isHost && (
                         <div className="pt-2.5 border-t border-[#333]">
-                             {/* Calculated derived state for "all ready" excluding host check if host isn't marked ready yet in UI */}
                              {(() => {
-                                 // Check if everyone ELSE is ready
-                                 // We need to filter out the host from the ready check?
-                                 // `players` is an object.
-                                 const otherPlayers = players ? Object.values(players).filter(p => !p.id || (p.id !== (Object.keys(players).find(key => players[key] === p) /* Not easy to get ID if p doesn't have it? p has id from GameRoom! */))) : [];
-                                 
-                                 // Actually p has .id. 
-                                 // We need myId to know who I am, but isHost is passed boolean.
-                                 // However, we can check if `allReady` (passed prop) is "Almost All Ready".
-                                 
-                                 // Let's rely on the explicit check:
-                                 const others = players ? Object.values(players).filter(p => !p.isHost && p.id !== (players[Object.keys(players).find(k => players[k] === p)]?.id /* wait this is messy */)) : [];
-                                 // Simplified: `players` contains all. Host doesn't need to be ready.
-                                 // So we check if every player WHERE id != hostId is ready.
-                                 // But we don't have hostId prop directly here? We have `isHost` boolean.
-                                 
-                                 // Better approach:
-                                 // The `allReady` var at top of component:
-                                 // `const allReady = players ? Object.values(players).every(p => p.isReady) : false;`
-                                 // We should update that definition or create `canStart`.
-                                 
-                                 // Let's redefine `allReady` at the top? No, I can't edit top level here easily without scrolling up.
-                                 // I will just implement the logic inline here.
-                                 const readyCount = players ? Object.values(players).filter(p => p.isReady).length : 0;
-                                 const totalPlayers = players ? Object.keys(players).length : 0;
-                                 // If host is not ready, allReady is false.
-                                 // We want: Everyone ready OR (Everyone except Host ready).
-                                 
-                                 // Check unready count
-                                 const unreadyCount = players ? Object.values(players).filter(p => !p.isReady).length : 0;
-                                 
-                                 // If I am Host and I see this, I am unready. 
-                                 // So unreadyCount must be exactly 1 (Me) OR 0 (If I am somehow marked ready).
-                                 const canStart = unreadyCount === 0 || (unreadyCount === 1 && !isReady);
+                                 // Host can start if everyone else is ready
+                                 const canStart = players && Object.values(players).every(p => p.id === myId || p.isReady);
                                  
                                  return (
                                     <div className="relative w-full">
                                          <button 
                                             className={`btn-brutal bg-accent text-black w-full ${!canStart && 'opacity-50 cursor-not-allowed'}`}
-                                            onClick={() => { actions.onStartGame(); }}
+                                            onClick={() => { if(canStart) actions.onStartGame(); }}
+                                            disabled={!canStart}
                                         >
                                             {!canStart ? t('waiting_for_others') : t('start_game')}
                                         </button>

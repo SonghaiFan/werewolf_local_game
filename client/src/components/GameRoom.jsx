@@ -29,11 +29,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
                 ...prev,
                 ...state
             }));
-
-            // Auto-clear local state when game resets
-            if (state.phase === 'WAITING' || state.round === 0) {
-                 setInspectedPlayers({});
-            }
+        
         }
 
         function onNotification(msg) {
@@ -62,6 +58,13 @@ export default function GameRoom({ roomId, myId, onExit }) {
             socket.off('seer_result', onSeerResult);
         };
     }, [t]);
+
+    // Auto-clear local state when game resets
+    useEffect(() => {
+        if (gameState.phase === 'WAITING' || gameState.round === 0) {
+             setInspectedPlayers({});
+        }
+    }, [gameState.phase, gameState.round]);
 
     // Voice Judge Effect
     useEffect(() => {
