@@ -55,7 +55,7 @@ export default function Landing() {
                 </svg>
             </div>
             
-            <div className="photostat-root relative w-full h-full p-10 flex flex-col items-center justify-center gap-5 contrast-125 brightness-110 z-10">
+            <div className="photostat-root relative w-full h-full p-4 md:p-10 flex flex-col items-center justify-center gap-5 contrast-125 brightness-110 z-10 transition-all">
                 <div className="scanline"></div>
                 <div className="photocopy-texture"></div>
 

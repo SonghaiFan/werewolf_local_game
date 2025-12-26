@@ -98,7 +98,7 @@ export default function AvatarCard({
     return (
         <div 
             className={`
-                relative bg-[#151515] border-2 h-full min-h-[140px] 
+                relative bg-[#151515] border-2 h-full min-h-[120px] md:min-h-[140px] 
                 transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden flex flex-col
                 ${canInteract ? 'cursor-pointer hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[8px_8px_0px_var(--accent)] hover:bg-[#1a1a1a] hover:border-ink' : ''}
                 ${!canInteract && !isMe ? 'opacity-90' : ''}
@@ -136,10 +136,10 @@ export default function AvatarCard({
                             }
                         }}
                     >
-                        <div className="w-16 h-16 mb-2">
+                        <div className="w-10 h-10 md:w-16 md:h-16 mb-2">
                             {roleIcon}
                         </div>
-                        <div className="text-xl font-bold uppercase tracking-widest leading-none">
+                        <div className="text-sm md:text-xl font-bold uppercase tracking-widest leading-none">
                             {/* Translate Role */}
                             {roleKey ? t(`roles.${roleKey}`, roleKey) : t('unknown_role')}
                         </div>
@@ -149,7 +149,7 @@ export default function AvatarCard({
                     // --- BACK (Hidden / Number) ---
                     <div className="w-full h-full flex items-center justify-center relative">
                         {/* Player Number (Avatar ID as visual identifier) */}
-                        <div className="font-mono text-6xl font-bold opacity-20 select-none">
+                        <div className="font-mono text-4xl md:text-6xl font-bold opacity-20 select-none">
                             {String(player.avatar || '00').padStart(2, '0')}
                         </div>
                         

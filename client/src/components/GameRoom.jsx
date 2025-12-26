@@ -173,7 +173,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
                 </svg>
             </div>
             
-            <div className="photostat-root relative w-full h-[100dvh] p-2 grid grid-rows-[50px_1fr_80px_160px] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333] overflow-hidden">
+            <div className="photostat-root relative w-full h-[100dvh] p-2 grid grid-rows-[50px_1fr_80px_140px] md:grid-rows-[50px_1fr_80px_160px] gap-2.5 contrast-125 brightness-110 z-10 max-w-lg mx-auto border-x-0 md:border-x border-[#333] overflow-hidden transition-all">
                 <div className="scanline"></div>
                 <div className="photocopy-texture"></div>
 
@@ -198,7 +198,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
 
                 {/* 2. MAIN STAGE (Others) */}
                 <section className="main-stage overflow-y-auto min-h-0 border-2 border-[#333] bg-[#050505] p-2">
-                     <div className="grid grid-cols-4 gap-2">
+                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
                         <PlayerGrid players={otherPlayers} />
                      </div>
                 </section>
