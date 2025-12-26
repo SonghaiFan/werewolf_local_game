@@ -125,6 +125,11 @@ export default function AvatarCard({
 
             {/* Main Content Area */}
             <div className="flex-1 relative flex items-center justify-center p-2">
+                {/* PERSISTENT PLAYER NUMBER BADGE */}
+                <div className="absolute top-0 right-0 z-50 bg-black text-white text-xs font-mono font-bold px-1.5 py-0.5 border-l border-b border-white shadow-sm select-none">
+                    {String(player.avatar || '0').padStart(2, '0')}
+                </div>
+
                 {showCardFace ? (
                     // --- FRONT (Role Revealed) ---
                     <div 
