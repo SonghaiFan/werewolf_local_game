@@ -1,4 +1,5 @@
 const { PHASES, ROLES } = require('../constants');
+const VOICE_MESSAGES = require('../voiceMessages');
 
 class DayManager {
     constructor() {
@@ -30,10 +31,8 @@ class DayManager {
             game.addLog(`JUDGE: Discussion starts. ${nextP.name}, you have the floor.`);
             
             // Trigger specific voice for first speaker
-            // setTimeout to let the "Start Discussion" intro play first if needed, 
-            // but usually they are sequential in client queue or we just send it.
-            // Let's send it directly.
-            game.onVoiceCue(`请${nextP.avatar}号玩家发言`);
+            const text = VOICE_MESSAGES.NEXT_SPEAKER(nextP.avatar);
+            game.onVoiceCue(text);
         } else {
              // Should unlikely happen
              game.advancePhase(PHASES.DAY_VOTE);
@@ -72,7 +71,8 @@ class DayManager {
             const nextP = game.players[nextId];
             game.addLog(`JUDGE: Next speaker is ${nextP.name}.`);
             // Specific voice cue
-            game.onVoiceCue(`请${nextP.avatar}号玩家发言`);
+            const text = VOICE_MESSAGES.NEXT_SPEAKER(nextP.avatar);
+            game.onVoiceCue(text);
         }
         
         // Trigger generic update for UI
@@ -141,12 +141,34 @@ class DayManager {
             game.addLog(`JUDGE: The village has voted to execute ${game.players[victim].name}.`);
             
             game.executedPlayerId = victim;
+            game.banishCount = (game.banishCount || 0) + 1;
 
             const winResult = game.checkWinCondition();
             if (winResult) {
                 game.finishGame(winResult);
             } else {
-                 game.advancePhase(PHASES.DAY_LEAVE_SPEECH);
+                 // Rule: Day Execution Last Words ONLY for the FIRST banished player
+                 if (game.banishCount === 1) {
+                     // Phase: DAY_LEAVE_SPEECH (Standard)
+                     game.phase = PHASES.DAY_LEAVE_SPEECH;
+                     game.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
+                     
+                     const code = game.players[victim].avatar || '?';
+                     const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
+                     game.triggerVoice(PHASES.DAY_LEAVE_SPEECH, text);
+                     
+                     if(game.onGameUpdate) game.onGameUpdate(game);
+                 } else {
+                     // NO Last Words for subsequent bans (Round > 1 usually)
+                     const name = game.players[victim].name;
+                     game.addLog(`JUDGE: ${name} executed. No last words allowed.`);
+                     
+                     const code = game.players[victim].avatar || '?';
+                     const text = VOICE_MESSAGES.BANISH_GENERIC(code);
+                     game.triggerVoice('GENERIC', text);
+                     
+                     setTimeout(() => game.startNightOrEnd(), 3000);
+                 }
             }
 
         } else {

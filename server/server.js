@@ -72,7 +72,7 @@ io.on('connection', (socket) => {
         });
     };
 
-    socket.on('create_game', ({ name }) => {
+    socket.on('create_game', ({ name, config }) => {
         const roomId = Math.random().toString(36).substring(2, 8).toUpperCase();
         // Pass callback for voice cues
         const onVoiceCue = (text) => {
@@ -82,7 +82,7 @@ io.on('connection', (socket) => {
         // Pass callback for state broadcasting (for async transitions)
         const onGameUpdate = (g) => broadcastState(g);
 
-        const game = new WerewolfGame(roomId, socket.id, onVoiceCue, onGameUpdate);
+        const game = new WerewolfGame(roomId, socket.id, onVoiceCue, onGameUpdate, config);
         
         game.addPlayer(socket.id, name);
         games.set(roomId, game);

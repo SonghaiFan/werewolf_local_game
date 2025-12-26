@@ -198,7 +198,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
 
                 {/* 2. MAIN STAGE (Others) */}
                 <section className="main-stage overflow-y-auto min-h-0 border-2 border-[#333] bg-[#050505] p-2">
-                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
+                     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-2">
                         <PlayerGrid players={otherPlayers} />
                      </div>
                 </section>

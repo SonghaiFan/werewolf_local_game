@@ -4,11 +4,12 @@ const DayManager = require('./managers/DayManager');
 const VOICE_MESSAGES = require('./voiceMessages');
 
 class WerewolfGame {
-    constructor(id, hostId, onVoiceCue, onGameUpdate) {
+    constructor(id, hostId, onVoiceCue, onGameUpdate, config = null) {
         this.id = id;
         this.hostId = hostId;
         this.onVoiceCue = onVoiceCue || (() => {});
         this.onGameUpdate = onGameUpdate || (() => {});
+        this.initialConfig = config;
 
         this.players = {};
         this.phase = PHASES.WAITING;
@@ -21,6 +22,7 @@ class WerewolfGame {
         this.nightManager = new NightManager();
         this.dayManager = new DayManager();
         this.winner = null;
+        this.banishCount = 0;
     }
 
     // --- State Access ---
@@ -203,9 +205,12 @@ class WerewolfGame {
         // Role Distribution
         const roles = [];
         
-        if (config && typeof config === 'object') {
+        // Effective Config: Passed Config (Lobby) > Initial Config (Landing) > Auto
+        const effectiveConfig = config || this.initialConfig;
+
+        if (effectiveConfig && typeof effectiveConfig === 'object') {
              // 3a. Custom Config from Host
-             const { wolves = 0, seer = false, witch = false } = config;
+             const { wolves = 0, seer = false, witch = false } = effectiveConfig;
              
              // Add Wolves
              for (let i = 0; i < wolves; i++) roles.push(ROLES.WOLF);
@@ -328,10 +333,11 @@ class WerewolfGame {
         }
     }
 
-    triggerVoice(phaseOrText) {
-        // Look up by phase, or use text directly if not found
-        let text = VOICE_MESSAGES[phaseOrText] || phaseOrText;
-        if(text) this.onVoiceCue(text);
+    triggerVoice(phase, overrideText = null) {
+        const text = overrideText || VOICE_MESSAGES[phase];
+        if (text) {
+            this.onVoiceCue(text);
+        }
     }
 
     // --- Action Proxies ---
@@ -352,23 +358,56 @@ class WerewolfGame {
             if(this.players[id]) this.players[id].status = 'dead';
         });
         
-        if (this.pendingDeaths.length > 0) {
-            const names = this.pendingDeaths.map(id => this.players[id].name).join(", ");
-            this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died: ${names}.`);
-        } else {
-            this.addLog("JUDGE: Sun rises. It was a peaceful night.");
-        }
+        // 3. ANNOUNCE DEATHS & CHECK FOR LAST WORDS
+        let announcement = "";
+        let hasDeaths = this.pendingDeaths.length > 0;
 
-        // Check for Game Over immediately after deaths (e.g. 1 Wolf vs 1 Villager -> Wolf Win)
+        if (hasDeaths) {
+             const namesCN = this.pendingDeaths.map(pid => this.players[pid]?.name || '未知').join(', ');
+             announcement = VOICE_MESSAGES.DEATH_ANNOUNCE(namesCN);
+             this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died.`);
+        } else {
+             announcement = VOICE_MESSAGES.DEATH_PEACEFUL();
+             this.addLog("JUDGE: Sun rises. It was a peaceful night.");
+        }
+        
+        // Broadcast the update (deaths handled)
+        this.onGameUpdate(this);
+
+        // CHECK WIN immediately after deaths
         const winResult = this.checkWinCondition();
         if (winResult) {
             this.finishGame(winResult);
-            this.pendingDeaths = []; // Clear pending
+            this.pendingDeaths = []; 
             return;
         }
 
-        // Proceed to next phase
-        setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000);
+        // TRANSITION
+        // Rule: Night Death Last Words ONLY on Round 1
+        if (this.round === 1 && hasDeaths) {
+            this.executedPlayerId = this.pendingDeaths[0]; // Set focus to first victim for UI
+            
+            this.phase = PHASES.DAY_LEAVE_SPEECH;
+            this.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
+            this.onGameUpdate(this);
+            
+            // Voice: "Please leave last words."
+            this.triggerVoice(PHASES.DAY_LEAVE_SPEECH, VOICE_MESSAGES.DEATH_LAST_WORDS(announcement)); 
+            
+        } else {
+            // No last words (Round > 1 OR Peace)
+            // Announcement + "Please discuss"
+            this.phase = PHASES.DAY_DISCUSSION;
+            this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
+            this.onGameUpdate(this);
+            
+            this.triggerVoice(PHASES.DAY_DISCUSSION, VOICE_MESSAGES.NIGHT_DISCUSSION(announcement));
+            
+            // Actually start discussion timer/manage it
+            this.dayManager.startDiscussion(this);
+        }
+        
+        // Clear pending
         this.pendingDeaths = [];
     }
     

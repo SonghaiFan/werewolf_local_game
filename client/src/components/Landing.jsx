@@ -7,6 +7,14 @@ export default function Landing() {
     const [name, setName] = useState('');
     const [roomId, setRoomId] = useState('');
     const [error, setError] = useState('');
+    
+    // Game Settings State
+    const [showSettings, setShowSettings] = useState(false);
+    const [gameConfig, setGameConfig] = useState({
+        wolves: 2,
+        seer: true,
+        witch: true
+    });
 
     const toggleLanguage = () => {
         const newLang = i18n.language === 'zh' ? 'en' : 'zh';
@@ -25,11 +33,10 @@ export default function Landing() {
     }, []);
 
     const handleCreate = () => {
-        if (!name) return setError(t('error') + ': Please enter your name'); // Partial translation for simplicity on input errors or full?
-        // Let's keep input errors simple for now or generic. 
-        // Actually "Please enter your name" is static.
+        if (!name) return setError(t('error') + ': Please enter your name'); 
+        
         socket.connect();
-        socket.emit('create_game', { name });
+        socket.emit('create_game', { name, config: gameConfig });
     };
 
     const handleJoin = () => {
@@ -85,6 +92,42 @@ export default function Landing() {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                             />
+                        </div>
+
+                        {/* Settings Panel for Create Game */}
+                        <div className="bg-[#1a1a1a] border border-[#333] p-2.5 text-xs mb-2.5">
+                            <div className="flex items-center justify-between font-mono text-[#666] mb-2 cursor-pointer" onClick={() => setShowSettings(!showSettings)}>
+                                <span>{t('settings')}</span>
+                                <span>{showSettings ? '-' : '+'}</span>
+                            </div>
+                            
+                            {showSettings && (
+                                <div className="space-y-2 mt-2 pt-2 border-t border-[#333]">
+                                     <div className="flex items-center justify-between">
+                                         <label className="text-[#888]">Wolves: {gameConfig.wolves}</label>
+                                         <div className="flex gap-1">
+                                             <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
+                                             <button className="px-2 py-0.5 bg-[#333] hover:bg-[#444] text-white" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
+                                         </div>
+                                     </div>
+                                     <div className="flex items-center gap-2">
+                                         <input 
+                                             type="checkbox" 
+                                             checked={gameConfig.seer} 
+                                             onChange={e => setGameConfig(p => ({...p, seer: e.target.checked}))}
+                                         />
+                                         <label className="text-[#888]">Seer ({t('roles.SEER')})</label>
+                                     </div>
+                                     <div className="flex items-center gap-2">
+                                         <input 
+                                             type="checkbox" 
+                                             checked={gameConfig.witch} 
+                                             onChange={e => setGameConfig(p => ({...p, witch: e.target.checked}))}
+                                         />
+                                         <label className="text-[#888]">Witch ({t('roles.WITCH')})</label>
+                                     </div>
+                                </div>
+                            )}
                         </div>
 
                         <button className="btn-brutal btn-start" onClick={handleCreate}>

@@ -76,7 +76,8 @@ const resources = {
         "SEER": "SEER",
         "WITCH": "WITCH",
         "scanned": "SCANNED",
-        "UNKNOWN": "???"
+        "UNKNOWN": "???",
+        "settings": "SETTINGS"
       }
     }
   },
@@ -147,6 +148,7 @@ const resources = {
       "voting_not_open": "投票未开启！",
       "select_vote_target": "请选择投票对象！",
       "room": "房间",
+      "settings": "游戏设置",
       "round_short": "轮",
       "roles": {
         "WOLF": "狼人",
