@@ -164,12 +164,6 @@ export default function AvatarCard({
                         {/* Reveal Hint (Self Only) - Modern & Clean */}
                         {isMe && !isDead && (
                              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center cursor-pointer">
-                                <div className="p-2 rounded-full bg-surface/50 backdrop-blur-sm border border-primary/20 shadow-lg group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all duration-300">
-                                    <svg className="w-3 h-3 md:w-4 md:h-4 text-primary group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                                        <circle cx="12" cy="12" r="3" />
-                                    </svg>
-                                </div>
                                 <span className="mt-1.5 text-[8px] font-bold uppercase tracking-[0.2em] text-primary/60 group-hover:text-primary transition-colors">
                                     {t('reveal')}
                                 </span>

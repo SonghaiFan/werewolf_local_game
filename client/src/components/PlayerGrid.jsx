@@ -1,4 +1,3 @@
-import React from 'react';
 import AvatarCard from './AvatarCard';
 
 export default function PlayerGrid({ players }) {

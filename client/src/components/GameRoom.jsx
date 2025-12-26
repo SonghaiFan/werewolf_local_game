@@ -147,10 +147,12 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
             <div className="werewolf-app bg-bg p-4 flex flex-col items-center justify-center">
                 
                 {/* Max-width container for larger screens */}
-                <div className="w-full max-w-6xl h-full flex flex-col gap-6 relative">
+                {/* Max-width container for larger screens */}
+                {/* Max-width container for larger screens */}
+                <div className="w-full max-w-6xl h-full flex flex-col gap-4 relative transition-colors duration-700" data-theme={gameState.phase.startsWith('DAY_') || gameState.phase === 'FINISHED' ? 'light' : 'dark'}>
                     
                     {/* 1. HEADER - Minimalist, No Background */}
-                    <header className="flex justify-between items-end px-2 pt-2 pb-0">
+                    <header className="flex justify-between items-end px-4 pt-4 pb-0">
                         <div className="flex flex-col">
                              <div className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1 opacity-70">Room {roomId}</div>
                              <h1 className="text-2xl font-black text-ink tracking-tight">Werewolf</h1>
@@ -158,48 +160,51 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                         
                         <div className="text-right">
                             <div className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1 opacity-70">{t('round_short')} {gameState.round}</div>
-                            <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                            <div className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
                                 gameState.phase.includes('NIGHT') ? 'bg-primary/10 text-primary' : 
-                                gameState.phase.includes('DAY') ? 'bg-accent/10 text-accent' : 'bg-surface text-muted'
+                                gameState.phase.includes('DAY') ? 'bg-amber-500/10 text-amber-600' : 'bg-surface text-muted'
                             }`}>
-                                {gameState.phase.replace('_', ' ')}
+                                {gameState.phase.replace(/_/g, ' ')}
                             </div>
                         </div>
                     </header>
 
                     {/* 2. MAIN STAGE (Player Grid) - Floating, no borders */}
-                    <section className="flex-1 overflow-y-auto px-2 scrollbar-hide flex items-center justify-center">
+                    <section className="flex-1 overflow-y-auto px-4 scrollbar-hide flex items-center justify-center">
                          {/* Responsive grid using rem for dynamic columns */}
-                         <div className="w-full grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-3 pt-4 pb-20">
+                         <div className="w-full grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-3 pb-20 pt-4">
                             <PlayerGrid players={otherPlayers} />
                          </div>
                     </section>
                     
                     {/* 3. FOOTER AREA - Fixed/Sticky Bottom for Mobile Feel, immersive */}
-                    <footer className="shrink-0 grid grid-cols-[6rem_1fr] md:grid-cols-[8rem_1fr] gap-4 md:gap-6 items-end pb-4">
-                        {/* User Avatar (Me) - Floating Card */}
-                        <div className={`transition-all duration-300 ${gameState.me?.status === 'dead' ? 'opacity-50 grayscale' : ''}`}>
-                             <div className="text-[9px] uppercase tracking-wider text-muted text-center mb-1.5">{t('you')}</div>
-                             <AvatarCard
-                                 player={mePlayer}
-                                 onSelect={null}
-                                 className="shadow-2xl !bg-surface"
-                             />
-                        </div>
+                    <footer className="shrink-0 flex flex-col gap-4 pb-6 px-4">
+                         
+                         {/* Logs - Full Width, Floating Above Controls */}
+                         <div className="w-full h-[60px] relative mask-image-gradient-to-t flex items-end justify-center">
+                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg/90 to-transparent pointer-events-none h-6 z-10" />
+                              <div className="w-full max-w-lg">
+                                  <ControlPanel onlyLogs={true} />
+                              </div>
+                         </div>
 
-                        {/* Control Center - Clean, divided into Logs and Actions */}
-                        <div className="flex flex-col gap-4 h-full justify-end">
-                            {/* Logs float above actions, fading out */}
-                            <div className="h-[80px] overflow-hidden relative mask-image-gradient-to-t">
-                                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg/80 to-transparent pointer-events-none h-4 z-10" />
-                                 <ControlPanel onlyLogs={true} />
+                         {/* Bottom Row: Me Card + Actions */}
+                         <div className="w-full grid grid-cols-[6rem_1fr] gap-4 md:gap-8 items-end">
+                            {/* User Avatar (Me) - Floating Card */}
+                            <div className={`transition-all duration-300 ${gameState.me?.status === 'dead' ? 'opacity-50 grayscale' : ''}`}>
+                                 <div className="text-[9px] uppercase tracking-wider text-muted text-center mb-1.5 opacity-60">{t('you')}</div>
+                                 <AvatarCard
+                                     player={mePlayer}
+                                     onSelect={null}
+                                     className="shadow-2xl !bg-surface"
+                                 />
                             </div>
 
-                            {/* Actions - The explicit interaction zone */}
-                            <div className="">
+                            {/* Actions Area (Anchored) */}
+                            <div className="w-full">
                                 <ControlPanel onlyActions={true} />
                             </div>
-                        </div>
+                         </div>
                     </footer>
                 </div>
             </div>

@@ -4,26 +4,53 @@
    THEME TOKENS
    ============================================ */
 @theme {
-  --color-bg: #09090b; /* Zinc 950 - Darker, more immersive */
-  --color-surface: #18181b; /* Zinc 900 */
-  --color-surface-hover: #27272a; /* Zinc 800 */
-  --color-border: #27272a; /* Zinc 800 - Subtle borders */
-  --color-ink: #fafafa; /* Zinc 50 */
-  --color-muted: #a1a1aa; /* Zinc 400 */
+  --color-bg: var(--project-bg);
+  --color-surface: var(--project-surface);
+  --color-surface-hover: var(--project-surface-hover);
+  --color-border: var(--project-border);
+  --color-ink: var(--project-ink);
+  --color-muted: var(--project-muted);
   
-  --color-primary: #6366f1; /* Indigo 500 */
-  --color-primary-hover: #818cf8; /* Indigo 400 - Lighter on hover for dark mode */
+  --color-primary: var(--project-primary);
+  --color-primary-hover: var(--project-primary-hover);
   
-  --color-accent: #fbbf24; /* Amber 400 */
-  --color-danger: #f87171; /* Red 400 */
-  --color-success: #34d399; /* Emerald 400 */
+  --color-accent: #fbbf24;
+  --color-danger: #f87171;
+  --color-success: #34d399;
 
   --font-sans: "Inter", system-ui, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   
   --radius-sm: 0.5rem;
   --radius-md: 0.75rem;
-  --radius-lg: 1rem; /* More rounded/friendly/modern */
+  --radius-lg: 1rem;
+}
+
+/* Dynamic Field Theming */
+@layer base {
+  :root {
+    /* Default (Dark) - Zinc 950 Base */
+    --project-bg: #09090b;
+    --project-surface: #18181b; 
+    --project-surface-hover: #27272a;
+    --project-border: #27272a;
+    --project-ink: #fafafa;
+    --project-muted: #a1a1aa;
+    --project-primary: #6366f1; /* Indigo 500 */
+    --project-primary-hover: #818cf8;
+  }
+
+  [data-theme="light"] {
+    /* Light Mode - Zinc 50 Base */
+    --project-bg: #f4f4f5; 
+    --project-surface: #ffffff;
+    --project-surface-hover: #e4e4e7;
+    --project-border: #d4d4d8; 
+    --project-ink: #18181b; /* Dark text */
+    --project-muted: #71717a;
+    --project-primary: #4f46e5; /* Indigo 600 - darker for contrast */
+    --project-primary-hover: #4338ca;
+  }
 }
 
 /* ============================================

@@ -23,6 +23,9 @@ class WerewolfGame {
         this.dayManager = new DayManager();
         this.winner = null;
         this.banishCount = 0;
+        
+        // Mapping Ephemeral Socket ID -> Persistent Player ID
+        this.socketToPid = new Map();
     }
 
     // --- State Access ---
@@ -160,7 +163,10 @@ class WerewolfGame {
         this.logs.push(`[${time}] ${message}`);
     }
 
-    addPlayer(socketId, name) {
+    addPlayer(socketId, name, pid) {
+        // If pid already exists (rejoin scenario handled by reconnectPlayer, but just in case)
+        if (this.players[pid]) return false;
+
         if (this.phase !== PHASES.WAITING) return false;
         
         // Find first available seat number (1-based)
@@ -170,19 +176,42 @@ class WerewolfGame {
             seatNumber++;
         }
 
-        this.players[socketId] = {
-            id: socketId,
+        this.players[pid] = {
+            id: pid, // Persistent ID
+            socketId: socketId, // Current Socket
             name: name,
             role: null,
             status: 'alive',
-            avatar: seatNumber, // Use sequential seat number
+            avatar: seatNumber,
             isReady: false
         };
+        
+        this.socketToPid.set(socketId, pid);
+        return true;
+    }
+
+    reconnectPlayer(socketId, pid) {
+        const player = this.players[pid];
+        if (!player) return false;
+
+        // Update with new socket
+        player.socketId = socketId;
+        player.status = (player.status === 'disconnected') ? 'alive' : player.status; // Revive if disconnected status (logic dependent)
+        
+        // Update map
+        // Remove old socket mapping if exists? Hard to know old socket, but clean up potentially? 
+        // We just set new one.
+        this.socketToPid.set(socketId, pid);
+        this.addLog(`Player ${player.name} reconnected.`);
         return true;
     }
 
     removePlayer(socketId) {
-        delete this.players[socketId];
+        const pid = this.socketToPid.get(socketId);
+        if (pid) {
+            delete this.players[pid];
+            this.socketToPid.delete(socketId);
+        }
     }
 
     handlePlayerReady(playerId) {

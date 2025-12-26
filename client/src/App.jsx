@@ -27,12 +27,29 @@ function App() {
   }, []);
   
   useEffect(() => {
-       socket.on('connect', () => setMyId(socket.id));
-       socket.on('disconnect', () => { setInGame(false); setRoomId(null); });
+       socket.on('connect', () => {
+           setMyId(socket.id);
+       });
        
-       socket.on('game_created', ({ roomId }) => {
-           setRoomId(roomId);
+       socket.on('disconnect', () => { 
+           setInGame(false); 
+           setRoomId(null); 
+           // Note: We keep localStorage intact for reconnection
+       });
+       
+       const saveSession = (rid, pid) => {
+           localStorage.setItem('werewolf_room', rid);
+           localStorage.setItem('werewolf_pid', pid);
+           setRoomId(rid);
            setInGame(true);
+       };
+
+       socket.on('game_created', ({ roomId, pid }) => {
+           saveSession(roomId, pid);
+       });
+
+       socket.on('joined_success', ({ roomId, pid }) => {
+           saveSession(roomId, pid);
        });
        
        socket.on('game_state', (state) => {
@@ -47,12 +64,16 @@ function App() {
             setServerIP(ip);
        });
 
-       socket.on('error', (alertMsg) => alert(alertMsg));
+       socket.on('error', (alertMsg) => {
+           alert(alertMsg);
+           // If error occurs during potential auto-rejoin, stop the "inGame" assumption if stuck
+       });
        
        return () => {
            socket.off('connect');
            socket.off('disconnect');
            socket.off('game_created');
+           socket.off('joined_success');
            socket.off('game_state');
            socket.off('server_config');
            socket.off('error');
@@ -60,8 +81,11 @@ function App() {
   }, []);
 
   const handleExit = () => {
+      localStorage.removeItem('werewolf_room');
+      localStorage.removeItem('werewolf_pid');
       setInGame(false);
       setRoomId(null);
+      window.location.reload();
   };
 
   return (

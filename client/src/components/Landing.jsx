@@ -9,6 +9,7 @@ export default function Landing() {
     const [latestRoom, setLatestRoom] = useState(null);
     const [error, setError] = useState('');
     const [view, setView] = useState('home'); // 'home', 'host', 'manual'
+    const [isRejoining, setIsRejoining] = useState(false);
     
     // Game Settings State
     const [gameConfig, setGameConfig] = useState({
@@ -24,6 +25,26 @@ export default function Landing() {
     };
 
     useEffect(() => {
+        // Auto-Rejoin Logic
+        const storedRoom = localStorage.getItem('werewolf_room');
+        const storedPid = localStorage.getItem('werewolf_pid');
+        
+        if (storedRoom && storedPid) {
+            setIsRejoining(true);
+            if (!socket.connected) socket.connect();
+            
+            const attemptRejoin = () => {
+                console.log(`[Landing] Attempting auto-rejoin to ${storedRoom} with PID ${storedPid}`);
+                socket.emit('join_game', { roomId: storedRoom, name: 'Rejoining...', pid: storedPid });
+            };
+            
+            if (socket.connected) attemptRejoin();
+            else socket.once('connect', attemptRejoin);
+            
+            // Fallback timeout if stuck
+            setTimeout(() => setIsRejoining(false), 5000);
+        }
+
         // Parse URL params
         const params = new URLSearchParams(window.location.search);
         const roomParam = params.get('room');
@@ -48,6 +69,15 @@ export default function Landing() {
             socket.off('latest_room', onLatestRoom);
         };
     }, []);
+
+    if (isRejoining) {
+        return (
+             <div className="min-h-screen w-full flex flex-col items-center justify-center bg-bg text-ink">
+                 <div className="animate-pulse text-primary tracking-[0.2em] uppercase text-xs font-bold mb-4">{t('room')} {localStorage.getItem('werewolf_room')}</div>
+                 <div className="animate-pulse text-muted tracking-[0.2em] uppercase text-[10px]">Restoring Session...</div>
+             </div>
+        );
+    }
 
     const handleCreate = () => {
         if (!name) return setError(t('error') + ': Please enter your name'); 
