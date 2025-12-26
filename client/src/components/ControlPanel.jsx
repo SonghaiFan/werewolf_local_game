@@ -233,12 +233,28 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                  if (hasActed) {
                      return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button></div>;
                  }
+                 
+                 const saveUsed = gameState.me?.witchState?.saveUsed;
+                 const poisonUsed = gameState.me?.witchState?.poisonUsed;
+
                  return (
                     <div className="mt-auto space-y-3">
                         <div className="text-xs text-purple-400 font-bold uppercase tracking-widest mb-1 text-center opacity-80">{t('witch_wake')}</div>
                         <div className="grid grid-cols-2 gap-3">
-                            <button className="btn-base bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-white transition-all px-4 py-3 rounded-[var(--radius-lg)] font-medium text-sm" onClick={() => actions.onWitchAction('save')}>{t('save_victim')}</button>
-                            <button className="btn-base bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500 hover:text-white transition-all px-4 py-3 rounded-[var(--radius-lg)] font-medium text-sm" onClick={() => actions.onWitchAction('poison')}>{t('poison_target')}</button>
+                            <button 
+                                className={`btn-base px-4 py-3 rounded-[var(--radius-lg)] font-medium text-sm transition-all ${saveUsed ? 'bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed shadow-none opacity-50' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`} 
+                                onClick={() => !saveUsed && actions.onWitchAction('save')}
+                                disabled={saveUsed}
+                            >
+                                {saveUsed ? `${t('save_victim')} (已消耗)` : t('save_victim')}
+                            </button>
+                            <button 
+                                className={`btn-base px-4 py-3 rounded-[var(--radius-lg)] font-medium text-sm transition-all ${poisonUsed ? 'bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed shadow-none opacity-50' : 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500 hover:text-white'}`} 
+                                onClick={() => !poisonUsed && actions.onWitchAction('poison')}
+                                disabled={poisonUsed}
+                            >
+                                {poisonUsed ? `${t('poison_target')} (已消耗)` : t('poison_target')}
+                            </button>
                         </div>
                         <button className="btn-outline w-full py-2 text-xs opacity-60 hover:opacity-100" onClick={() => actions.onWitchAction('skip')}>{t('do_nothing')}</button>
                     </div>

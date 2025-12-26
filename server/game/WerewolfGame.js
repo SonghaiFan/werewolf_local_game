@@ -99,13 +99,21 @@ class WerewolfGame {
                     hasActed = true;
                 }
             }
-            if (me.role === ROLES.WITCH && this.phase === PHASES.NIGHT_WITCH) {
-                 // Only reveal victim if Witch has Antidote (save not used)
-                 if (!this.nightManager.witchState.saveUsed) {
-                     info.wolfTarget = this.nightManager.actions.wolfTarget;
-                 }
-                 if (this.nightManager.actions.witchAction) {
-                     hasActed = true;
+            if (me.role === ROLES.WITCH) {
+                 // Add long-term potion status
+                 info.witchState = {
+                     saveUsed: this.nightManager.witchState.saveUsed,
+                     poisonUsed: this.nightManager.witchState.poisonUsed
+                 };
+
+                 if (this.phase === PHASES.NIGHT_WITCH) {
+                     // Only reveal victim if Witch has Antidote (save not used)
+                     if (!this.nightManager.witchState.saveUsed) {
+                         info.wolfTarget = this.nightManager.actions.wolfTarget;
+                     }
+                     if (this.nightManager.actions.witchAction) {
+                         hasActed = true;
+                     }
                  }
             }
             if (me.role === ROLES.SEER && this.phase === PHASES.NIGHT_SEER) {
