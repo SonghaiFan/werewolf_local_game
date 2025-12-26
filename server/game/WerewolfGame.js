@@ -342,9 +342,6 @@ class WerewolfGame {
         // Voice Triggers
         this.triggerVoice(newPhase);
 
-        // Broadcast State Update (for async transitions)
-        this.onGameUpdate(this);
-
         switch (this.phase) {
             case PHASES.NIGHT_WOLVES:
                 this.addLog("JUDGE: Night falls. Wolves, please wake up and hunt.");
@@ -375,12 +372,15 @@ class WerewolfGame {
 
             case PHASES.DAY_LEAVE_SPEECH:
                 if (this.executedPlayerId && this.players[this.executedPlayerId]) {
-                    this.addLog(`JUDGE: ${this.players[this.executedPlayerId].name} has been executed. Please leave your last words.`);
+                    this.addLog(`JUDGE: ${String(this.players[this.executedPlayerId].avatar || '0').padStart(2, '0')}号玩家出局，发表遗言。`);
                 } else {
                     setTimeout(() => this.startNightOrEnd(), 1000);
                 }
                 break;
         }
+
+        // Broadcast State Update AFTER all phase side-effects
+        if(this.onGameUpdate) this.onGameUpdate(this);
     }
 
     triggerVoice(phase, overrideText = null) {

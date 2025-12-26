@@ -165,7 +165,7 @@ export default function AvatarCard({
             )}
 
             {/* Voting Indicator */}
-             {player.isVoting && phase === 'DAY_VOTE' && (
+             {player.isVoting && (phase === 'DAY_VOTE' || phase === 'DAY_ELIMINATION') && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
                      <div className="bg-danger text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg shadow-red-500/20 animate-bounce">
                         {t('voted')}

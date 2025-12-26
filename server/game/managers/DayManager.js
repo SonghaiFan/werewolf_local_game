@@ -136,6 +136,14 @@ class DayManager {
 
         game.phase = PHASES.DAY_ELIMINATION;
         
+        // If it's a tie, reset votes immediately so UI doesn't look stuck during the 5s tie announcement
+        const names = Object.values(voteCounts);
+        const tieMode = names.length === 0 || candidates.length > 1;
+        
+        if (tieMode) {
+             this.resetVotes(); 
+        }
+
         // Broadcast immediately to show the "Tallying" result / logs
         if(game.onGameUpdate) game.onGameUpdate(game);
 
@@ -188,7 +196,6 @@ class DayManager {
 
             setTimeout(() => {
                 game.addLog("JUDGE: Re-opening voting...");
-                this.resetVotes();
                 game.advancePhase(PHASES.DAY_VOTE); // Go back to voting
             }, 5000); // 5s delay to allow voice to finish
         }
