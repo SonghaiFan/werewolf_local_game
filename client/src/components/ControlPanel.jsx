@@ -280,7 +280,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              const isMyTurn = currentSpeakerId === myId;
              
              // Find speaker name
-             const speakerName = currentSpeakerId && players && players[currentSpeakerId] ? players[currentSpeakerId].name : 'Unknown';
+             const speakerName = currentSpeakerId && players && players[currentSpeakerId] ? players[currentSpeakerId].name : t('unknown_role');
 
              return (
                  <div className="mt-auto">

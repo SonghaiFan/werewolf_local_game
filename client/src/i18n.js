@@ -75,7 +75,8 @@ const resources = {
         "VILLAGER": "VILLAGER",
         "SEER": "SEER",
         "WITCH": "WITCH",
-        "scanned": "SCANNED"
+        "scanned": "SCANNED",
+        "UNKNOWN": "???"
       }
     }
   },
@@ -152,7 +153,8 @@ const resources = {
         "VILLAGER": "村民",
         "SEER": "预言家",
         "WITCH": "女巫",
-        "scanned": "已扫描"
+        "scanned": "已扫描",
+        "UNKNOWN": "???"
       }
     }
   }
