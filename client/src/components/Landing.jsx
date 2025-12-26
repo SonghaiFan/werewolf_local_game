@@ -12,6 +12,9 @@ export default function Landing() {
         if (roomParam) {
             setRoomId(roomParam.toUpperCase());
         }
+
+        const randomId = Math.floor(Math.random() * 9000) + 1000;
+        setName(`Player ${randomId}`);
     }, []);
 
     const handleCreate = () => {

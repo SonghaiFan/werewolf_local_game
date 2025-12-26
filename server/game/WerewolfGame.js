@@ -4,10 +4,11 @@ const ElectionManager = require('./managers/ElectionManager');
 const DayManager = require('./managers/DayManager');
 
 class WerewolfGame {
-    constructor(id, hostId, onVoiceCue) {
+    constructor(id, hostId, onVoiceCue, onGameUpdate) {
         this.id = id;
         this.hostId = hostId;
         this.onVoiceCue = onVoiceCue || (() => {});
+        this.onGameUpdate = onGameUpdate || (() => {});
 
         this.players = {};
         this.phase = PHASES.WAITING;
@@ -174,6 +175,9 @@ class WerewolfGame {
         // Voice Triggers
         this.triggerVoice(newPhase);
 
+        // Broadcast State Update (for async transitions)
+        this.onGameUpdate(this);
+
         switch (this.phase) {
             case PHASES.NIGHT_WOLVES:
                 this.addLog("JUDGE: Night falls. Wolves, please wake up and hunt.");
@@ -181,10 +185,13 @@ class WerewolfGame {
                 break;
             case PHASES.NIGHT_WITCH:
                 this.addLog("JUDGE: Wolves have closed their eyes. Witch, please wake up.");
-                // Auto-skip logic could go here
+                // Check if Witch exists and is alive
+                this.checkActiveRole(ROLES.WITCH, PHASES.NIGHT_SEER);
                 break;
             case PHASES.NIGHT_SEER:
                 this.addLog("JUDGE: Witch has closed eyes. Seer, please wake up.");
+                // Check if Seer exists and is alive
+                this.checkActiveRole(ROLES.SEER, () => this.resolveNight());
                 break;
             case PHASES.DAY_ELECTION_NOMINATION:
                 this.addLog("JUDGE: It is now time for the Sheriff Election. Please declare if you wish to run.");
@@ -343,6 +350,24 @@ class WerewolfGame {
     }
     handleSheriffHandover(playerId, targetId) {
         this.dayManager.handleSheriffHandover(this, playerId, targetId);
+    }
+
+    checkActiveRole(role, nextAction) {
+        const player = Object.values(this.players).find(p => p.role === role);
+        const isActive = player && player.status === 'alive';
+        
+        // If inactive (dead or doesn't exist), wait random time then advance
+        if (!isActive) {
+            const delay = Math.floor(Math.random() * 10000) + 15000; // 15-25 seconds random delay
+            console.log(`[Game] Role ${role} inactive. Fake waiting for ${delay}ms.`);
+            setTimeout(() => {
+                if (typeof nextAction === 'string') {
+                    this.advancePhase(nextAction);
+                } else {
+                    nextAction();
+                }
+            }, delay);
+        }
     }
 }
 
