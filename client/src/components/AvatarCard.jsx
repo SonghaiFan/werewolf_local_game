@@ -107,25 +107,27 @@ export default function AvatarCard({
             onClick={() => canInteract && handleSelect(player.id)}
         >
             {/* Top Bar: Player Name & Status */}
+            {/* Top Bar: Index First, Name Second */}
             <div className={`
-                p-1.5 border-b border-border/50 flex justify-between items-center text-xs
+                px-3 py-2 border-b border-border/50 flex justify-between items-center
                 ${isSelected ? 'bg-primary/10' : 'bg-surface'}
             `}>
-                <span className="truncate max-w-[85px] font-medium text-ink/90">
-                    {player.name} {isMe && <span className="text-muted text-[10px] ml-0.5">({t('you')})</span>}
-                </span>
+                <div className="flex items-baseline gap-2 overflow-hidden">
+                    <span className="font-mono text-lg font-black text-white leading-none tracking-tight">
+                        {String(player.avatar || '0').padStart(2, '0')}
+                    </span>
+                    <span className="truncate text-[9px] text-muted/60 font-medium uppercase tracking-wide">
+                        {player.name} {isMe && t('you')}
+                    </span>
+                </div>
                  {/* Ready Status indicator */}
                  {phase === 'WAITING' && (
-                    <span className={`w-1.5 h-1.5 rounded-full ${player.isReady ? 'bg-primary shadow-[0_0_8px_rgba(var(--color-primary),0.5)]' : 'bg-border'}`} />
+                    <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${player.isReady ? 'bg-primary shadow-[0_0_8px_rgba(var(--color-primary),0.5)]' : 'bg-border'}`} />
                 )}
             </div>
 
             {/* Main Content */}
             <div className="flex-1 relative flex items-center justify-center p-2">
-                {/* Player Number Badge */}
-                <div className="absolute top-1 right-1 z-10 text-[10px] font-mono text-muted/50 font-bold select-none">
-                    #{String(player.avatar || '0').padStart(2, '0')}
-                </div>
 
                 {showCardFace ? (
                     // --- FRONT (Role Revealed) ---
@@ -148,18 +150,27 @@ export default function AvatarCard({
                     </div>
                 ) : (
                     // --- BACK (Hidden) ---
-                    <div className="w-full h-full flex items-center justify-center relative group">
-                        {/* Large Number */}
-                        <div className="font-mono text-5xl font-bold text-border select-none group-hover:text-muted transition-colors">
+                    <div 
+                        className="w-full h-full flex items-center justify-center relative group"
+                        onClick={(e) => { 
+                            if(isMe && !isDead) { e.stopPropagation(); setIsRevealed(true); } 
+                        }}
+                    >
+                        {/* Large Number (Background) */}
+                        <div className={`font-mono text-4xl font-black select-none transition-all duration-300 ${isMe && !isDead ? 'text-primary/5 scale-90 blur-[1px] group-hover:blur-0 group-hover:scale-100' : 'text-white/5'}`}>
                             {String(player.avatar || '00').padStart(2, '0')}
                         </div>
                         
-                        {/* Tap to Reveal (Self) */}
+                        {/* Reveal Hint (Self Only) - Modern & Clean */}
                         {isMe && !isDead && (
-                             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]"
-                                 onClick={(e) => { e.stopPropagation(); setIsRevealed(true); }}
-                             >
-                                <span className="text-xs font-medium text-white bg-black/50 px-3 py-1.5 rounded-full border border-white/20 backdrop-blur-md">
+                             <div className="absolute inset-0 z-30 flex flex-col items-center justify-center cursor-pointer">
+                                <div className="p-2 rounded-full bg-surface/50 backdrop-blur-sm border border-primary/20 shadow-lg group-hover:bg-primary group-hover:text-white group-hover:border-primary group-hover:shadow-[0_0_15px_rgba(99,102,241,0.5)] transition-all duration-300">
+                                    <svg className="w-3 h-3 md:w-4 md:h-4 text-primary group-hover:text-white transition-colors" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                                        <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                </div>
+                                <span className="mt-1.5 text-[8px] font-bold uppercase tracking-[0.2em] text-primary/60 group-hover:text-primary transition-colors">
                                     {t('reveal')}
                                 </span>
                             </div>
@@ -207,9 +218,9 @@ export default function AvatarCard({
             {wolfVotes && phase === 'NIGHT_WOLVES' && Object.entries(wolfVotes).map(([wolfId, targetId]) => {
                 if (String(targetId) === String(player.id)) {
                     return (
-                        <div key={wolfId} className="absolute -top-2 -right-2 z-40 animate-bounce">
+                        <div key={wolfId} className="absolute top-2 right-1 z-40 animate-bounce">
                            <div className="bg-red-600 text-white w-5 h-5 rounded-full flex items-center justify-center border-2 border-surface shadow-sm text-[10px]">
-                               W
+                               <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                            </div>
                         </div>
                     );

@@ -9,7 +9,6 @@ export default function PlayerGrid({ players }) {
                 <AvatarCard 
                     key={player.id}
                     player={player}
-                    className="md:min-h-[200px]"
                 />
             ))}
         </>

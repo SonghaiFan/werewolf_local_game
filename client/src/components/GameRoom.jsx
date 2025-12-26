@@ -168,22 +168,22 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                     </header>
 
                     {/* 2. MAIN STAGE (Player Grid) - Floating, no borders */}
-                    <section className="flex-1 overflow-y-auto px-2 scrollbar-hide">
-                         {/* Centered grid with more spacing */}
-                         <div className="grid grid-cols-2 small:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 pb-20">
+                    <section className="flex-1 overflow-y-auto px-2 scrollbar-hide flex items-center justify-center">
+                         {/* Responsive grid using rem for dynamic columns */}
+                         <div className="w-full grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-3 pt-4 pb-20">
                             <PlayerGrid players={otherPlayers} />
                          </div>
                     </section>
                     
                     {/* 3. FOOTER AREA - Fixed/Sticky Bottom for Mobile Feel, immersive */}
-                    <footer className="shrink-0 grid grid-cols-[100px_1fr] md:grid-cols-[140px_1fr] gap-6 items-end pb-2">
+                    <footer className="shrink-0 grid grid-cols-[6rem_1fr] md:grid-cols-[8rem_1fr] gap-4 md:gap-6 items-end pb-4">
                         {/* User Avatar (Me) - Floating Card */}
                         <div className={`transition-all duration-300 ${gameState.me?.status === 'dead' ? 'opacity-50 grayscale' : ''}`}>
-                             <div className="text-[10px] uppercase tracking-wider text-muted text-center mb-2">{t('you')}</div>
+                             <div className="text-[9px] uppercase tracking-wider text-muted text-center mb-1.5">{t('you')}</div>
                              <AvatarCard
                                  player={mePlayer}
                                  onSelect={null}
-                                 className="h-[120px] md:h-[160px] shadow-2xl !bg-surface"
+                                 className="shadow-2xl !bg-surface"
                              />
                         </div>
 

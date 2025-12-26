@@ -30,7 +30,8 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
     const [gameConfig, setGameConfig] = useState({
         wolves: 2,
         seer: true,
-        witch: true
+        witch: true,
+        winCondition: 'wipeout'
     });
     
     const playerCount = players ? Object.keys(players).length : 0;
@@ -144,6 +145,23 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                                                      <div className="flex items-center gap-2 cursor-pointer opacity-80 hover:opacity-100" onClick={() => setGameConfig(p => ({...p, witch: !p.witch}))}>
                                                           <div className={`w-3 h-3 rounded-full border ${gameConfig.witch ? 'bg-primary border-primary' : 'border-muted'}`}></div>
                                                          <label className="text-muted select-none cursor-pointer">Witch</label>
+                                                     </div>
+                                                 </div>
+                                                 <div className="pt-3 mt-3 border-t border-white/5">
+                                                     <div className="flex rounded-md overflow-hidden border border-white/10">
+                                                         <button 
+                                                             className={`flex-1 py-1.5 text-[10px] font-medium transition-colors ${gameConfig.winCondition === 'side_kill' ? 'bg-primary text-white' : 'bg-transparent text-muted hover:bg-white/5'}`}
+                                                             onClick={() => setGameConfig(p => ({...p, winCondition: 'side_kill'}))}
+                                                         >
+                                                             {t('side_kill')}
+                                                         </button>
+                                                         <div className="w-[1px] bg-white/10"></div>
+                                                         <button 
+                                                             className={`flex-1 py-1.5 text-[10px] font-medium transition-colors ${gameConfig.winCondition === 'wipeout' ? 'bg-primary text-white' : 'bg-transparent text-muted hover:bg-white/5'}`}
+                                                             onClick={() => setGameConfig(p => ({...p, winCondition: 'wipeout'}))}
+                                                         >
+                                                             {t('wipeout')}
+                                                         </button>
                                                      </div>
                                                  </div>
                                              </div>
@@ -322,8 +340,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
     }
     
     if (onlyLogs) { 
-        // Minimalist logs: No dashed lines, just subtle spacing and fading opacity for older logs?
-        // Actually simpler: Just text.
+        // Minimalist logs
         return (
             <div className="flex-grow flex flex-col justify-end font-medium text-xs list-none overflow-y-auto p-2 h-full scrollbar-hide space-y-1">
                 {logs.slice(-5).map((log, i) => ( // Only show last 5 logs for 'less is more' focus
@@ -336,6 +353,5 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         );
     }
     
-    // Fallback?
     return null;
 }
