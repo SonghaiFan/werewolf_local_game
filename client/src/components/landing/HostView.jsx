@@ -35,32 +35,28 @@ export default function HostView({ t, gameConfig, setGameConfig, handleCreate, s
                             </div>
                         </div>
 
-                        {/* Role Toggles - Using Icons */}
+                        {/* Role Toggles - Dynamic */}
                         <div className="flex gap-5 pb-1">
-                            <button
-                                className="flex flex-col items-center gap-2 group transition-all"
-                                onClick={() => setGameConfig(p => ({ ...p, seer: !p.seer }))}
-                            >   
-                                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${gameConfig.seer ? 'text-primary' : 'text-muted/30'}`}>
-                                    {t('roles.SEER')}
-                                </span>
-                                <div className={`w-8 h-8 p-1.5 rounded-xl transition-all duration-300 border flex items-center justify-center ${gameConfig.seer ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20' : 'bg-black/20 border-white/5 text-muted/30'}`}>
-                                    {RoleIcons.SEER}
-                                </div>
-
-                            </button>
-                            <button
-                                className="flex flex-col items-center gap-2 group transition-all"
-                                onClick={() => setGameConfig(p => ({ ...p, witch: !p.witch }))}
-                            >
-                                <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${gameConfig.witch ? 'text-purple-500' : 'text-muted/30'}`}>
-                                    {t('roles.WITCH')}
-                                </span>
-                                <div className={`w-8 h-8 p-1.5 rounded-xl transition-all duration-300 border flex items-center justify-center ${gameConfig.witch ? 'bg-purple-500 border-purple-500 text-white shadow-lg shadow-purple-500/20' : 'bg-black/20 border-white/5 text-muted/30'}`}>
-                                    {RoleIcons.WITCH}
-                                </div>
-
-                            </button>
+                            {[
+                                { id: 'SEER', color: 'text-primary', activeBg: 'bg-primary border-primary' },
+                                { id: 'WITCH', color: 'text-purple-500', activeBg: 'bg-purple-500 border-purple-500' }
+                            ].map(role => {
+                                const isActive = gameConfig[role.id.toLowerCase()];
+                                return (
+                                    <button
+                                        key={role.id}
+                                        className="flex flex-col items-center gap-2 group transition-all"
+                                        onClick={() => setGameConfig(p => ({ ...p, [role.id.toLowerCase()]: !p[role.id.toLowerCase()] }))}
+                                    >   
+                                        <span className={`text-[9px] font-black uppercase tracking-widest transition-colors ${isActive ? role.color : 'text-muted/30'}`}>
+                                            {t(`roles.${role.id}`)}
+                                        </span>
+                                        <div className={`w-8 h-8 p-1.5 rounded-xl transition-all duration-300 border flex items-center justify-center ${isActive ? `${role.activeBg} text-white shadow-lg shadow-current/20` : 'bg-black/20 border-white/5 text-muted/30'}`}>
+                                            {RoleIcons[role.id]}
+                                        </div>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
 

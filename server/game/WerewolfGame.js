@@ -600,7 +600,7 @@ class WerewolfGame {
         
         // If inactive (dead or doesn't exist), wait random time then advance
         if (!isActive) {
-            const delay = Math.floor(Math.random() * 2000) + 3000; // 3-5 seconds random delay
+            const delay = Math.floor(Math.random() * 5000) + 5000; // 5-10 seconds random delay
             console.log(`[Game] Role ${role} inactive. Fake waiting for ${delay}ms.`);
             setTimeout(() => {
                 if (typeof nextAction === 'string') {
