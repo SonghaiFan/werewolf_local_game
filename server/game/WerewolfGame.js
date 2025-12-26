@@ -45,6 +45,15 @@ class WerewolfGame {
             electionData = { candidates: this.electionManager.candidates };
         }
 
+        // Add Speaking Data
+        let speakingData = null;
+        if (this.phase === PHASES.DAY_DISCUSSION && this.dayManager.speakingOrder) {
+            speakingData = {
+                currentSpeakerId: this.dayManager.speakingOrder[this.dayManager.currentSpeakerIndex] || null,
+                order: this.dayManager.speakingOrder
+            };
+        }
+
         return {
             id: this.id,
             phase: this.phase,
@@ -52,6 +61,7 @@ class WerewolfGame {
             players: publicPlayers,
             logs: this.logs,
             election: electionData,
+            speaking: speakingData,
             hostId: this.hostId
         };
     }
@@ -71,6 +81,9 @@ class WerewolfGame {
                  // Info about election votes if needed? 
                  // Original code exposed election state generally.
             }
+
+            // Speaking Data (Private Context if needed? No, public)
+
 
             // Context specific info
             if (me.role === ROLES.WOLF) {
@@ -138,8 +151,13 @@ class WerewolfGame {
     startGame() {
         if (this.phase !== PHASES.WAITING) return;
         
-        const allReady = Object.values(this.players).every(p => p.isReady);
+        const allReady = Object.values(this.players).every(p => p.isReady || p.id === this.hostId);
         if (!allReady) return;
+        
+        // Ensure host is marked ready for consistency if not already
+        if (this.players[this.hostId] && !this.players[this.hostId].isReady) {
+            this.players[this.hostId].isReady = true;
+        }
         
         const playerIds = Object.keys(this.players);
         const count = playerIds.length;
@@ -201,11 +219,11 @@ class WerewolfGame {
                 const cIds = this.electionManager.candidates;
                 if (cIds.length === 0) {
                      this.addLog("JUDGE: No candidates. Cancelling Election.");
-                     setTimeout(() => this.startDayAnnounce(), 2000);
+                     setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 2000);
                 } else if (cIds.length === 1) {
                      this.sheriffId = cIds[0];
                      this.addLog(`JUDGE: Only one candidate. Player ${this.players[cIds[0]].name} is automatically the Sheriff!`);
-                     setTimeout(() => this.startDayAnnounce(), 3000);
+                     setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000);
                 } else {
                      const names = cIds.map(id => this.players[id].name).join(", ");
                      this.addLog(`JUDGE: Candidates are: ${names}. Voters, please cast your vote.`);
@@ -215,13 +233,7 @@ class WerewolfGame {
                 this.applyPendingDeaths();
                 break;
             case PHASES.DAY_DISCUSSION:
-                this.addLog("JUDGE: Discuss who is the suspicion. You have free speech.");
-                if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
-                    const pIds = Object.keys(this.players);
-                    const sIndex = pIds.indexOf(this.sheriffId);
-                    const nextIndex = (sIndex + 1) % pIds.length;
-                    this.addLog(`JUDGE: Sheriff ${this.players[this.sheriffId].name}, please direct discussion starting from ${this.players[pIds[nextIndex]].name}.`);
-                }
+                this.dayManager.startDiscussion(this);
                 break;
             case PHASES.DAY_SHERIFF_SPEECH:
                 if (this.sheriffId && this.players[this.sheriffId]?.status === 'alive') {
@@ -270,11 +282,8 @@ class WerewolfGame {
     resolveNight() {
         const deadIds = this.nightManager.resolve(this);
         this.pendingDeaths = deadIds;
-        if (this.round === 1) {
-            this.advancePhase(PHASES.DAY_ELECTION_NOMINATION);
-        } else {
-            this.startDayAnnounce();
-        }
+        // Always announce deaths first (User Rule: Day breaks -> Deaths -> Election)
+        this.startDayAnnounce();
     }
 
     startDayAnnounce() {
@@ -291,16 +300,24 @@ class WerewolfGame {
             this.addLog(`JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died: ${names}.`);
             
             if (this.sheriffId && this.pendingDeaths.includes(this.sheriffId)) {
-                // Night Death -> Handover -> Discussion
-                this.pendingNextPhase = PHASES.DAY_DISCUSSION; 
+                // Night Death -> Handover -> Next Phase
+                // If Round 1, Next Phase = Election
+                // If Round > 1, Next Phase = Discussion
+                this.pendingNextPhase = (this.round === 1) ? PHASES.DAY_ELECTION_NOMINATION : PHASES.DAY_DISCUSSION;
                 this.advancePhase(PHASES.DAY_SHERIFF_HANDOVER);
-                // Note: pendingDeaths cleared after this block? No, just clear now.
-            } else {
-                 setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000); 
+                return;
             }
         } else {
             this.addLog("JUDGE: Sun rises. It was a peaceful night.");
-            setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000); 
+        }
+
+        // Proceed to next phase
+        if (this.round === 1) {
+            // Round 1: Deaths -> Election
+             setTimeout(() => this.advancePhase(PHASES.DAY_ELECTION_NOMINATION), 3000);
+        } else {
+            // Round > 1: Deaths -> Discussion
+             setTimeout(() => this.advancePhase(PHASES.DAY_DISCUSSION), 3000);
         }
         this.pendingDeaths = [];
     }
@@ -350,6 +367,10 @@ class WerewolfGame {
     }
     handleSheriffHandover(playerId, targetId) {
         this.dayManager.handleSheriffHandover(this, playerId, targetId);
+    }
+
+    handleEndSpeech(playerId) {
+        this.dayManager.handleEndSpeech(this, playerId);
     }
 
     checkActiveRole(role, nextAction) {

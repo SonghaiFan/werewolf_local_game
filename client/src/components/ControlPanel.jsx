@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 
-export default function ControlPanel({ roomId, serverIP, logs, phase, role, myStatus, election, isReady, players, isHost, actions }) {
+export default function ControlPanel(props) {
+    const { roomId, serverIP, logs, phase, role, myStatus, election, isReady, players, isHost, actions, speaking, myId } = props;
     const logsEndRef = useRef(null);
     const [showQRCode, setShowQRCode] = useState(false);
     
@@ -12,6 +13,12 @@ export default function ControlPanel({ roomId, serverIP, logs, phase, role, mySt
     useEffect(() => {
         logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [logs]);
+
+    // Election Vote Tracking
+    const [hasVoted, setHasVoted] = useState(false);
+    useEffect(() => {
+        if (phase !== 'DAY_ELECTION_NOMINATION') setHasVoted(false);
+    }, [phase]);
 
     const renderActions = () => {
         if (myStatus === 'dead') {
@@ -47,27 +54,74 @@ export default function ControlPanel({ roomId, serverIP, logs, phase, role, mySt
                         </div>
                      )}
 
-                     {/* Ready Toggle */}
-                     <button 
-                         className={`btn-brutal w-full ${isReady ? 'bg-[#333] text-[#888]' : 'bg-transparent border-white text-white animate-pulse'}`} 
-                         onClick={actions.onPlayerReady}
-                     >
-                         {isReady ? (isHost ? 'WAITING FOR OTHERS...' : 'WAITING FOR HOST...') : 'CLICK WHEN READY'}
-                     </button>
+                     {/* Ready Toggle - Only for non-host */}
+                     {!isHost && (
+                         <button 
+                             className={`btn-brutal w-full ${isReady ? 'bg-[#333] text-[#888]' : 'bg-transparent border-white text-white animate-pulse'}`} 
+                             onClick={actions.onPlayerReady}
+                         >
+                             {isReady ? 'WAITING FOR OTHERS...' : 'CLICK WHEN READY'}
+                         </button>
+                     )}
 
                      {/* Host Start Button */}
                      {isHost && (
                         <div className="pt-2.5 border-t border-[#333]">
-                             <button 
-                                className={`btn-brutal bg-accent text-black w-full ${!allReady && 'opacity-50 cursor-not-allowed'}`}
-                                onClick={() => {
-                                    if(allReady) actions.onStartGame();
-                                    else alert("Wait for all players to be READY!");
-                                }}
-                            >
-                                START GAME
-                            </button>
-                            {!allReady && <div className="text-[9px] text-center mt-1 text-danger">WAITING FOR PLAYERS TO READY UP</div>}
+                             {/* Calculated derived state for "all ready" excluding host check if host isn't marked ready yet in UI */}
+                             {(() => {
+                                 // Check if everyone ELSE is ready
+                                 // We need to filter out the host from the ready check?
+                                 // `players` is an object.
+                                 const otherPlayers = players ? Object.values(players).filter(p => !p.id || (p.id !== (Object.keys(players).find(key => players[key] === p) /* Not easy to get ID if p doesn't have it? p has id from GameRoom! */))) : [];
+                                 
+                                 // Actually p has .id. 
+                                 // We need myId to know who I am, but isHost is passed boolean.
+                                 // However, we can check if `allReady` (passed prop) is "Almost All Ready".
+                                 
+                                 // Let's rely on the explicit check:
+                                 const others = players ? Object.values(players).filter(p => !p.isHost && p.id !== (players[Object.keys(players).find(k => players[k] === p)]?.id /* wait this is messy */)) : [];
+                                 // Simplified: `players` contains all. Host doesn't need to be ready.
+                                 // So we check if every player WHERE id != hostId is ready.
+                                 // But we don't have hostId prop directly here? We have `isHost` boolean.
+                                 
+                                 // Better approach:
+                                 // The `allReady` var at top of component:
+                                 // `const allReady = players ? Object.values(players).every(p => p.isReady) : false;`
+                                 // We should update that definition or create `canStart`.
+                                 
+                                 // Let's redefine `allReady` at the top? No, I can't edit top level here easily without scrolling up.
+                                 // I will just implement the logic inline here.
+                                 const readyCount = players ? Object.values(players).filter(p => p.isReady).length : 0;
+                                 const totalPlayers = players ? Object.keys(players).length : 0;
+                                 // If host is not ready, allReady is false.
+                                 // We want: Everyone ready OR (Everyone except Host ready).
+                                 
+                                 // Check unready count
+                                 const unreadyCount = players ? Object.values(players).filter(p => !p.isReady).length : 0;
+                                 
+                                 // If I am Host and I see this, I am unready. 
+                                 // So unreadyCount must be exactly 1 (Me) OR 0 (If I am somehow marked ready).
+                                 const canStart = unreadyCount === 0 || (unreadyCount === 1 && !isReady);
+                                 
+                                 return (
+                                    <div className="relative w-full">
+                                         {!canStart && (
+                                            <div className="absolute bottom-full left-0 w-full text-[9px] text-center mb-2 text-danger font-bold uppercase tracking-wider animate-pulse">
+                                                WAITING FOR PLAYERS
+                                            </div>
+                                         )}
+                                         <button 
+                                            className={`btn-brutal bg-accent text-black w-full ${!canStart && 'opacity-50 cursor-not-allowed'}`}
+                                            onClick={() => {
+                                                if(canStart) actions.onStartGame();
+                                                else alert("Wait for all players to be READY!");
+                                            }}
+                                        >
+                                            START GAME
+                                        </button>
+                                     </div>
+                                 );
+                             })()}
                         </div>
                      )}
                      
@@ -170,17 +224,7 @@ export default function ControlPanel({ roomId, serverIP, logs, phase, role, mySt
              // Use UI state to hide after click? Optimistic UI?
              // Better: Show "WAITING FOR OTHERS" if I clicked.
              
-             const [hasVoted, setHasVoted] = useState(false);
-             
-             // Reset vote state when phase changes (effect at top of component?) 
-             // Actually, `hasVoted` is local state. We need to reset it if phase changes back to NOMINATION? 
-             // Unlikely to happen in one session without unmount.
-             // But let's use a simple condition: if election.participants includes ME? 
              // We don't have ME. So we use local state `hasVoted`.
-             
-             useEffect(() => {
-                 if (phase !== 'DAY_ELECTION_NOMINATION') setHasVoted(false);
-             }, [phase]);
 
              return (
                  <div className="mt-auto">
@@ -254,22 +298,40 @@ export default function ControlPanel({ roomId, serverIP, logs, phase, role, mySt
 
         // DISCUSSION
         if (phase === 'DAY_DISCUSSION') {
-             const isSheriff = (role && false) || (myStatus && false); // Logic needs checking props. 
-             // We need to know if I am sheriff.
-             // We didn't pass "isSheriff" explicitly to ControlPanel, but we have "election" props? No.
-             // Best way: GameRoom passes "amISheriff".
-             // For now, let's use the ADMIN/SKIP button below for everyone, 
-             // BUT we can custom render if we knew. 
-             // Let's rely on the generic "ADMIN SKIP" at bottom for now, but perform text update.
+             // Use speaking state if available, otherwise fallback
+             const currentSpeakerId = props.speaking?.currentSpeakerId;
+             const isMyTurn = currentSpeakerId === props.myId;
              
+             // Find speaker name
+             const speakerName = currentSpeakerId && props.players && props.players[currentSpeakerId] ? props.players[currentSpeakerId].name : 'Unknown';
+
              return (
                  <div className="mt-auto">
-                     <div className="font-mono text-[11px] mb-2.5 text-ink">
+                     <div className="font-mono text-[11px] mb-2.5 text-accent animate-pulse">
                         &gt;&gt; DISCUSSIONS OPEN
                      </div>
-                     <button className="btn-brutal opacity-50" disabled>VOTING LOCKED</button>
+                     
+                     {currentSpeakerId ? (
+                         <div className="mb-2.5 p-2.5 border border-[#333] bg-[#111]">
+                            <div className="text-[9px] text-[#666] uppercase mb-1">CURRENT SPEAKER</div>
+                            <div className="font-bold text-lg text-white">{speakerName}</div>
+                         </div>
+                     ) : (
+                         <div className="text-xs text-[#666] mb-2.5">Preparing speaking order...</div>
+                     )}
+
+                     {isMyTurn ? (
+                         <button className="btn-brutal bg-accent text-black animate-pulse" onClick={actions.onEndSpeech}>
+                             END SPEECH
+                         </button>
+                     ) : (
+                         <button className="btn-brutal opacity-50 cursor-not-allowed" disabled>
+                             WAITING FOR TURN...
+                         </button>
+                     )}
+                     
                       <div className="mt-2.5 text-xs text-[#666]">
-                        Judge has announced speaking order.
+                        {props.speaking?.currentSpeakerId ? 'Listen explicitly.' : 'Judge is determining order...'}
                      </div>
                  </div>
              );

@@ -169,6 +169,14 @@ io.on('connection', (socket) => {
         broadcastState(game);
     });
 
+    socket.on('end_speech', ({ roomId }) => {
+        const game = games.get(roomId);
+        if (game) {
+            game.handleEndSpeech(socket.id);
+            broadcastState(game);
+        }
+    });
+
     socket.on('sheriff_handover', ({ roomId, targetId }) => {
         const game = games.get(roomId);
         if(!game) return;

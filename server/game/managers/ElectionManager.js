@@ -57,8 +57,11 @@ class ElectionManager {
         // Validation: voter must be alive.
         if (game.phase !== PHASES.DAY_ELECTION_VOTE) return;
         
-        // Logic: Non-candidates vote? Or everyone?
-        // Logic from original: everyone votes.
+        // Logic: Only candidates can be voted for
+        if (!this.candidates.includes(candidateId)) {
+            // Optional: Log error or just ignore
+            return; 
+        }
         
         this.votes[voterId] = candidateId;
 
@@ -89,7 +92,7 @@ class ElectionManager {
             game.sheriffId = null;
         }
 
-        setTimeout(() => game.startDayAnnounce(), 3000);
+        setTimeout(() => game.advancePhase(PHASES.DAY_DISCUSSION), 3000);
     }
 }
 

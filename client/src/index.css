@@ -15,13 +15,13 @@
   }
   
   body {
-    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-screen flex items-center justify-center relative;
+    @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] flex items-center justify-center relative;
   }
 }
 
 @layer components {
     .werewolf-app {
-        @apply bg-bg text-ink font-grotesk overflow-hidden h-screen w-screen flex items-center justify-center relative;
+        @apply bg-bg text-ink font-grotesk overflow-hidden w-screen h-[100dvh] flex items-center justify-center relative;
     }
 
     /* Brulatist Button */

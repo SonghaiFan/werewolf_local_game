@@ -38,7 +38,7 @@ const Avatars = [
     )
 ];
 
-export default function PlayerGrid({ players, myId, selectedId, onSelect, phase, hostId }) {
+export default function PlayerGrid({ players, myId, selectedId, onSelect, phase, hostId, candidates }) {
     return (
         <>
             {Object.values(players).map(player => {
@@ -46,6 +46,12 @@ export default function PlayerGrid({ players, myId, selectedId, onSelect, phase,
                 const isSelected = player.id === selectedId;
                 const isDead = player.status === 'dead';
                 
+                // Election Logic
+                const isElectionVote = phase === 'DAY_ELECTION_VOTE';
+                const isCandidate = candidates && candidates.includes(player.id);
+                const isSelectable = !isDead && (!isElectionVote || isCandidate); // Only candidates selectable during vote
+
+
                 // Determine what to show in status
                 let statusText = "Identity: Unknown";
                 if (isMe) statusText = `Identity: ${player.role || 'Hidden'}`;
@@ -59,14 +65,16 @@ export default function PlayerGrid({ players, myId, selectedId, onSelect, phase,
                     <div 
                         key={player.id} 
                         className={`
-                            relative bg-[#151515] border-2 border-ink h-full min-h-[120px] md:min-h-[200px] 
+                            relative bg-[#151515] border-2 h-full min-h-[120px] md:min-h-[200px] 
                             transition-all duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden cursor-pointer
-                            hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[12px_12px_0px_var(--accent)] hover:bg-ink hover:text-black
-                            ${isSelected ? 'bg-accent text-black border-black -rotate-1 -translate-x-1 -translate-y-1 shadow-[12px_12px_0px_#fff]' : ''}
+                            ${isSelectable ? 'hover:-translate-x-1 hover:-translate-y-1 hover:shadow-[12px_12px_0px_var(--accent)] hover:bg-ink hover:text-black hover:border-ink' : 'opacity-40 grayscale cursor-not-allowed'}
+                            ${isSelected ? 'bg-accent text-black border-black -rotate-1 -translate-x-1 -translate-y-1 shadow-[12px_12px_0px_#fff]' : 'border-ink'}
                             ${isDead ? 'opacity-30 grayscale blur-[1px] pointer-events-none' : ''}
+                            ${isCandidate && isElectionVote ? 'ring-4 ring-offset-2 ring-danger animate-pulse' : ''} 
                         `}
-                        onClick={() => !isDead && onSelect(player.id)}
+                        onClick={() => isSelectable && onSelect(player.id)}
                     >
+                        {isCandidate && isElectionVote && <div className="absolute top-0 right-0 bg-danger text-white text-[9px] font-bold px-1 z-20">CANDIDATE</div>}
                         <div className="absolute top-2.5 left-2.5 font-mono text-2xl md:text-[40px] leading-none z-10">{player.avatar || '00'}</div>
                         <div className="absolute top-2.5 right-2.5 font-mono text-[11px] md:text-sm font-bold z-10 flex flex-col items-end">
                             <span>{player.name} {isMe && '(YOU)'}</span>

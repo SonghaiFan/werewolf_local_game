@@ -158,6 +158,8 @@ export default function GameRoom({ roomId, myId, onExit }) {
         roomId, serverIP, logs: gameState.logs, phase: gameState.phase,
         role: gameState.me?.role, myStatus: gameState.me?.status, election: gameState.election,
         isReady: gameState.players[myId]?.isReady || false,
+        speaking: gameState.speaking, // Pass speaking state
+        myId, // Pass my ID
         players: gameState.players, 
         isHost: gameState.hostId === myId,
         actions: {
@@ -170,7 +172,8 @@ export default function GameRoom({ roomId, myId, onExit }) {
             onElectionPass: handleElectionPass,
             onSheriffHandover: handleSheriffHandover,
             onResolvePhase: handleResolvePhase,
-            onSkipTurn: () => setSelectedTarget(null)
+            onSkipTurn: () => setSelectedTarget(null),
+            onEndSpeech: () => socket.emit('end_speech', { roomId })
         }
     };
 
@@ -226,6 +229,7 @@ export default function GameRoom({ roomId, myId, onExit }) {
                             onSelect={setSelectedTarget}
                             phase={gameState.phase}
                             hostId={gameState.hostId}
+                            candidates={gameState.election?.candidates} // Pass candidates
                         />
                      </div>
                 </section>
