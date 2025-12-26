@@ -12,9 +12,9 @@ export default function HostView({ t, gameConfig, setGameConfig, handleCreate, s
                             key={num}
                             className="py-1.5 text-[10px] font-black rounded-lg bg-black/20 border border-transparent hover:border-primary/50 hover:text-primary transition-all text-muted/60 uppercase"
                             onClick={() => {
-                                if (num === 6) setGameConfig({ wolves: 2, seer: true, witch: true, winCondition: 'wipeout' });
-                                if (num === 9) setGameConfig({ wolves: 3, seer: true, witch: true, winCondition: 'side_kill' });
-                                if (num === 12) setGameConfig({ wolves: 4, seer: true, witch: true, winCondition: 'side_kill' });
+                                if (num === 6) setGameConfig({ wolves: 2, seer: true, witch: true, guard: true, winCondition: 'wipeout' });
+                                if (num === 9) setGameConfig({ wolves: 3, seer: true, witch: true, guard: true, winCondition: 'side_kill' });
+                                if (num === 12) setGameConfig({ wolves: 4, seer: true, witch: true, guard: true, winCondition: 'side_kill' });
                             }}
                         >
                             {num} P
@@ -39,7 +39,8 @@ export default function HostView({ t, gameConfig, setGameConfig, handleCreate, s
                         <div className="flex gap-5 pb-1">
                             {[
                                 { id: 'SEER', color: 'text-primary', activeBg: 'bg-primary border-primary' },
-                                { id: 'WITCH', color: 'text-purple-500', activeBg: 'bg-purple-500 border-purple-500' }
+                                { id: 'WITCH', color: 'text-purple-500', activeBg: 'bg-purple-500 border-purple-500' },
+                                { id: 'GUARD', color: 'text-emerald-500', activeBg: 'bg-emerald-500 border-emerald-500' }
                             ].map(role => {
                                 const isActive = gameConfig[role.id.toLowerCase()];
                                 return (

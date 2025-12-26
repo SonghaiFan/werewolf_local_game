@@ -3,7 +3,8 @@ const { PHASES } = require('./constants');
 // Centralized voice messages configuration
 const VOICE_MESSAGES = {
     // Phases
-    [PHASES.NIGHT_WOLVES]: "狼人请睁眼。",
+    [PHASES.NIGHT_GUARD]: "守卫请睁眼。",
+    [PHASES.NIGHT_WOLVES]: "守卫请闭眼。狼人请睁眼。",
     [PHASES.NIGHT_WITCH]: "狼人请闭眼。女巫请睁眼。",
     [PHASES.NIGHT_SEER]: "女巫请闭眼。预言家请睁眼。",
     [PHASES.DAY_ANNOUNCE]: "天亮了。所有人都醒过来。",

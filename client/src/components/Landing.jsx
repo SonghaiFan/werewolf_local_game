@@ -21,6 +21,7 @@ export default function Landing() {
         wolves: 2,
         seer: true,
         witch: true,
+        guard: true,
         winCondition: 'wipeout'
     });
 

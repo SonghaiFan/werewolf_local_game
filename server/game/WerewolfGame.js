@@ -107,6 +107,13 @@ class WerewolfGame {
             // Context specific info
             // let hasActed = false; // Removed, now set directly on info
 
+            if (me.role === ROLES.GUARD) {
+                info.guardState = this.nightManager.guardState;
+                if (this.phase === PHASES.NIGHT_GUARD && this.nightManager.actions.guardTarget !== undefined) {
+                    info.hasActed = true;
+                }
+            }
+
             if (me.role === ROLES.WOLF) {
                 info.nightTarget = this.nightManager.actions.wolfTarget;
                 info.wolfVotes = this.nightManager.actions.wolfVotes;
@@ -264,7 +271,7 @@ class WerewolfGame {
 
         if (effectiveConfig && typeof effectiveConfig === 'object') {
              // 3a. Custom Config from Host
-             const { wolves = 0, seer = false, witch = false } = effectiveConfig;
+             const { wolves = 0, seer = false, witch = false, guard = false } = effectiveConfig;
              
              // Add Wolves
              for (let i = 0; i < wolves; i++) roles.push(ROLES.WOLF);
@@ -272,11 +279,12 @@ class WerewolfGame {
              // Add Specials
              if (seer) roles.push(ROLES.SEER);
              if (witch) roles.push(ROLES.WITCH);
+             if (guard) roles.push(ROLES.GUARD);
              
              // Validation: If config exceeds count, we might have issues, but UI prevents this.
              // If config is less, we fill with villagers below.
              
-             this.addLog(`JUDGE: Custom Rules - Wolves: ${wolves}, Seer: ${seer?'Yes':'No'}, Witch: ${witch?'Yes':'No'}.`);
+             this.addLog(`JUDGE: Custom Rules - Wolves: ${wolves}, Seer: ${seer?'Yes':'No'}, Witch: ${witch?'Yes':'No'}, Guard: ${guard?'Yes':'No'}.`);
              
         } else {
             // 3b. Standard Auto-Config (Fallback)
@@ -350,7 +358,7 @@ class WerewolfGame {
         
         setTimeout(() => {
             this.round = targetRound;
-            this.advancePhase(PHASES.NIGHT_WOLVES);
+            this.advancePhase(PHASES.NIGHT_GUARD);
         }, 4000); // 4s for closing eyes effect
     }
 
@@ -364,6 +372,10 @@ class WerewolfGame {
         this.triggerVoice(newPhase);
 
         switch (this.phase) {
+            case PHASES.NIGHT_GUARD:
+                this.addLog("JUDGE: Night falls. Guard, please wake up.");
+                this.checkActiveRole(ROLES.GUARD, PHASES.NIGHT_WOLVES);
+                break;
             case PHASES.NIGHT_WOLVES:
                 this.addLog("JUDGE: Night falls. Wolves, please wake up and hunt.");
                 this.nightManager.resetNight();

@@ -46,7 +46,15 @@ export default function AvatarCard({
     const roleKey = (player.role || 'UNKNOWN').toUpperCase();
     const roleIcon = RoleIcons[roleKey] || RoleIcons.UNKNOWN;
 
-    const isSelectable = !isDead; 
+    const isTargetDisabled = useMemo(() => {
+        const availableActions = gameState.me?.availableActions || [];
+        // If any target-needing action disables this player, we treat them as globally unselectable for current phase
+        return availableActions.some(action => 
+            action.needsTarget && action.disabledTargets && action.disabledTargets.includes(player.id)
+        );
+    }, [gameState.me?.availableActions, player.id]);
+
+    const isSelectable = !isDead && !isTargetDisabled; 
     const canInteract = handleSelect && isSelectable;
 
     return (
@@ -59,7 +67,7 @@ export default function AvatarCard({
                 ${!canInteract && !isMe ? 'opacity-90' : ''}
                 ${!isSelectable && !isMe ? 'opacity-40 grayscale blur-[1px] cursor-not-allowed' : ''}
                 ${isSelected ? 'ring-2 ring-primary border-transparent bg-primary/10 shadow-[0_0_20px_rgba(99,102,241,0.3)]' : ''}
-                ${isDead ? 'opacity-30 grayscale blur-[2px] pointer-events-none' : ''}
+                ${isDead || isTargetDisabled ? 'opacity-30 grayscale blur-[2px] pointer-events-none' : ''}
                 ${isVictim ? 'ring-2 ring-purple-500 bg-purple-500/10' : ''}
                 ${inspectedRole === 'WOLF' ? 'ring-2 ring-danger bg-danger/10' : ''}
                 ${inspectedRole && inspectedRole !== 'WOLF' ? 'ring-2 ring-emerald-500 bg-emerald-500/10' : ''}

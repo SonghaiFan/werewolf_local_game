@@ -7,12 +7,16 @@ class NightManager {
             saveUsed: false,
             poisonUsed: false
         };
+        this.guardState = {
+            lastTargetId: null
+        };
         // Nightly state
         this.resetNight();
     }
 
     resetNight() {
         this.actions = {
+            guardTarget: undefined,
             wolfTarget: null,
             wolfVotes: {},
             witchAction: null,
@@ -24,6 +28,24 @@ class NightManager {
     handleAction(game, playerId, action) {
         const player = game.players[playerId];
         if (!player || player.status !== 'alive') return false;
+
+        // GUARD
+        if (game.phase === PHASES.NIGHT_GUARD && player.role === ROLES.GUARD) {
+            if (action.type === 'protect') {
+                // Server-side validation
+                if (action.targetId === playerId || action.targetId === this.guardState.lastTargetId) {
+                    console.log(`[NightManager] Guard tried to protect invalid target: ${action.targetId}`);
+                    return false; 
+                }
+                this.actions.guardTarget = action.targetId;
+            } else if (action.type === 'skip') {
+                this.actions.guardTarget = null;
+            }
+            
+            game.addLog("JUDGE: The Guard has acted.");
+            setTimeout(() => game.advancePhase(PHASES.NIGHT_WOLVES), 1000);
+            return true;
+        }
 
         // WOLVES
         if (game.phase === PHASES.NIGHT_WOLVES && player.role === ROLES.WOLF && action.type === 'kill') {
@@ -89,18 +111,29 @@ class NightManager {
         let deadIds = [];
         const wolfTarget = this.actions.wolfTarget;
         const witchAction = this.actions.witchAction;
+        const guardTarget = this.actions.guardTarget;
 
         if (wolfTarget) {
             let actualDeath = wolfTarget;
-            if (witchAction && witchAction.type === 'save' && witchAction.targetId === wolfTarget) {
+            const isSaved = witchAction && witchAction.type === 'save' && witchAction.targetId === wolfTarget;
+            const isGuarded = guardTarget === wolfTarget;
+
+            if (isSaved && isGuarded) {
+                // Tong-shou: Over-protected players still die
+                actualDeath = wolfTarget;
+            } else if (isSaved || isGuarded) {
                 actualDeath = null;
             }
+
             if (actualDeath) deadIds.push(actualDeath);
         }
 
         if (witchAction && witchAction.type === 'poison') {
             if (!deadIds.includes(witchAction.targetId)) deadIds.push(witchAction.targetId);
         }
+
+        // Update Guard's long-term memory
+        this.guardState.lastTargetId = guardTarget;
 
         return deadIds;
     }
