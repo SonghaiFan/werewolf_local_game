@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { socket } from '../socket';
 import ControlPanel from './ControlPanel';
-import PlayerGrid from './PlayerGrid';
 import AvatarCard from './AvatarCard';
 import { useTranslation } from 'react-i18next';
 import GameContext from '../context/GameContext';
@@ -174,9 +173,15 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                     </header>
 
                     <section className="flex-1 overflow-y-auto px-4 scrollbar-hide flex items-start justify-center">
-                         {/* Responsive grid using rem for dynamic columns */}
-                         <div className="w-full grid grid-cols-[repeat(auto-fill,minmax(6rem,1fr))] gap-3 pt-6 pb-6">
-                            <PlayerGrid players={otherPlayers} />
+                         <div className="w-full pt-6 pb-6">
+                            <div className="flex flex-wrap gap-3 justify-center">
+                                {Object.values(otherPlayers).map(player => (
+                                    <AvatarCard 
+                                        key={player.id}
+                                        player={player}
+                                    />
+                                ))}
+                            </div>
                          </div>
                     </section>
                     
@@ -192,11 +197,11 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                          </div>
 
                          {/* Bottom Row: Me Card + Actions */}
-                         <div className="w-full grid grid-cols-[6rem_1fr] gap-4 md:gap-8 items-end">
+                         <div className="w-full flex items-stretch gap-4 md:gap-8 pb-2">
                             {/* User Avatar (Me) - Floating Card */}
-                            <div className={`transition-all duration-300 ${gameState.me?.status === 'dead' ? 'opacity-50 grayscale' : ''}`}>
-                                 <div className="text-[9px] uppercase tracking-wider text-muted text-center mb-1.5 opacity-60">{t('you')}</div>
-                                 <AvatarCard
+                            <div className={`shrink-0 transition-all duration-300 flex flex-col items-center justify-center ${gameState.me?.status === 'dead' ? 'opacity-50 grayscale' : ''}`}>
+                                 <div className="text-[9px] uppercase tracking-wider text-muted text-center mb-1 opacity-60">{t('you')}</div>
+                                 <AvatarCard 
                                      player={mePlayer}
                                      onSelect={null}
                                      className="shadow-2xl !bg-surface"
@@ -204,7 +209,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                             </div>
 
                             {/* Actions Area (Anchored) */}
-                            <div className="w-full">
+                            <div className="flex-1 flex flex-col justify-center">
                                 <ControlPanel onlyActions={true} />
                             </div>
                          </div>

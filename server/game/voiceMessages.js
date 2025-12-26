@@ -14,7 +14,7 @@ const VOICE_MESSAGES = {
 
     // Events
     GAME_START_CONFIRM: "请确认身份。", 
-    GAME_START_CLOSE_EYES: "天黑请闭眼。", 
+    NIGHT_START_CLOSE_EYES: "天黑请闭眼。", 
     
     // Dynamic Constructors
     DEATH_ANNOUNCE: (indices) => `昨晚死亡的是 ${indices}。`,

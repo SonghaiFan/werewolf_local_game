@@ -81,7 +81,9 @@ const resources = {
       "wolves": "WOLVES",
       "win_condition": "WIN CONDITION",
       "side_kill": "SIDE KILL",
-      "wipeout": "WIPEOUT"
+      "wipeout": "WIPEOUT",
+      "abstain": "ABSTAIN",
+      "leave_room": "LEAVE"
     }
   },
   zh: {
@@ -163,7 +165,9 @@ const resources = {
       "wolves": "狼人数量",
       "win_condition": "胜利条件",
       "side_kill": "屠边",
-      "wipeout": "屠城"
+      "wipeout": "屠城",
+      "abstain": "弃票",
+      "leave_room": "离开"
     }
   }
 };

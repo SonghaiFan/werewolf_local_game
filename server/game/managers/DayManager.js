@@ -103,17 +103,21 @@ class DayManager {
 
         // Initialize counts to 0 for targets
         Object.values(this.votes).forEach(targetId => {
-             voteCounts[targetId] = 0;
+             if (targetId !== 'abstain') voteCounts[targetId] = 0;
         });
 
         // Tally and build detail log
         Object.entries(this.votes).forEach(([voterId, targetId]) => {
-             let w = 1;
-             voteCounts[targetId] = (voteCounts[targetId] || 0) + w;
-             
              const voterName = game.players[voterId]?.avatar || game.players[voterId]?.name || 'Unknown';
-             const targetName = game.players[targetId]?.avatar || game.players[targetId]?.name || 'Unknown';
-             voteDetails.push(`${voterName}->${targetName}`);
+             
+             if (targetId === 'abstain') {
+                 voteDetails.push(`${voterName}->弃票`);
+             } else {
+                 let w = 1;
+                 voteCounts[targetId] = (voteCounts[targetId] || 0) + w;
+                 const targetName = game.players[targetId]?.avatar || game.players[targetId]?.name || 'Unknown';
+                 voteDetails.push(`${voterName}->${targetName}`);
+             }
         });
 
         // Log the details

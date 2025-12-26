@@ -318,16 +318,19 @@ class WerewolfGame {
         if(this.onGameUpdate) this.onGameUpdate(this);
 
         setTimeout(() => {
-             const closeText = VOICE_MESSAGES.GAME_START_CLOSE_EYES;
-             this.triggerVoice('GAME_START_CLOSE_EYES');
-             this.addLog(`JUDGE: ${closeText}`);
-             
-             setTimeout(() => {
-                 this.round = 1;
-                 this.advancePhase(PHASES.NIGHT_WOLVES);
-             }, 4000); // 4s for closing eyes effect
-             
+             this.startNightPhase(1);
         }, 10000); // 10s to check role
+    }
+
+    startNightPhase(targetRound) {
+        const closeText = VOICE_MESSAGES.NIGHT_START_CLOSE_EYES;
+        this.triggerVoice('NIGHT_START_CLOSE_EYES');
+        this.addLog(`JUDGE: ${closeText}`);
+        
+        setTimeout(() => {
+            this.round = targetRound;
+            this.advancePhase(PHASES.NIGHT_WOLVES);
+        }, 4000); // 4s for closing eyes effect
     }
 
     // --- Phase Transition ---
@@ -464,9 +467,8 @@ class WerewolfGame {
             this.finishGame(winResult);
         } else {
             setTimeout(() => {
-                this.round++;
-                this.advancePhase(PHASES.NIGHT_WOLVES);
-            }, 3000);
+                this.startNightPhase(this.round + 1);
+            }, 2000);
         }
     }
 

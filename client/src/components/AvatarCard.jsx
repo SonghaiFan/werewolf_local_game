@@ -6,6 +6,7 @@ import { RoleIcons } from './RoleIcons';
 export default function AvatarCard({ 
     player, 
     onSelect, 
+    size = "6.5rem",
     className = "" 
 }) {
     const { t } = useTranslation();
@@ -51,7 +52,7 @@ export default function AvatarCard({
     return (
         <div 
             className={`
-                relative w-full aspect-square flex flex-col justify-between
+                relative aspect-square flex flex-col justify-between
                 bg-surface/60 backdrop-blur-sm border border-white/5 rounded-[var(--radius-lg)] shadow-lg
                 transition-all duration-300 ease-out overflow-hidden
                 ${canInteract ? 'cursor-pointer hover:bg-surface hover:shadow-xl hover:-translate-y-1' : ''}
@@ -65,7 +66,8 @@ export default function AvatarCard({
                 ${className}
             `}
             style={{
-                borderRadius: 'var(--radius-lg)'
+                borderRadius: 'var(--radius-lg)',
+                width: size
             }}
             onClick={() => canInteract && handleSelect(player.id)}
         >

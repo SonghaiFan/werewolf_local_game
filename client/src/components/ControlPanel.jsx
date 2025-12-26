@@ -297,13 +297,14 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         if (phase === 'DAY_DISCUSSION') {
              const currentSpeakerId = speaking?.currentSpeakerId;
              const isMyTurn = currentSpeakerId === myId;
-             const speakerName = currentSpeakerId && players && players[currentSpeakerId] ? players[currentSpeakerId].name : t('unknown_role');
+             const speaker = currentSpeakerId && players ? players[currentSpeakerId] : null;
+             const speakerLabel = speaker ? `${String(speaker.avatar || '0').padStart(2, '0')} 号玩家` : t('unknown_role');
 
              return (
                  <div className="mt-auto">
                      <div className={`p-4 rounded-[var(--radius-lg)] mb-4 text-center transition-all ${isMyTurn ? 'bg-primary/10 border-primary/20' : 'bg-surface/30 border-white/5'} border`}>
                         <div className="text-[10px] uppercase tracking-widest text-muted mb-1">{t('current_speaker')}</div>
-                        <div className={`text-lg font-bold ${isMyTurn ? 'text-primary' : 'text-ink'}`}>{isMyTurn ? t('you') : speakerName}</div>
+                        <div className={`text-lg font-bold ${isMyTurn ? 'text-primary' : 'text-ink'}`}>{isMyTurn ? t('you') : speakerLabel}</div>
                      </div>
 
                      {isMyTurn ? (
@@ -326,9 +327,12 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                  return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button></div>;
              }
              return (
-                 <div className="mt-auto">
-                     <div className="text-center text-danger font-bold uppercase tracking-widest text-xs mb-3">{t('vote_required')}</div>
+                 <div className="mt-auto flex flex-col gap-2">
+                     <div className="text-center text-danger font-bold uppercase tracking-widest text-xs mb-1">{t('vote_required')}</div>
                      <button className="btn-danger hover:shadow-red-500/20" onClick={actions.onDayVote}>{t('confirm_vote')}</button>
+                     <button className="btn-secondary text-[10px] uppercase tracking-widest py-2" onClick={() => actions.onDayVote('abstain')}>
+                        {t('abstain', 'Skip / Abstain')}
+                     </button>
                  </div>
              );
         }
