@@ -86,6 +86,14 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
             }
             setSelectedTarget(targetId);
         },
+        onAction: (type, needsTarget) => {
+            if (needsTarget && !selectedTarget) {
+                alert(t('select_target_first'));
+                return;
+            }
+            socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
+            setSelectedTarget(null);
+        },
         onNightAction: () => {
             if (selectedTarget) {
                 const role = gameState.me?.role;

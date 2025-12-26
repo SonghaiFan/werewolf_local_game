@@ -199,91 +199,52 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              );
         }
 
-        // --- NIGHT PHASES ---
-        if (phase.startsWith('NIGHT_') && role !== 'WOLF' && role !== 'SEER' && role !== 'WITCH') {
-             return (
-                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center">
-                    <div className="font-mono text-xs mb-1 text-muted animate-pulse">Night Falls</div>
-                    <p className="text-sm text-ink/80 font-medium">{t('wait_turn')}</p>
-                 </div>
-             );
-        }
+        // --- NIGHT PHASES (Dynamic Actions) ---
+        if (phase.startsWith('NIGHT_')) {
+             if (hasActed) {
+                 return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button></div>;
+             }
 
-        if (phase === 'NIGHT_WOLVES') {
-            if (role === 'WOLF') {
-                 if (hasActed) {
-                     return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button></div>;
-                 }
+             const availableActions = gameState.me?.availableActions || [];
+             if (availableActions.length === 0) {
                  return (
-                     <div className="mt-auto">
-                         <div className="text-xs text-danger font-bold uppercase tracking-widest mb-3 text-center opacity-80">{t('wolf_wake')}</div>
-                         <button className="btn-danger shadow-lg shadow-red-500/10" onClick={actions.onNightAction}>{t('kill_target')}</button>
+                     <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center">
+                        <div className="font-mono text-[10px] mb-1 text-muted opacity-40 uppercase tracking-[0.2em]">{phase.replace(/_/g, ' ')}</div>
+                        <p className="text-sm text-muted font-medium italic">{t('wait_turn')}</p>
                      </div>
                  );
-            }
-            return (
-                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center">
-                     <p className="text-xs text-muted italic">{t('wolves_hunting')}</p>
-                 </div>
-            );
-        }
+             }
 
-        if (phase === 'NIGHT_WITCH') {
-            if (role === 'WITCH') {
-                 if (hasActed) {
-                     return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button></div>;
-                 }
-                 
-                 const saveUsed = gameState.me?.witchState?.saveUsed;
-                 const poisonUsed = gameState.me?.witchState?.poisonUsed;
+             const mainActions = availableActions.filter(a => a.type !== 'skip');
+             const skipAction = availableActions.find(a => a.type === 'skip');
 
-                 return (
-                    <div className="mt-auto space-y-3">
-                        <div className="text-xs text-purple-400 font-bold uppercase tracking-widest mb-1 text-center opacity-80">{t('witch_wake')}</div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button 
-                                className={`btn-base px-4 py-3 rounded-[var(--radius-lg)] font-medium text-sm transition-all ${saveUsed ? 'bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed shadow-none opacity-50' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500 hover:text-white'}`} 
-                                onClick={() => !saveUsed && actions.onWitchAction('save')}
-                                disabled={saveUsed}
-                            >
-                                {saveUsed ? `${t('save_victim')} (已消耗)` : t('save_victim')}
-                            </button>
-                            <button 
-                                className={`btn-base px-4 py-3 rounded-[var(--radius-lg)] font-medium text-sm transition-all ${poisonUsed ? 'bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed shadow-none opacity-50' : 'bg-purple-500/10 text-purple-400 border-purple-500/20 hover:bg-purple-500 hover:text-white'}`} 
-                                onClick={() => !poisonUsed && actions.onWitchAction('poison')}
-                                disabled={poisonUsed}
-                            >
-                                {poisonUsed ? `${t('poison_target')} (已消耗)` : t('poison_target')}
-                            </button>
-                        </div>
-                        <button className="btn-outline w-full py-2 text-xs opacity-60 hover:opacity-100" onClick={() => actions.onWitchAction('skip')}>{t('do_nothing')}</button>
-                    </div>
-                 );
-            }
-            return (
-                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center">
-                     <p className="text-xs text-muted italic">{t('witch_active')}</p>
-                 </div>
-            );
-        }
-
-        if (phase === 'NIGHT_SEER') {
-            if (role === 'SEER') {
-                 if (hasActed) {
-                     return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button></div>;
-                 }
-                 return (
-                    <div className="mt-auto">
-                        <div className="text-xs text-blue-400 font-bold uppercase tracking-widest mb-3 text-center opacity-80">{t('seer_wake')}</div>
-                        <button className="btn-primary bg-blue-600 hover:bg-blue-500 shadow-blue-500/20" onClick={actions.onNightAction}>{t('check_identity')}</button>
-                    </div>
-                 );
-            }
              return (
-                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center">
-                     <p className="text-xs text-muted italic">{t('seer_active')}</p>
-                 </div>
-            );
+                <div className="mt-auto space-y-3">
+                    <div className="text-[10px] text-primary font-bold uppercase tracking-widest mb-1 text-center opacity-60">
+                        {t(`${role?.toLowerCase()}_wake`, t('identity'))}
+                    </div>
+                    <div className={`grid ${mainActions.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                        {mainActions.map(action => (
+                            <button 
+                                key={action.type}
+                                className={`btn-base px-4 py-3 rounded-[var(--radius-lg)] font-medium text-sm transition-all 
+                                    ${action.disabled 
+                                        ? 'bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed shadow-none opacity-50' 
+                                        : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white'}`} 
+                                onClick={() => !action.disabled && actions.onAction(action.type, action.needsTarget)}
+                                disabled={action.disabled}
+                            >
+                                {t(action.label)} {action.disabled ? `(${t('consumed', 'Consumed')})` : ''}
+                            </button>
+                        ))}
+                    </div>
+                    {skipAction && (
+                        <button className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100" onClick={() => actions.onAction('skip', false)}>
+                            {t('do_nothing')}
+                        </button>
+                    )}
+                </div>
+             );
         }
 
         // --- DAY PHASES ---

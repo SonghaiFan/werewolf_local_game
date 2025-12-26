@@ -1,6 +1,7 @@
 const { ROLES, PHASES } = require('./constants');
 const NightManager = require('./managers/NightManager');
 const DayManager = require('./managers/DayManager');
+const ROLE_DEFINITIONS = require('./RoleDefinitions');
 const VOICE_MESSAGES = require('./voiceMessages');
 
 class WerewolfGame {
@@ -77,9 +78,23 @@ class WerewolfGame {
                 publicState.players[playerId].role = me.role;
             }
             
+            // Capabilities-based Actions
+            const definition = ROLE_DEFINITIONS[me.role];
+            if (definition) {
+                info.capabilities = {
+                    canActAtNight: definition.canActAtNight,
+                    nightPhase: definition.nightPhase,
+                    side: definition.side
+                };
+                info.availableActions = definition.getAvailableActions(this, me);
+            }
+
             // Add Voting Data
             if (this.phase === PHASES.DAY_VOTE) {
                 info.votes = this.dayManager.votes;
+                if (this.dayManager.votes[playerId]) {
+                    info.hasActed = true;
+                }
             }
             if (this.phase === PHASES.DAY_ELECTION_VOTE) {
                  // Info about election votes if needed? 
@@ -90,21 +105,18 @@ class WerewolfGame {
 
 
             // Context specific info
-            let hasActed = false;
+            // let hasActed = false; // Removed, now set directly on info
 
             if (me.role === ROLES.WOLF) {
                 info.nightTarget = this.nightManager.actions.wolfTarget;
                 info.wolfVotes = this.nightManager.actions.wolfVotes;
                 if (this.phase === PHASES.NIGHT_WOLVES && this.nightManager.actions.wolfTarget) {
-                    hasActed = true;
+                    info.hasActed = true;
                 }
             }
             if (me.role === ROLES.WITCH) {
                  // Add long-term potion status
-                 info.witchState = {
-                     saveUsed: this.nightManager.witchState.saveUsed,
-                     poisonUsed: this.nightManager.witchState.poisonUsed
-                 };
+                 info.witchState = this.nightManager.witchState;
 
                  if (this.phase === PHASES.NIGHT_WITCH) {
                      // Only reveal victim if Witch has Antidote (save not used)
@@ -112,27 +124,28 @@ class WerewolfGame {
                          info.wolfTarget = this.nightManager.actions.wolfTarget;
                      }
                      if (this.nightManager.actions.witchAction) {
-                         hasActed = true;
+                         info.hasActed = true;
                      }
                  }
             }
             if (me.role === ROLES.SEER && this.phase === PHASES.NIGHT_SEER) {
                 if (this.nightManager.actions.seerResult || this.nightManager.actions.seerTarget) {
-                    hasActed = true;
+                    info.hasActed = true;
                 }
             }
             
-            if (this.phase === PHASES.DAY_VOTE) {
-                if (this.dayManager.votes && this.dayManager.votes[playerId]) {
-                    hasActed = true;
-                }
-                info.votes = this.dayManager.votes;
-            } else if (this.phase === PHASES.DAY_ELECTION_VOTE) {
-                 // Info about election votes if needed? 
-                 // Original code exposed election state generally.
-            }
+            // The Day Vote hasActed logic was moved up to be with the other voting data.
+            // if (this.phase === PHASES.DAY_VOTE) {
+            //     if (this.dayManager.votes && this.dayManager.votes[playerId]) {
+            //         hasActed = true;
+            //     }
+            //     info.votes = this.dayManager.votes;
+            // } else if (this.phase === PHASES.DAY_ELECTION_VOTE) {
+            //      // Info about election votes if needed? 
+            //      // Original code exposed election state generally.
+            // }
 
-            info.hasActed = hasActed;
+            // info.hasActed = hasActed; // Removed, now set directly on info
             
             publicState.me = info;
         }
