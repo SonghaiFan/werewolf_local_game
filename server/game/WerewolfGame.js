@@ -941,6 +941,16 @@ class WerewolfGame {
     this.nightManager = new NightManager();
     this.dayManager = new DayManager();
     this.winner = null;
+    this.banishCount = 0;
+
+    // Reset PK State
+    this.pkCandidates = [];
+
+    // Reset Hunter specific
+    this.hunterDeadId = null;
+    this.hunterShootTarget = null;
+    this.poisonedId = null;
+    this.phaseBeforeHunter = null;
 
     // Reset Players (Keep connections/names, clear roles/status)
     Object.values(this.players).forEach((p) => {
