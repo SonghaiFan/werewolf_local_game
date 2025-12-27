@@ -59,7 +59,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
             if (gameState.hostId !== myId) return;
             
             // Cancel any current speaking to avoid overlaps
-            window.speechSynthesis.cancel();
+            // window.speechSynthesis.cancel(); // FIXED: Do not cancel, let them queue!
 
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-CN';
@@ -101,32 +101,31 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         },
         onPlayerReady: () => socket.emit('player_ready', { roomId }),
         onSelect: (targetId) => {
+            console.log('[Client] Selected Target:', targetId);
             if (gameState.phase === 'NIGHT_WOLVES' && gameState.me?.role === 'WOLF') {
                 socket.emit('wolf_propose', { roomId, targetId });
             }
             setSelectedTarget(targetId);
         },
         onAction: (type, needsTarget) => {
+            console.log(`[Client] Action requested: ${type}, NeedsTarget: ${needsTarget}, Selected: ${selectedTarget}`);
+            
             if (needsTarget && !selectedTarget) {
                 alert(t('select_target_first'));
                 return;
             }
+            console.log('[Client] Emitting night_action:', { type, targetId: selectedTarget });
             socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
             setSelectedTarget(null);
         },
         onNightAction: () => {
-            if (selectedTarget) {
-                const role = gameState.me?.role;
-                let type = 'kill'; 
-                if (role === 'SEER') type = 'check';
-                    
-                socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
-                setSelectedTarget(null);
-            } else {
-                alert(t('select_target_first'));
-            }
+             // ... legacy wrapper
+             if (selectedTarget) {
+                 // ...
+             }
         },
         onWitchAction: (type) => { 
+            console.log(`[Client] Witch Action: ${type}, Target: ${selectedTarget}`);
             if (type === 'poison' && !selectedTarget) {
                 alert(t('select_poison_target'));
                 return;
@@ -135,6 +134,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
             setSelectedTarget(null);
         },
         onDayVote: (targetIdOverride) => {
+            // ...
             // If called directly via onClick={actions.onDayVote}, targetIdOverride is an Event object.
             // We only want to use targetIdOverride if it's a string (like 'abstain').
             const targetId = typeof targetIdOverride === 'string' ? targetIdOverride : selectedTarget;

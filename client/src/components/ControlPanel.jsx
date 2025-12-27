@@ -41,9 +41,20 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
     const allReady = players ? Object.values(players).every(p => p.isReady) : false;
 
     // Auto-scroll logs
+    // Auto-scroll logs
     useEffect(() => {
         logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
     }, [logs]);
+
+    // Sync config from server state
+    useEffect(() => {
+        if(gameState.config) {
+             setGameConfig(prev => ({
+                 ...prev,
+                 ...gameState.config
+             }));
+        }
+    }, [gameState.config]);
 
     const renderActions = () => {
         if (phase === 'FINISHED') {
@@ -80,6 +91,15 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         
         if (myStatus === 'dead' && !isMyLastWords && !isMyHunterTurn) {
              return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed bg-transparent border-dashed" disabled>{t('you_are_dead')}</button></div>;
+        }
+
+        if (phase === 'GAME_START') {
+             return (
+                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center animate-in">
+                    <div className="font-mono text-[10px] mb-2 text-muted opacity-60 uppercase tracking-[0.2em]">{t('game_start', 'GAME STARTING')}</div>
+                    <p className="text-sm text-white/90 font-medium">{t('please_confirm_identity', 'Please check your role')}</p>
+                 </div>
+             );
         }
 
         if (phase === 'WAITING') {

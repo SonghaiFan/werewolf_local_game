@@ -59,7 +59,7 @@ export default function AvatarCard({
         );
     }, [gameState.me?.availableActions, player.id]);
 
-    const isSelectable = !isDead && !isTargetDisabled; 
+    const isSelectable = (!isDead || isMyHunterTurn) && !isTargetDisabled && player.status !== 'dead'; 
     const canInteract = handleSelect && isSelectable;
 
     // Visual State

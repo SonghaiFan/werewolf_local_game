@@ -4,22 +4,23 @@ const { PHASES } = require('./constants');
 const VOICE_MESSAGES = {
     // Phases
     [PHASES.NIGHT_GUARD]: "守卫请睁眼。",
-    [PHASES.NIGHT_WOLVES]: "守卫请闭眼。狼人请睁眼。",
+    [PHASES.NIGHT_WOLVES]: (hasGuard) => hasGuard ? "守卫请闭眼。狼人请睁眼。" : "狼人请睁眼。",
     [PHASES.NIGHT_WITCH]: "狼人请闭眼。女巫请睁眼。",
-    [PHASES.NIGHT_SEER]: "女巫请闭眼。预言家请睁眼。",
+    [PHASES.NIGHT_SEER]: (hasWitch) => hasWitch ? "女巫请闭眼。预言家请睁眼。" : "狼人请闭眼。预言家请睁眼。",
+
     [PHASES.DAY_ANNOUNCE]: "天亮了。所有人都醒过来。",
     [PHASES.DAY_DISCUSSION]: "请开始讨论昨晚发生的事情。",
     [PHASES.DAY_VOTE]: "讨论结束。请投票放逐玩家。",
-    DAY_VOTE_TIE: "平票。请重新投票。",
     [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
     [PHASES.DAY_HUNTER_DECIDE]: "猎人请开枪。",
+    
+    // Events & Outcomes
+    DAY_VOTE_TIE: "平票。请重新投票。",
     HUNTER_SHOT: (index) => `猎人开枪带走了 ${index} 号玩家。`,
-
-    // Events
+    
     GAME_START_CONFIRM: "请确认身份。", 
     NIGHT_START_CLOSE_EYES: "天黑请闭眼。", 
     
-    // Dynamic Constructors
     DEATH_ANNOUNCE: (indices) => `昨晚死亡的是 ${indices}。`,
     DEATH_PEACEFUL: () => "昨晚是个平安夜。",
     

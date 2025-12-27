@@ -67,8 +67,10 @@ class WerewolfGame {
             logs: this.logs,
             speaking: speakingData,
             executedId: this.executedPlayerId, // Expose executed player ID
+            hunterDeadId: this.hunterDeadId, // Expose active hunter ID
             hostId: this.hostId,
-            winner: this.winner
+            winner: this.winner,
+            config: this.initialConfig
         };
     }
 
@@ -360,6 +362,8 @@ class WerewolfGame {
         this.addLog(`JUDGE: ${confirmText}`);
         this.triggerVoice('GAME_START_CONFIRM');
         
+        this.phase = PHASES.GAME_START; 
+        
         // Ensure initial state is sent so players can see "Tap to Reveal"
         if(this.onGameUpdate) this.onGameUpdate(this);
 
@@ -381,12 +385,38 @@ class WerewolfGame {
 
     // --- Phase Transition ---
 
+    hasRole(role) {
+        return Object.values(this.players).some(p => p.role === role);
+    }
+
     advancePhase(newPhase) {
+        // Skip phases for roles that don't exist in the current game config
+        if (newPhase === PHASES.NIGHT_GUARD && !this.hasRole(ROLES.GUARD)) {
+            return this.advancePhase(PHASES.NIGHT_WOLVES);
+        }
+        if (newPhase === PHASES.NIGHT_WITCH && !this.hasRole(ROLES.WITCH)) {
+            return this.advancePhase(PHASES.NIGHT_SEER);
+        }
+        if (newPhase === PHASES.NIGHT_SEER && !this.hasRole(ROLES.SEER)) {
+            // Seer is usually last before resolve, so call resolveNight
+            return this.resolveNight();
+        }
+        if (newPhase === PHASES.DAY_HUNTER_DECIDE && !this.hasRole(ROLES.HUNTER)) {
+             // Should not happen via normal flow if logic is correct, but safe guard
+             // Actually hunter phase is manual, but good to have
+        }
+
         this.phase = newPhase;
         this.logs.push(`--- PHASE: ${newPhase} ---`); 
         
         // Voice Triggers
-        this.triggerVoice(newPhase);
+        if (newPhase === PHASES.NIGHT_WOLVES) {
+            this.triggerVoice(newPhase, this.hasRole(ROLES.GUARD));
+        } else if (newPhase === PHASES.NIGHT_SEER) {
+            this.triggerVoice(newPhase, this.hasRole(ROLES.WITCH));
+        } else {
+            this.triggerVoice(newPhase);
+        }
 
         switch (this.phase) {
             case PHASES.NIGHT_GUARD:
@@ -498,40 +528,49 @@ class WerewolfGame {
             return;
         }
 
-        // TRANSITION
+        // Check if Hunter needs to act now
+        if (this.hunterDeadId) {
+            // Set phaseBeforeHunter to handle resume logic
+            // If it's Round 1, we should go to LEAVE_SPEECH after hunter.
+            // If Round > 1, we go to DISCUSSION.
+            if (this.round === 1) {
+                 this.executedPlayerId = this.pendingDeaths[0]; // Ensure we still have a "main" death for reference
+                 this.phaseBeforeHunter = PHASES.DAY_LEAVE_SPEECH;
+            } else {
+                 this.phaseBeforeHunter = PHASES.DAY_DISCUSSION;
+            }
+
+            // Speak the death result FIRST
+            if (announcement) {
+                this.triggerVoice(announcement);
+            }
+
+            // Immediately switch to Hunter Phase, skipping standard transition
+            setTimeout(() => {
+                this.advancePhase(PHASES.DAY_HUNTER_DECIDE);
+            }, 4000); // 4s delay to allow announcement to finish
+            return; // STOP! Don't run the else block below
+        }
+
+        // TRANSITION (Only run if no Hunter action intervened)
         // Rule: Night Death Last Words ONLY on Round 1
         if (this.round === 1 && hasDeaths) {
-            this.executedPlayerId = this.pendingDeaths[0]; // Set focus to first victim for UI
+            this.executedPlayerId = this.pendingDeaths[0]; 
             
             this.phase = PHASES.DAY_LEAVE_SPEECH;
             this.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
             this.onGameUpdate(this);
             
-            // Voice: "Please leave last words."
-            this.triggerVoice(PHASES.DAY_LEAVE_SPEECH, VOICE_MESSAGES.DEATH_LAST_WORDS(announcement)); 
+            this.triggerVoice(VOICE_MESSAGES.DEATH_LAST_WORDS(announcement)); 
             
         } else {
-            // No last words (Round > 1 OR Peace)
-            // Announcement + "Please discuss"
             this.phase = PHASES.DAY_DISCUSSION;
             this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
             this.onGameUpdate(this);
             
-            this.triggerVoice(PHASES.DAY_DISCUSSION, VOICE_MESSAGES.NIGHT_DISCUSSION(announcement));
+            this.triggerVoice(VOICE_MESSAGES.NIGHT_DISCUSSION(announcement));
             
-            // Actually start discussion timer/manage it
             this.dayManager.startDiscussion(this);
-        }
-        
-        // Clear pending
-        this.pendingDeaths = [];
-
-        // Check if Hunter needs to act now
-        if (this.hunterDeadId) {
-            this.phaseBeforeHunter = PHASES.DAY_ANNOUNCE;
-            setTimeout(() => {
-                this.advancePhase(PHASES.DAY_HUNTER_DECIDE);
-            }, 3000);
         }
     }
 
@@ -551,14 +590,17 @@ class WerewolfGame {
 
     handleNightAction(playerId, action) {
         const player = this.players[playerId];
+        console.log(`[Action] Player ${player?.name}(${playerId}) performing ${action.type}. Phase: ${this.phase}, DeadHunter: ${this.hunterDeadId}, Status: ${player?.status}`);
         
         // Hunter Decision Phase
         if (this.phase === PHASES.DAY_HUNTER_DECIDE && playerId === this.hunterDeadId) {
+            console.log(`[Hunter] Entity accepted action. Processing shot...`);
             const me = this.players[playerId];
             if (me) me.hunterShotAction = true;
 
             if (action.type === 'shoot') {
                 const target = this.players[action.targetId];
+                console.log(`[Hunter] Target: ${target?.name} (${action.targetId}), Status: ${target?.status}`);
                 if (target && target.status === 'alive') {
                     target.status = 'dead';
                     this.hunterShootTarget = action.targetId;
@@ -567,6 +609,8 @@ class WerewolfGame {
                     
                     // Check if the person shot was also a hunter? (Chain reaction)
                     this.checkDeathTriggers(action.targetId, 'shoot');
+                } else {
+                    console.log(`[Hunter] Target invalid or already dead.`);
                 }
             } else {
                 this.addLog("JUDGE: The Hunter chose not to shoot.");
@@ -576,6 +620,16 @@ class WerewolfGame {
             setTimeout(() => {
                 this.hunterDeadId = null; // Mark current as acted
                 
+                // Broadcast update so client clears the Hunter UI immediately
+                if (this.onGameUpdate) this.onGameUpdate(this);
+
+                // Check Win Condition again after Hunter shot!!
+                const winResult = this.checkWinCondition();
+                if (winResult) {
+                    this.finishGame(winResult);
+                    return;
+                }
+
                 const nextHunterId = this.findNextPendingHunter();
                 if (nextHunterId) {
                     this.hunterDeadId = nextHunterId;
@@ -585,17 +639,36 @@ class WerewolfGame {
                         const cb = this.hunterCallback;
                         this.hunterCallback = null;
                         cb();
+                    } else if (this.phaseBeforeHunter === PHASES.DAY_LEAVE_SPEECH) {
+                         // Resume to Last Words
+                        this.phase = PHASES.DAY_LEAVE_SPEECH;
+                        this.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
+                        /** 
+                         * NOTE: The announcement variable isn't available here, 
+                         * but the initial death announcement was already played.
+                         * Just prompt for speech.
+                         */
+                        this.triggerVoice(PHASES.DAY_LEAVE_SPEECH, "请发表遗言。"); 
+                        this.onGameUpdate(this);
                     } else if (this.phaseBeforeHunter === PHASES.DAY_ANNOUNCE) {
+                         // Legacy fallback
                         this.advancePhase(PHASES.DAY_DISCUSSION);
                     } else {
-                        this.startNightOrEnd();
+                        // Default to Discussion if no other path
+                         this.advancePhase(PHASES.DAY_DISCUSSION);
                     }
                 }
-            }, 2000);
+            }, 3000); // 3s delay to let voice finish
+            
+            // Immediate update to reflect the shot happening (logs etc)
+            if (this.onGameUpdate) this.onGameUpdate(this);
             return;
         }
 
-        if (!player || player.status !== 'alive') return;
+        if (!player || player.status !== 'alive') {
+            console.log(`[Action] Dropped - Player dead or invalid.`);
+            return;
+        }
         const success = this.nightManager.handleAction(this, playerId, action);
         if (success && this.onGameUpdate) this.onGameUpdate(this);
     }
@@ -711,9 +784,6 @@ class WerewolfGame {
     }
 
     // Handlers delegated to managers
-    handleNightAction(playerId, action) {
-        return this.nightManager.handleAction(this, playerId, action);
-    }
     handleDayVote(playerId, targetId) {
         this.dayManager.handleVote(this, playerId, targetId);
     }

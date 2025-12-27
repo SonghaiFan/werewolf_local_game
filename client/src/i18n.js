@@ -5,6 +5,8 @@ const resources = {
   en: {
     translation: {
       "start_game": "START GAME",
+      "game_start": "GAME STARTING",
+      "please_confirm_identity": "PLEASE CHECK YOUR ROLE",
       "tap_to_ready": "TAP TO READY",
       "waiting_for_others": "WAITING FOR OTHERS...",
       "click_when_ready": "CLICK WHEN READY",
@@ -99,6 +101,8 @@ const resources = {
   zh: {
     translation: {
       "start_game": "开始游戏",
+      "game_start": "游戏开始",
+      "please_confirm_identity": "请确认身份",
       "tap_to_ready": "点击准备",
       "waiting_for_others": "等待其他玩家...",
       "click_when_ready": "点击准备",

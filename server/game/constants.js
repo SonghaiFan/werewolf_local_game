@@ -9,6 +9,7 @@ const ROLES = {
 
 const PHASES = {
     WAITING: 'WAITING',
+    GAME_START: 'GAME_START',
     // Granular Night Phases
     NIGHT_GUARD: 'NIGHT_GUARD',
     NIGHT_WOLVES: 'NIGHT_WOLVES',

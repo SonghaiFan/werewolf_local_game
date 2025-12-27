@@ -19,11 +19,11 @@ class NightManager {
             guardTarget: undefined,
             wolfTarget: null,
             wolfVotes: {},
-            witchAction: null,
+            witchActions: { save: false, poison: null }, // Changed structure
             seerTarget: null,
             seerResult: null,
-            poisonedId: null, // New
-            wolfKillId: null  // New
+            poisonedId: null, 
+            wolfKillId: null
         };
     }
 
@@ -59,21 +59,30 @@ class NightManager {
 
         // WITCH
         if (game.phase === PHASES.NIGHT_WITCH && player.role === ROLES.WITCH) {
-            if (action.type === 'save' && !this.witchState.saveUsed) {
-                this.actions.witchAction = { type: 'save', targetId: this.actions.wolfTarget };
-                this.witchState.saveUsed = true;
-            } else if (action.type === 'poison' && !this.witchState.poisonUsed) {
-                this.actions.witchAction = { type: 'poison', targetId: action.targetId };
-                this.witchState.poisonUsed = true;
-            } else if (action.type === 'skip') {
-                this.actions.witchAction = { type: 'skip' };
-            }
+            // Ensure initialization
+            if (!this.actions.witchActions) this.actions.witchActions = { save: false, poison: null };
 
-            if (this.actions.witchAction) {
+            if (action.type === 'save' && !this.witchState.saveUsed) {
+                // Self-save restriction logic (Double check backend)
+                // Rule: Cannot save self on night > 1
+                if (game.round > 1 && this.actions.wolfTarget === playerId) {
+                     console.log("[Witch] Attempted self-save > Round 1. Blocked.");
+                     return false;
+                }
+                
+                this.actions.witchActions.save = true;
+                this.witchState.saveUsed = true;
+                
+            } else if (action.type === 'poison' && !this.witchState.poisonUsed) {
+                this.actions.witchActions.poison = action.targetId;
+                this.witchState.poisonUsed = true;
+                
+            } else if (action.type === 'skip') {
+                // "Skip" button acts as "Confirm/Done"
                 game.addLog("JUDGE: The Witch has acted.");
-                setTimeout(() => game.advancePhase(PHASES.NIGHT_SEER), 1500);
+                setTimeout(() => game.advancePhase(PHASES.NIGHT_SEER), 1000);
             }
-            return true;
+            return true; // Updates state, triggers onGameUpdate, but waits for 'skip' to advance
         }
 
         // SEER
@@ -112,12 +121,12 @@ class NightManager {
     resolve(game) {
         let deadIds = [];
         const wolfTarget = this.actions.wolfTarget;
-        const witchAction = this.actions.witchAction;
+        const witchActions = this.actions.witchActions || { save: false, poison: null };
         const guardTarget = this.actions.guardTarget;
 
         if (wolfTarget) {
             let actualDeath = wolfTarget;
-            const isSaved = witchAction && witchAction.type === 'save' && witchAction.targetId === wolfTarget;
+            const isSaved = witchActions.save;
             const isGuarded = guardTarget === wolfTarget;
 
             if (isSaved && isGuarded) {
@@ -133,8 +142,8 @@ class NightManager {
             }
         }
 
-        if (witchAction && witchAction.type === 'poison') {
-            const poisonId = witchAction.targetId;
+        if (witchActions.poison) {
+            const poisonId = witchActions.poison;
             if (!deadIds.includes(poisonId)) {
                 deadIds.push(poisonId);
             }
