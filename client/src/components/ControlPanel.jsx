@@ -102,7 +102,7 @@ export default function ControlPanel({
               </button>
             )}
             <button className="btn-secondary w-full" onClick={onExit}>
-              {t("back_to_menu", "Back to Home")}
+              {t("back_to_menu")}
             </button>
           </div>
         </div>

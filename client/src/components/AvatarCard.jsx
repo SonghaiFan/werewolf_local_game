@@ -108,7 +108,6 @@ export default function AvatarCard({
                     ? "ring-2 ring-primary border-transparent bg-primary/10 shadow-[0_0_20px_rgba(99,102,241,0.3)]"
                     : ""
                 }
-                ${isVictim ? "ring-2 ring-purple-500 bg-purple-500/10" : ""}
                 ${className}
             `}
       style={{
