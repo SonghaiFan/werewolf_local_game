@@ -14,6 +14,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         round: 0,
         me: { role: null, status: 'alive' }
     });
+    const { phase, round } = gameState;
     
     const [selectedTarget, setSelectedTarget] = useState(null);
     const [inspectedPlayers, setInspectedPlayers] = useState({});
@@ -174,12 +175,18 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
         serverIP
     };
 
+    useEffect(() => {
+        const theme = phase.startsWith('DAY_') || phase === 'FINISHED' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', theme);
+        // Cleanup: Reset to dark when leaving the game
+        return () => document.documentElement.setAttribute('data-theme', 'dark');
+    }, [phase]);
+
     return (
         <GameContext.Provider value={contextValue}>
-            <div className="werewolf-app bg-bg flex flex-col items-center justify-center h-[100dvh] w-full overflow-hidden">
-                
+            <div className="werewolf-app bg-bg flex flex-col items-center justify-center h-[100dvh] w-full overflow-hidden transition-colors duration-700">
                 {/* Max-width container for larger screens */}
-                <div className="w-full max-w-6xl h-full flex flex-col relative transition-colors duration-700" data-theme={gameState.phase.startsWith('DAY_') || gameState.phase === 'FINISHED' ? 'light' : 'dark'}>
+                <div className="w-full max-w-6xl h-full flex flex-col relative">
                     
                     {/* 1. HEADER - Minimalist, No Background */}
                     <header className="flex justify-between items-start px-4 pt-4 pb-0">

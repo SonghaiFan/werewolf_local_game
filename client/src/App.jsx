@@ -9,22 +9,7 @@ function App() {
   const [inGame, setInGame] = useState(false);
   const [serverIP, setServerIP] = useState(null);
 
-  useEffect(() => {
-    function onConnect() {
-      setMyId(socket.id);
-    }
 
-    function onDisconnect() {
-      setInGame(false);
-      setRoomId(null);
-    }
-
-    function onGameCreated({ roomId }) {
-      setRoomId(roomId);
-      setInGame(true);
-    }
-
-  }, []);
   
   useEffect(() => {
        socket.on('connect', () => {

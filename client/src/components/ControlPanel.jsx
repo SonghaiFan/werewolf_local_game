@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { useTranslation } from 'react-i18next';
+import GameSettings from './GameSettings';
 import { useGameContext } from '../context/GameContext';
 
 export default function ControlPanel({ onlyActions = false, onlyLogs = false }) {
@@ -95,18 +96,18 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
 
         if (phase === 'GAME_START') {
              return (
-                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center animate-in">
+                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-border/50 backdrop-blur-sm text-center animate-in">
                     <div className="font-mono text-[10px] mb-2 text-muted opacity-60 uppercase tracking-[0.2em]">{t('game_start', 'GAME STARTING')}</div>
-                    <p className="text-sm text-white/90 font-medium">{t('please_confirm_identity', 'Please check your role')}</p>
+                     <p className="text-sm text-ink/90 font-medium">{t('please_confirm_identity', 'Please check your role')}</p>
                  </div>
              );
         }
 
         if (phase === 'NIGHT_START') {
              return (
-                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center animate-in">
+                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-border/50 backdrop-blur-sm text-center animate-in">
                     <div className="font-mono text-[10px] mb-2 text-muted opacity-60 uppercase tracking-[0.2em]">{t('night_falls')}</div>
-                    <p className="text-sm text-white/90 font-medium animate-pulse">{t('close_eyes', 'Please close your eyes')}</p>
+                     <p className="text-sm text-ink/90 font-medium animate-pulse">{t('close_eyes', 'Please close your eyes')}</p>
                  </div>
              );
         }
@@ -124,11 +125,11 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                      {showQRCode && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-6 animate-in">
                              <div className="bg-surface p-6 rounded-[var(--radius-lg)] border border-border shadow-2xl max-w-sm w-full relative">
-                                <button className="absolute top-4 right-4 text-muted hover:text-white" onClick={() => setShowQRCode(false)}>✕</button>
-                                <div className="font-bold text-white mb-6 text-center text-lg">{t('scan_to_join')}</div>
-                                <div className="bg-white p-4 rounded-xl shadow-inner mx-auto w-fit">
-                                    <QRCodeSVG value={joinUrl} size={180} level="H" />
-                                </div>
+                                <button className="absolute top-4 right-4 text-muted hover:text-ink" onClick={() => setShowQRCode(false)}>✕</button>
+                                <div className="font-bold text-ink mb-6 text-center text-lg">{t('scan_to_join')}</div>
+                                 <div className="bg-white p-4 rounded-xl shadow-inner mx-auto w-fit">
+                                     <QRCodeSVG value={joinUrl} size={180} level="H" fgColor="#000000" bgColor="#FFFFFF" />
+                                 </div>
                                 <div className="font-mono text-[10px] text-muted mt-5 text-center bg-black/30 p-2 rounded break-all select-all">
                                     {joinUrl}
                                 </div>
@@ -157,7 +158,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                                          {/* Simple Settings Toggle */}
                                          <div className="flex items-center justify-end px-1">
                                              <button 
-                                                 className={`text-[10px] uppercase tracking-wider font-bold transition-colors ${showSettings ? 'text-white' : 'text-muted hover:text-white'}`}
+                                                 className={`text-[10px] uppercase tracking-wider font-bold transition-colors ${showSettings ? 'text-ink' : 'text-muted hover:text-ink'}`}
                                                  onClick={() => setShowSettings(!showSettings)}
                                              >
                                                  {showSettings ? 'Hide Settings' : 'Settings'}
@@ -165,42 +166,13 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                                          </div>
 
                                          {showSettings && (
-                                             <div className="mb-4 p-4 bg-surface/30 backdrop-blur-md rounded-xl border border-white/5 text-xs animate-in">
-                                                 <div className="flex items-center justify-between mb-4">
-                                                     <label className="text-muted font-medium">Wolves</label>
-                                                     <div className="flex items-center bg-black/20 rounded-lg p-1">
-                                                         <button className="w-6 h-6 flex items-center justify-center hover:bg-white/10 rounded text-muted" onClick={() => setGameConfig(p => ({...p, wolves: Math.max(1, p.wolves - 1)}))}>-</button>
-                                                         <span className="w-6 text-center text-white font-mono">{gameConfig.wolves}</span>
-                                                         <button className="w-6 h-6 flex items-center justify-center hover:bg-white/10 rounded text-muted" onClick={() => setGameConfig(p => ({...p, wolves: p.wolves + 1}))}>+</button>
-                                                     </div>
-                                                 </div>
-                                                 <div className="flex gap-4">
-                                                     <div className="flex items-center gap-2 cursor-pointer opacity-80 hover:opacity-100" onClick={() => setGameConfig(p => ({...p, seer: !p.seer}))}>
-                                                         <div className={`w-3 h-3 rounded-full border ${gameConfig.seer ? 'bg-primary border-primary' : 'border-muted'}`}></div>
-                                                         <label className="text-muted select-none cursor-pointer">Seer</label>
-                                                     </div>
-                                                     <div className="flex items-center gap-2 cursor-pointer opacity-80 hover:opacity-100" onClick={() => setGameConfig(p => ({...p, witch: !p.witch}))}>
-                                                          <div className={`w-3 h-3 rounded-full border ${gameConfig.witch ? 'bg-primary border-primary' : 'border-muted'}`}></div>
-                                                         <label className="text-muted select-none cursor-pointer">Witch</label>
-                                                     </div>
-                                                 </div>
-                                                 <div className="pt-3 mt-3 border-t border-white/5">
-                                                     <div className="flex rounded-md overflow-hidden border border-white/10">
-                                                         <button 
-                                                             className={`flex-1 py-1.5 text-[10px] font-medium transition-colors ${gameConfig.winCondition === 'side_kill' ? 'bg-primary text-white' : 'bg-transparent text-muted hover:bg-white/5'}`}
-                                                             onClick={() => setGameConfig(p => ({...p, winCondition: 'side_kill'}))}
-                                                         >
-                                                             {t('side_kill')}
-                                                         </button>
-                                                         <div className="w-[1px] bg-white/10"></div>
-                                                         <button 
-                                                             className={`flex-1 py-1.5 text-[10px] font-medium transition-colors ${gameConfig.winCondition === 'wipeout' ? 'bg-primary text-white' : 'bg-transparent text-muted hover:bg-white/5'}`}
-                                                             onClick={() => setGameConfig(p => ({...p, winCondition: 'wipeout'}))}
-                                                         >
-                                                             {t('wipeout')}
-                                                         </button>
-                                                     </div>
-                                                 </div>
+                                             <div className="mb-4 p-4 bg-surface/30 backdrop-blur-md rounded-xl border border-border/50 text-xs animate-in">
+                                                 <GameSettings 
+                                                     t={t} 
+                                                     gameConfig={gameConfig} 
+                                                     setGameConfig={setGameConfig}
+                                                     showPresets={playerCount < 2} // Only show presets if alone? Or always? Let's just go with always for truth.
+                                                 />
                                              </div>
                                          )}
 
@@ -251,7 +223,7 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
 
              if (availableActions.length === 0) {
                  return (
-                     <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center">
+                     <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-border/50 backdrop-blur-sm text-center">
                         <div className="font-mono text-[10px] mb-1 text-muted opacity-40 uppercase tracking-[0.2em]">{phase.replace(/_/g, ' ')}</div>
                         <p className="text-sm text-muted font-medium italic">{t('wait_turn')}</p>
                      </div>

@@ -103,7 +103,7 @@ export default function AvatarCard({
                 ${isSelected ? 'bg-primary/10' : 'bg-surface'}
             `}>
                 <div className="flex items-baseline gap-2 overflow-hidden">
-                    <span className="font-mono text-lg font-black text-white leading-none tracking-tight">
+                    <span className="font-mono text-lg font-black text-ink leading-none tracking-tight">
                         {String(player.avatar || '0').padStart(2, '0')}
                     </span>
                     <span className="truncate text-[9px] text-muted/60 font-medium uppercase tracking-wide">
@@ -115,9 +115,11 @@ export default function AvatarCard({
                     <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${player.isReady ? 'bg-primary shadow-[0_0_8px_rgba(var(--color-primary),0.5)]' : 'bg-border'}`} />
                 )}
             </div>
+            
 
             {/* Main Content */}
             <div className="flex-1 relative flex items-center justify-center p-2">
+                
 
                 {showCardFace ? (
                     // --- FRONT (Role Revealed) ---
@@ -133,10 +135,11 @@ export default function AvatarCard({
                         <div className={`w-8 h-8 md:w-10 md:h-10 mb-1 ${isDead ? 'text-muted' : 'text-primary'}`}>
                             {roleIcon}
                         </div>
+                        
                         <div className="text-xs font-bold uppercase tracking-wider text-ink/90 scale-75 md:scale-100 origin-center transition-transform">
                          {roleKey ? t(`roles.${roleKey}`, roleKey) : t('unknown_role')}
                         </div>
-                         {isDead && !isMyHunterTurn && <div className="mt-1 px-2 py-0.5 bg-zinc-800 text-muted rounded text-[10px] uppercase tracking-wider">{t('deceased')}</div>}
+                     
                          {isMyHunterTurn && <div className="mt-1 px-2 py-0.5 bg-primary/20 text-primary border border-primary/20 rounded text-[10px] uppercase tracking-widest font-black animate-pulse">{t('hunter_active')}</div>}
                         
                         {/* Reveal Toggle Button (Self Only - Hide) */}
