@@ -130,15 +130,6 @@ class WerewolfGame {
           info.hasActed = true;
         }
       }
-      if (this.phase === PHASES.DAY_ELECTION_VOTE) {
-        // Info about election votes if needed?
-        // Original code exposed election state generally.
-      }
-
-      // Speaking Data (Private Context if needed? No, public)
-
-      // Context specific info
-      // let hasActed = false; // Removed, now set directly on info
 
       if (me.role === ROLES.GUARD) {
         info.guardState = this.nightManager.guardState;
@@ -195,19 +186,6 @@ class WerewolfGame {
           info.hasActed = true;
         }
       }
-
-      // The Day Vote hasActed logic was moved up to be with the other voting data.
-      // if (this.phase === PHASES.DAY_VOTE) {
-      //     if (this.dayManager.votes && this.dayManager.votes[playerId]) {
-      //         hasActed = true;
-      //     }
-      //     info.votes = this.dayManager.votes;
-      // } else if (this.phase === PHASES.DAY_ELECTION_VOTE) {
-      //      // Info about election votes if needed?
-      //      // Original code exposed election state generally.
-      // }
-
-      // info.hasActed = hasActed; // Removed, now set directly on info
 
       publicState.me = info;
     }
@@ -630,8 +608,6 @@ class WerewolfGame {
     const { deadIds, poisonedId } = this.nightManager.resolve(this);
     this.pendingDeaths = deadIds;
     this.poisonedId = poisonedId;
-
-    // Always announce deaths first (User Rule: Day breaks -> Deaths -> Election)
     this.startDayAnnounce();
   }
 
