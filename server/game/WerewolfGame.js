@@ -675,6 +675,7 @@ class WerewolfGame {
         }
         const success = this.nightManager.handleAction(this, playerId, action);
         if (success && this.onGameUpdate) this.onGameUpdate(this);
+        return success;
     }
 
     findNextPendingHunter() {
@@ -709,7 +710,7 @@ class WerewolfGame {
 
         const winCondition = this.initialConfig?.winCondition || 'wipeout';
 
-        this.addLog(`DEBUG: Win Check [${winCondition}] - W:${wolfCount} G:${goodCount} (V:${villagerCount}/God:${godCount})`);
+        // this.addLog(`DEBUG: Win Check [${winCondition}] - W:${wolfCount} G:${goodCount} (V:${villagerCount}/God:${godCount})`);
 
         // 2. Villager Win: No Wolves left
         if (wolfCount === 0) return 'VILLAGERS';

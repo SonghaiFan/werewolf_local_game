@@ -2,10 +2,9 @@
 export const RoleIcons = {
     WOLF: (
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M19.07 4.93L17 9h-2l-2-5-2 5H9L7 4.93 3 13h18l-4-8.07z" />
-            <circle cx="10" cy="14" r="1.5" fill="currentColor" stroke="none" />
-            <circle cx="14" cy="14" r="1.5" fill="currentColor" stroke="none" />
-            <path d="M12 18v1" />
+            <path d="M2.5 21 L6.5 12 L3.5 5 L10.5 8 L13.5 2 L16.5 8 L22.5 11 L14.5 16 L18 22" />
+            <path d="M10.5 8 L16.5 8" />
+            <circle cx="16" cy="11" r="1" fill="currentColor" stroke="none" />
         </svg>
     ),
     VILLAGER: (

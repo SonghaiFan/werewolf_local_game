@@ -127,7 +127,7 @@ const resources = {
       "witch_wake": "女巫请睁眼。药水已备。",
       "save_victim": "救活目标",
       "poison_target": "毒杀目标",
-      "do_nothing": "跳过",
+      "do_nothing": "过",
       "witch_active": "女巫正在行动。",
       "seer_wake": "预言家请睁眼。揭示真相。",
       "check_identity": "查验身份",
