@@ -185,12 +185,6 @@ export default function AvatarCard({
               {roleKey ? t(`roles.${roleKey}`, roleKey) : t("unknown_role")}
             </div>
 
-            {isMyHunterTurn && (
-              <div className="mt-1 px-2 py-0.5 bg-primary/20 text-primary border border-primary/20 rounded text-[10px] uppercase tracking-widest font-black animate-pulse">
-                {t("hunter_active")}
-              </div>
-            )}
-
             {/* Reveal Toggle Button (Self Only - Hide) */}
             {isMe && !isDead && (
               <div
