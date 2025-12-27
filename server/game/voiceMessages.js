@@ -26,13 +26,13 @@ const VOICE_MESSAGES = {
   [PHASES.DAY_ANNOUNCE]: "天亮了。所有人都醒过来。",
   [PHASES.DAY_DISCUSSION]: "请开始讨论昨晚发生的事情。",
   [PHASES.DAY_VOTE]: "讨论结束。请投票放逐玩家。",
-  [PHASES.DAY_PK_SPEECH]: "平票。请PK玩家发表言论。",
+  [PHASES.DAY_PK_SPEECH]: "请PK玩家发表言论。",
   [PHASES.DAY_PK_VOTE]: "请再次投票。",
   [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
   [PHASES.DAY_HUNTER_DECIDE]: "猎人请开枪。",
 
   // Events & Outcomes
-  DAY_VOTE_TIE: "平票。请重新投票。",
+  DAY_VOTE_TIE: "平票。进入PK环节。",
   DAY_PK_TIE: "再次平票。今天是平安日。",
   HUNTER_SHOT: (index) => `猎人开枪带走了 ${index} 号玩家。`,
 

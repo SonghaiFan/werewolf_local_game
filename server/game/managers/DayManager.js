@@ -288,9 +288,7 @@ class DayManager {
       // Broadcast the tie message
       if (game.onGameUpdate) game.onGameUpdate(game);
 
-      setTimeout(() => {
-        this.startPK(game, candidates);
-      }, 5000);
+      this.startPK(game, candidates);
     }
   }
 }

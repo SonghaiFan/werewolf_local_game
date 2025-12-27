@@ -56,16 +56,16 @@ const FLOW_DEFINITION = {
   [PHASES.DAY_PK_SPEECH]: {
     next: PHASES.DAY_PK_VOTE,
     onEnter: (game) => {
-      // Logic handled by DayManager transition or manual trigger
-      // But we can ensure queue is set
-    },
+        // Logic handled by DayManager transition or manual trigger
+        // But we can ensure queue is set
+    }
   },
   [PHASES.DAY_PK_VOTE]: {
     next: PHASES.DAY_ELIMINATION,
     onEnter: (game) => {
-      game.addLog("JUDGE: PK Speech over. Please cast your votes again.");
-      game.dayManager.resetVotes();
-    },
+        game.addLog("JUDGE: PK Speech over. Please cast your votes again.");
+        game.dayManager.resetVotes();
+    }
   },
   [PHASES.DAY_ELIMINATION]: { next: PHASES.DAY_LEAVE_SPEECH },
   [PHASES.DAY_LEAVE_SPEECH]: {

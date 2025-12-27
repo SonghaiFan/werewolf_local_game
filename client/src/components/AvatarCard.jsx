@@ -44,6 +44,11 @@ export default function AvatarCard({
     ? wolfTarget.some((t) => String(t) === pId)
     : String(wolfTarget) === pId;
 
+  const isPkCandidate =
+    (phase === "DAY_PK_VOTE" || phase === "DAY_PK_SPEECH") &&
+    gameState.pkCandidates &&
+    gameState.pkCandidates.includes(player.id);
+
   const hasPublicRole = !!player.role && player.role !== "scanned";
 
   // Determine if we should show the card face
@@ -95,6 +100,8 @@ export default function AvatarCard({
                 ${
                   isSelected
                     ? "ring-2 ring-primary border-transparent bg-primary/10 shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                    : isPkCandidate
+                    ? "ring-2 ring-danger border-danger/50 bg-danger/10 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse-slow"
                     : ""
                 }
                 ${isVictim ? "ring-2 ring-purple-500 bg-purple-500/10" : ""}
@@ -138,6 +145,11 @@ export default function AvatarCard({
             {player.name} {isMe && t("you")}
           </span>
         </div>
+        {isPkCandidate && (
+          <span className="shrink-0 px-1.5 py-0.5 bg-danger text-white text-[9px] font-bold rounded uppercase tracking-wider animate-pulse">
+            PK
+          </span>
+        )}
         {/* Ready Status indicator */}
         {phase === "WAITING" && (
           <span

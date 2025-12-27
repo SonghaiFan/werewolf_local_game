@@ -408,8 +408,9 @@ export default function ControlPanel({
       );
     }
 
-    if (phase === "DAY_DISCUSSION") {
+    if (phase === "DAY_DISCUSSION" || phase === "DAY_PK_SPEECH") {
       const currentSpeakerId = speaking?.currentSpeakerId;
+      const isMeDying = executedId === myId; // Fallback if needed, though usually for leave speech
       const isMyTurn = currentSpeakerId === myId;
       const speaker =
         currentSpeakerId && players ? players[currentSpeakerId] : null;
@@ -427,7 +428,7 @@ export default function ControlPanel({
             } border`}
           >
             <div className="text-[10px] uppercase tracking-widest text-muted mb-1">
-              {t("current_speaker")}
+              {phase === "DAY_PK_SPEECH" ? "PK SPEECH" : t("current_speaker")}
             </div>
             <div
               className={`text-lg font-bold ${
@@ -462,7 +463,25 @@ export default function ControlPanel({
       );
     }
 
-    if (phase === "DAY_VOTE") {
+    if (phase === "DAY_VOTE" || phase === "DAY_PK_VOTE") {
+      // PK Special Case: Candidates cannot vote
+      if (
+        phase === "DAY_PK_VOTE" &&
+        gameState.pkCandidates &&
+        gameState.pkCandidates.includes(myId)
+      ) {
+        return (
+          <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-border/50 backdrop-blur-sm text-center">
+            <div className="font-mono text-[10px] mb-1 text-muted opacity-40 uppercase tracking-[0.2em]">
+              PK CANDIDATE
+            </div>
+            <p className="text-sm text-muted font-medium italic">
+              {t("wait_turn")}
+            </p>
+          </div>
+        );
+      }
+
       if (hasActed) {
         return (
           <div className="mt-auto">
