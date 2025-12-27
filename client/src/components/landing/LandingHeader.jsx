@@ -1,10 +1,41 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { RoleIcons } from '../RoleIcons';
+
+const TITLE = "WEREWOLF";
+const ROLES_LIST = Object.keys(RoleIcons).filter(r => r !== 'UNKNOWN');
 
 export default function LandingHeader({ t, name, setName }) {
+    const [glitch, setGlitch] = useState({ index: -1, role: null });
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (Math.random() > 0.7) { // 30% chance to glitch each tick
+                // No-op to avoid too frequent
+            } else {
+                 const index = Math.floor(Math.random() * TITLE.length);
+                 const role = ROLES_LIST[Math.floor(Math.random() * ROLES_LIST.length)];
+                 setGlitch({ index, role });
+                 setTimeout(() => setGlitch({ index: -1, role: null }), 100 + Math.random() * 200);
+            }
+        }, 500); 
+        
+        return () => clearInterval(interval);
+    }, []);
+
     return (
         <div className="text-center w-full">
-            <h1 className="text-4xl font-black tracking-tighter mb-8 opacity-90" style={{ fontFamily: 'var(--font-heading)' }}>
-                WEREWOLF
+            <h1 className="text-4xl font-black tracking-tighter mb-8 opacity-90 flex w-full max-w-[320px] mx-auto justify-between items-center" style={{ fontFamily: 'var(--font-heading)' }}>
+                {TITLE.split('').map((char, i) => (
+                    <span key={i} className="inline-block w-8 md:w-10 relative flex justify-center text-center">
+                        {glitch.index === i ? (
+                             <div className="w-8 h-8 md:w-10 md:h-10 text-primary animate-pulse flex items-center justify-center">
+                                {RoleIcons[glitch.role]}
+                             </div>
+                        ) : (
+                            <span>{char}</span>
+                        )}
+                    </span>
+                ))}
             </h1>
             
             {/* Name Input - Always visible, clean interaction */}

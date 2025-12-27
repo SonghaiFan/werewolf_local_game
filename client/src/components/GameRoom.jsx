@@ -195,7 +195,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                         
                         <div className="text-right">
                             <div className="text-[10px] uppercase tracking-[0.2em] text-muted mb-1 opacity-70">{t('round_short')} {gameState.round}</div>
-                            <div className={`text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
+                            <div className={`text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider ${
                                 gameState.phase.includes('NIGHT') ? 'bg-primary/10 text-primary' : 
                                 gameState.phase.includes('DAY') ? 'bg-amber-500/10 text-amber-600' : 'bg-surface text-muted'
                             }`}>
