@@ -22,6 +22,8 @@ const PHASES = {
   DAY_ANNOUNCE: "DAY_ANNOUNCE", // Deaths announced
   DAY_DISCUSSION: "DAY_DISCUSSION",
   DAY_VOTE: "DAY_VOTE",
+  DAY_PK_SPEECH: "DAY_PK_SPEECH", // PK Speech
+  DAY_PK_VOTE: "DAY_PK_VOTE", // PK Vote
   DAY_ELIMINATION: "DAY_ELIMINATION", // Post-vote announcement
   DAY_LEAVE_SPEECH: "DAY_LEAVE_SPEECH", // Executed player last words
   FINISHED: "FINISHED",

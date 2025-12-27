@@ -91,6 +91,16 @@ class DayManager {
     const player = game.players[voterId];
     if (!player || player.status !== "alive") return;
 
+    // PK Restriction: Candidates cannot vote in PK phase
+    if (
+      game.phase === PHASES.DAY_PK_VOTE &&
+      game.pkCandidates &&
+      game.pkCandidates.includes(voterId)
+    ) {
+      // Silently ignore or warn?
+      return;
+    }
+
     // Toggle vote
     if (this.votes[voterId] === targetId) {
       delete this.votes[voterId];
@@ -98,12 +108,41 @@ class DayManager {
       this.votes[voterId] = targetId;
     }
 
-    const aliveCount = Object.values(game.players).filter(
+    // Calculate expected voters
+    let expectedVoters = Object.values(game.players).filter(
       (p) => p.status === "alive"
-    ).length;
-    if (Object.keys(this.votes).length === aliveCount) {
+    );
+
+    // In PK Vote, exclude candidates
+    if (game.phase === PHASES.DAY_PK_VOTE && game.pkCandidates) {
+      expectedVoters = expectedVoters.filter(
+        (p) => !game.pkCandidates.includes(p.id)
+      );
+    }
+
+    if (Object.keys(this.votes).length === expectedVoters.length) {
       game.addLog("JUDGE: All votes received. Tallying...");
       setTimeout(() => this.resolve(game), 1500);
+    }
+  }
+
+  startPK(game, candidates) {
+    game.pkCandidates = candidates;
+
+    // Set speaking queue to candidates
+    this.setSpeakingQueue(candidates);
+
+    game.addLog("JUDGE: Entering PK Session. Candidates will speak.");
+
+    // Advance to PK Speech
+    game.advancePhase(PHASES.DAY_PK_SPEECH);
+
+    // Trigger first speaker immediately
+    if (candidates.length > 0) {
+      const firstId = candidates[0];
+      const firstP = game.players[firstId];
+      const cue = VOICE_MESSAGES.NEXT_SPEAKER(firstP.avatar);
+      game.onVoiceCue(cue);
     }
   }
 
@@ -167,6 +206,7 @@ class DayManager {
 
     if (candidates.length === 1) {
       const victim = candidates[0];
+      game.pkCandidates = null; // Clear PK state if resolved
       game.players[victim].status = "dead";
       game.addLog(
         `JUDGE: The village has voted to execute ${game.players[victim].name}.`
@@ -220,6 +260,25 @@ class DayManager {
       }
     } else {
       // TIE / DRAW
+
+      // Check if this is already a PK vote
+      if (game.phase === PHASES.DAY_PK_VOTE) {
+        // Second Tie -> Peaceful Day
+        const text = VOICE_MESSAGES.DAY_PK_TIE;
+        game.addLog(`JUDGE: ${text}`);
+        game.onVoiceCue(text);
+        game.executedPlayerId = null;
+        game.pkCandidates = []; // Clear PK state
+
+        if (game.onGameUpdate) game.onGameUpdate(game);
+
+        setTimeout(() => {
+          game.startNightOrEnd();
+        }, 5000);
+        return;
+      }
+
+      // First Tie -> Enter PK
       const text = VOICE_MESSAGES.DAY_VOTE_TIE;
       game.addLog(`JUDGE: ${text}`);
       game.onVoiceCue(text);
@@ -230,13 +289,8 @@ class DayManager {
       if (game.onGameUpdate) game.onGameUpdate(game);
 
       setTimeout(() => {
-        game.addLog("JUDGE: Re-opening voting...");
-        // Go back to voting (Special case: Loop back)
-        // Since this is a loop, we can't easily use nextPhase() unless we define a TIE phase.
-        // For now, explicit advancePhase is acceptable for loops, OR we can use nextPhase if we change current phase to DISCUSSION?
-        // Let's stick to explicit for the loop to avoid complexity.
-        game.advancePhase(PHASES.DAY_VOTE);
-      }, 5000); // 5s delay to allow voice to finish
+        this.startPK(game, candidates);
+      }, 5000);
     }
   }
 }

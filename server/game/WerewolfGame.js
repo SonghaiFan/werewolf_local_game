@@ -26,6 +26,9 @@ class WerewolfGame {
     this.winner = null;
     this.banishCount = 0;
 
+    // PK State
+    this.pkCandidates = [];
+
     // Hunter specific
     this.hunterDeadId = null;
     this.hunterShootTarget = null;
@@ -52,10 +55,12 @@ class WerewolfGame {
         // Add Voting Status
         isVoting:
           (this.phase === PHASES.DAY_VOTE ||
+            this.phase === PHASES.DAY_PK_VOTE ||
             this.phase === PHASES.DAY_ELIMINATION) &&
           this.dayManager.votes[pid] !== undefined,
         hasAbstained:
           (this.phase === PHASES.DAY_VOTE ||
+            this.phase === PHASES.DAY_PK_VOTE ||
             this.phase === PHASES.DAY_ELIMINATION) &&
           this.dayManager.votes[pid] === "abstain",
         // Show role only if game over
@@ -65,7 +70,12 @@ class WerewolfGame {
 
     // Add Speaking Data
     let speakingData = null;
-    if (this.phase === PHASES.DAY_DISCUSSION && this.dayManager.speakingOrder) {
+    if (
+      (this.phase === PHASES.DAY_DISCUSSION ||
+        this.phase === PHASES.DAY_PK_SPEECH ||
+        this.phase === PHASES.DAY_LEAVE_SPEECH) &&
+      this.dayManager.speakingOrder
+    ) {
       speakingData = {
         currentSpeakerId:
           this.dayManager.speakingOrder[this.dayManager.currentSpeakerIndex] ||
@@ -83,6 +93,7 @@ class WerewolfGame {
       speaking: speakingData,
       executedId: this.executedPlayerId, // Expose executed player ID
       hunterDeadId: this.hunterDeadId, // Expose active hunter ID
+      pkCandidates: this.pkCandidates, // Expose PK candidates
       hostId: this.hostId,
       winner: this.winner,
       config: this.initialConfig,
@@ -113,7 +124,7 @@ class WerewolfGame {
       }
 
       // Add Voting Data
-      if (this.phase === PHASES.DAY_VOTE) {
+      if (this.phase === PHASES.DAY_VOTE || this.phase === PHASES.DAY_PK_VOTE) {
         info.votes = this.dayManager.votes;
         if (this.dayManager.votes[playerId]) {
           info.hasActed = true;
@@ -672,6 +683,10 @@ class WerewolfGame {
       if (this.round === 1) {
         this.executedPlayerId = this.pendingDeaths[0]; // Ensure we still have a "main" death for reference
         this.phaseBeforeHunter = PHASES.DAY_LEAVE_SPEECH;
+
+        // FIX: Initialize speaking queue so it's ready when we return
+        this.dayManager.setSpeakingQueue(this.pendingDeaths);
+        this.nextPhaseAfterSpeech = PHASES.DAY_DISCUSSION;
       } else {
         this.phaseBeforeHunter = PHASES.DAY_DISCUSSION;
       }
@@ -805,12 +820,18 @@ class WerewolfGame {
             // Resume to Last Words
             this.phase = PHASES.DAY_LEAVE_SPEECH;
             this.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
-            /**
-             * NOTE: The announcement variable isn't available here,
-             * but the initial death announcement was already played.
-             * Just prompt for speech.
-             */
-            this.triggerVoice(PHASES.DAY_LEAVE_SPEECH, "请发表遗言。");
+
+            // Trigger voice for the current speaker if available
+            const currentSpeakerId =
+              this.dayManager.speakingOrder[
+                this.dayManager.currentSpeakerIndex
+              ];
+            if (currentSpeakerId && this.players[currentSpeakerId]) {
+              const avatar = this.players[currentSpeakerId].avatar;
+              this.triggerVoice("NEXT_SPEAKER", String(avatar));
+            } else {
+              this.triggerVoice(PHASES.DAY_LEAVE_SPEECH, "请发表遗言。");
+            }
             this.onGameUpdate(this);
           } else if (this.phaseBeforeHunter === PHASES.DAY_ANNOUNCE) {
             // Legacy fallback
