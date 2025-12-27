@@ -226,7 +226,7 @@ export default function AvatarCard({
               className={`font-mono text-4xl font-black select-none transition-all duration-300 ${
                 isMe && !isDead
                   ? "text-primary/5 scale-90 group-hover:scale-100"
-                  : "text-white/5"
+                  : "text-primary/5"
               }`}
             >
               {String(player.avatar || "00").padStart(2, "0")}
