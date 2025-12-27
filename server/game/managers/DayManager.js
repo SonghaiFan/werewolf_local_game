@@ -222,32 +222,20 @@ class DayManager {
         game.finishGame(winResult);
       } else {
         const proceedAfterDeathProcessing = () => {
-          // Rule: Day Execution Last Words ONLY for the FIRST banished player
-          if (game.banishCount === 1) {
-            // Phase: DAY_LEAVE_SPEECH (Standard)
-            game.phase = PHASES.DAY_LEAVE_SPEECH;
-            game.nextPhaseAfterSpeech = "START_NIGHT_OR_END"; // Go to night after speech
-            game.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
+          // Rule: Day Execution always allows Last Words
+          // Phase: DAY_LEAVE_SPEECH (Standard)
+          game.phase = PHASES.DAY_LEAVE_SPEECH;
+          game.nextPhaseAfterSpeech = "START_NIGHT_OR_END"; // Go to night after speech
+          game.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
 
-            // Set queue for single banishment
-            this.setSpeakingQueue([victim]);
+          // Set queue for single banishment
+          this.setSpeakingQueue([victim]);
 
-            const code = game.players[victim].avatar || "?";
-            const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
-            game.triggerVoice(PHASES.DAY_LEAVE_SPEECH, text);
+          const code = game.players[victim].avatar || "?";
+          const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
+          game.triggerVoice(text);
 
-            if (game.onGameUpdate) game.onGameUpdate(game);
-          } else {
-            // NO Last Words for subsequent bans (Round > 1 usually)
-            const name = game.players[victim].name;
-            game.addLog(`JUDGE: ${name} executed. No last words allowed.`);
-
-            const code = game.players[victim].avatar || "?";
-            const text = VOICE_MESSAGES.BANISH_GENERIC(code);
-            game.triggerVoice("GENERIC", text);
-
-            setTimeout(() => game.startNightOrEnd(), 3000);
-          }
+          if (game.onGameUpdate) game.onGameUpdate(game);
         };
 
         const interrupted = game.processDeathInterruption(

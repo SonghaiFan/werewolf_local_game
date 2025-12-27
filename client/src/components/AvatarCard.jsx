@@ -24,6 +24,22 @@ export default function AvatarCard({
   } = useGameContext();
 
   const [isRevealed, setIsRevealed] = React.useState(false);
+
+  const { isTargetDisabled, disabledReason } = useMemo(() => {
+    if (!player) return { isTargetDisabled: false, disabledReason: null };
+    const availableActions = gameState.me?.availableActions || [];
+    const action = availableActions.find(
+      (action) =>
+        action.needsTarget &&
+        action.disabledTargets &&
+        action.disabledTargets.includes(player.id)
+    );
+    return {
+      isTargetDisabled: !!action,
+      disabledReason: action?.disabledReasons?.[player.id],
+    };
+  }, [gameState.me?.availableActions, player]);
+
   if (!player) return null;
 
   // Derived Selection Logic
@@ -60,28 +76,18 @@ export default function AvatarCard({
   const roleKey = (player.role || "UNKNOWN").toUpperCase();
   const roleIcon = RoleIcons[roleKey] || RoleIcons.UNKNOWN;
 
-  const { isTargetDisabled, disabledReason } = useMemo(() => {
-    const availableActions = gameState.me?.availableActions || [];
-    const action = availableActions.find(
-      (action) =>
-        action.needsTarget &&
-        action.disabledTargets &&
-        action.disabledTargets.includes(player.id)
-    );
-    return {
-      isTargetDisabled: !!action,
-      disabledReason: action?.disabledReasons?.[player.id],
-    };
-  }, [gameState.me?.availableActions, player.id]);
-
   const isSelectable =
     (!isDead || isMyHunterTurn) &&
     !isTargetDisabled &&
     player.status !== "dead";
+
   const canInteract = handleSelect && isSelectable;
 
   // Visual State
-  const dimEffect = (isDead && !isMe) || (isDead && isMe && !isMyHunterTurn);
+  const dimEffect =
+    (isDead && !isMe) ||
+    (isDead && isMe && !isMyHunterTurn) ||
+    (phase === "DAY_PK_VOTE" && !isPkCandidate);
   const blurEffect = (isDead && !isMe) || (isDead && isMe && !isMyHunterTurn);
 
   return (
@@ -95,26 +101,14 @@ export default function AvatarCard({
                     ? "cursor-pointer hover:bg-surface hover:shadow-xl hover:-translate-y-1"
                     : ""
                 }
-                ${dimEffect ? "opacity-40 grayscale" : ""}
+                ${dimEffect ? "opacity-20 grayscale" : ""}
                 ${blurEffect ? "blur-[1px]" : ""}
                 ${
                   isSelected
                     ? "ring-2 ring-primary border-transparent bg-primary/10 shadow-[0_0_20px_rgba(99,102,241,0.3)]"
-                    : isPkCandidate
-                    ? "ring-2 ring-danger border-danger/50 bg-danger/10 shadow-[0_0_15px_rgba(239,68,68,0.4)] animate-pulse-slow"
                     : ""
                 }
                 ${isVictim ? "ring-2 ring-purple-500 bg-purple-500/10" : ""}
-                ${
-                  inspectedRole === "WOLF"
-                    ? "ring-2 ring-danger bg-danger/10"
-                    : ""
-                }
-                ${
-                  inspectedRole && inspectedRole !== "WOLF"
-                    ? "ring-2 ring-emerald-500 bg-emerald-500/10"
-                    : ""
-                }
                 ${className}
             `}
       style={{
@@ -130,11 +124,16 @@ export default function AvatarCard({
       }}
     >
       {/* Top Bar: Player Name & Status */}
-      {/* Top Bar: Index First, Name Second */}
       <div
         className={`
                 px-3 py-2 border-b border-border/50 flex justify-between items-center
-                ${isSelected ? "bg-primary/10" : "bg-surface"}
+                                ${
+                                  inspectedRole === "WOLF"
+                                    ? "bg-danger/10"
+                                    : inspectedRole
+                                    ? "bg-emerald-500/5"
+                                    : ""
+                                }
             `}
       >
         <div className="flex items-baseline gap-2 overflow-hidden">
