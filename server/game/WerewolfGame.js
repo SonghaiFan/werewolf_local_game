@@ -38,17 +38,24 @@ class WerewolfGame {
     // --- State Access ---
 
     getPublicState() {
+        // Build Public Player State
         const publicPlayers = {};
-        for(const [pid, p] of Object.entries(this.players)) {
+        Object.keys(this.players).forEach(pid => {
+            const p = this.players[pid];
             publicPlayers[pid] = {
                 id: p.id,
                 name: p.name,
-                status: p.status,
                 avatar: p.avatar,
+                status: p.status,
                 isReady: p.isReady,
-                isVoting: !!this.dayManager.votes[pid]
+                // Add Voting Status
+                isVoting: (this.phase === PHASES.DAY_VOTE || this.phase === PHASES.DAY_ELIMINATION) && this.dayManager.votes[pid] !== undefined,
+                hasAbstained: (this.phase === PHASES.DAY_VOTE || this.phase === PHASES.DAY_ELIMINATION) && this.dayManager.votes[pid] === 'abstain',
+                // Show role only if dead (and game rules allow) or game over?
+                // Actually existing logic might handle role visibility via blanking
+                role: (p.status === 'dead' || this.phase === PHASES.FINISHED) ? p.role : undefined
             };
-        }
+        });
 
         // Add Speaking Data
         let speakingData = null;
