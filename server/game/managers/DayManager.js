@@ -152,6 +152,8 @@ class DayManager {
             game.players[victim].status = 'dead';
             game.addLog(`JUDGE: The village has voted to execute ${game.players[victim].name}.`);
             
+            game.checkDeathTriggers(victim, 'vote'); // Check for Hunter
+            
             game.executedPlayerId = victim;
             game.banishCount = (game.banishCount || 0) + 1;
 
@@ -159,27 +161,39 @@ class DayManager {
             if (winResult) {
                 game.finishGame(winResult);
             } else {
-                 // Rule: Day Execution Last Words ONLY for the FIRST banished player
-                 if (game.banishCount === 1) {
-                     // Phase: DAY_LEAVE_SPEECH (Standard)
-                     game.phase = PHASES.DAY_LEAVE_SPEECH;
-                     game.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
-                     
-                     const code = game.players[victim].avatar || '?';
-                     const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
-                     game.triggerVoice(PHASES.DAY_LEAVE_SPEECH, text);
-                     
-                     if(game.onGameUpdate) game.onGameUpdate(game);
+                 const proceedAfterHunter = () => {
+                     // Rule: Day Execution Last Words ONLY for the FIRST banished player
+                     if (game.banishCount === 1) {
+                         // Phase: DAY_LEAVE_SPEECH (Standard)
+                         game.phase = PHASES.DAY_LEAVE_SPEECH;
+                         game.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
+                         
+                         const code = game.players[victim].avatar || '?';
+                         const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
+                         game.triggerVoice(PHASES.DAY_LEAVE_SPEECH, text);
+                         
+                         if(game.onGameUpdate) game.onGameUpdate(game);
+                     } else {
+                         // NO Last Words for subsequent bans (Round > 1 usually)
+                         const name = game.players[victim].name;
+                         game.addLog(`JUDGE: ${name} executed. No last words allowed.`);
+                         
+                         const code = game.players[victim].avatar || '?';
+                         const text = VOICE_MESSAGES.BANISH_GENERIC(code);
+                         game.triggerVoice('GENERIC', text);
+                         
+                         setTimeout(() => game.startNightOrEnd(), 3000);
+                     }
+                 };
+
+                 if (game.hunterDeadId) {
+                     game.phaseBeforeHunter = 'VOTE_EXECUTION'; // Special flag
+                     game.hunterCallback = proceedAfterHunter; // Use a callback for complex day branches
+                     setTimeout(() => {
+                         game.advancePhase(PHASES.DAY_HUNTER_DECIDE);
+                     }, 2000);
                  } else {
-                     // NO Last Words for subsequent bans (Round > 1 usually)
-                     const name = game.players[victim].name;
-                     game.addLog(`JUDGE: ${name} executed. No last words allowed.`);
-                     
-                     const code = game.players[victim].avatar || '?';
-                     const text = VOICE_MESSAGES.BANISH_GENERIC(code);
-                     game.triggerVoice('GENERIC', text);
-                     
-                     setTimeout(() => game.startNightOrEnd(), 3000);
+                     proceedAfterHunter();
                  }
             }
 

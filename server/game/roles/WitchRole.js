@@ -15,7 +15,7 @@ module.exports = {
             type: 'save', 
             label: 'save_victim', 
             needsTarget: false, 
-            disabled: witchState.saveUsed 
+            disabled: witchState.saveUsed || !game.nightManager.actions.wolfTarget
         });
         
         actions.push({ 

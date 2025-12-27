@@ -55,18 +55,38 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
 
     // Voice Judge Effect
     useEffect(() => {
+        const speak = (text) => {
+            if (gameState.hostId !== myId) return;
+            
+            // Cancel any current speaking to avoid overlaps
+            window.speechSynthesis.cancel();
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            
+            const voices = window.speechSynthesis.getVoices();
+            console.log(`[Voice] Available voices: ${voices.length}. Seeking ZH...`);
+            
+            const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
+            if (zhVoice) {
+                utterance.voice = zhVoice;
+            } else {
+                console.warn("[Voice] ZH Voice not found, using default.");
+            }
+            
+            utterance.rate = 0.9;
+            utterance.pitch = 0.8; 
+            window.speechSynthesis.speak(utterance);
+        };
+
         function onVoiceCue({ text }) {
-             if (gameState.hostId === myId) {
-                 const utterance = new SpeechSynthesisUtterance(text);
-                 utterance.lang = 'zh-CN';
-                 const voices = window.speechSynthesis.getVoices();
-                 const zhVoice = voices.find(v => v.lang.includes('zh') || v.lang.includes('CN'));
-                 if (zhVoice) utterance.voice = zhVoice;
-                 utterance.rate = 0.9;
-                 utterance.pitch = 0.8; 
-                 window.speechSynthesis.speak(utterance);
-             }
+             console.log(`[VoiceCue Received] ${text}`);
+             speak(text);
         }
+
+        // Pre-warm voices
+        window.speechSynthesis.getVoices();
+        
         socket.on('voice_cue', onVoiceCue);
         return () => socket.off('voice_cue', onVoiceCue);
     }, [gameState.hostId, myId]);
@@ -114,9 +134,13 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
             socket.emit('night_action', { roomId, action: { type, targetId: selectedTarget } });
             setSelectedTarget(null);
         },
-        onDayVote: () => {
-            if(selectedTarget) {
-                socket.emit('day_vote', { roomId, targetId: selectedTarget });
+        onDayVote: (targetIdOverride) => {
+            // If called directly via onClick={actions.onDayVote}, targetIdOverride is an Event object.
+            // We only want to use targetIdOverride if it's a string (like 'abstain').
+            const targetId = typeof targetIdOverride === 'string' ? targetIdOverride : selectedTarget;
+            
+            if (targetId) {
+                socket.emit('day_vote', { roomId, targetId });
                 setSelectedTarget(null);
             } else {
                 alert(t('select_vote_target'));
@@ -207,7 +231,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                          {/* Bottom Row: Me Card + Actions */}
                          <div className="w-full flex items-stretch gap-4 md:gap-8 pb-2">
                             {/* User Avatar (Me) - Floating Card */}
-                            <div className={`shrink-0 transition-all duration-300 flex flex-col items-center justify-center ${gameState.me?.status === 'dead' ? 'opacity-50 grayscale' : ''}`}>
+                            <div className={`shrink-0 transition-all duration-300 flex flex-col items-center justify-center ${(gameState.me?.status === 'dead' && gameState.hunterDeadId !== myId) ? 'opacity-50 grayscale' : ''}`}>
                                  <div className="text-[9px] uppercase tracking-wider text-muted text-center mb-1 opacity-60">{t('you')}</div>
                                  <AvatarCard 
                                      player={mePlayer}

@@ -32,6 +32,8 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
         wolves: 2,
         seer: true,
         witch: true,
+        guard: true,
+        hunter: true,
         winCondition: 'wipeout'
     });
     
@@ -74,8 +76,9 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
        }
 
         const isMyLastWords = phase === 'DAY_LEAVE_SPEECH' && executedId === myId;
+        const isMyHunterTurn = phase === 'DAY_HUNTER_DECIDE' && gameState.hunterDeadId === myId;
         
-        if (myStatus === 'dead' && !isMyLastWords) {
+        if (myStatus === 'dead' && !isMyLastWords && !isMyHunterTurn) {
              return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed bg-transparent border-dashed" disabled>{t('you_are_dead')}</button></div>;
         }
 
@@ -199,13 +202,24 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              );
         }
 
-        // --- NIGHT PHASES (Dynamic Actions) ---
-        if (phase.startsWith('NIGHT_')) {
+        // --- SPECIAL PHASES / SKILLS (Dynamic Actions) ---
+        if (phase.startsWith('NIGHT_') || phase === 'DAY_HUNTER_DECIDE') {
              if (hasActed) {
                  return <div className="mt-auto"><button className="btn-secondary opacity-50 cursor-not-allowed" disabled>{t('waiting_for_others')}</button></div>;
              }
 
              const availableActions = gameState.me?.availableActions || [];
+             
+             // Private Warning for Poisoned Hunter
+             if (role === 'HUNTER' && gameState.me?.isPoisoned && !hasActed) {
+                 return (
+                    <div className="mt-auto p-4 bg-danger/10 rounded-[var(--radius-lg)] border border-danger/20 backdrop-blur-sm text-center">
+                        <div className="font-mono text-[10px] mb-2 text-danger uppercase tracking-[0.2em]">{t('roles.HUNTER')}</div>
+                        <p className="text-sm text-danger/80 font-medium">{t('hunter_poisoned_hint')}</p>
+                    </div>
+                 );
+             }
+
              if (availableActions.length === 0) {
                  return (
                      <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center">

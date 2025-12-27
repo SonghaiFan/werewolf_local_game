@@ -11,6 +11,7 @@ export default function AvatarCard({
 }) {
     const { t } = useTranslation();
     const { 
+        gameState,
         myId, 
         phase, 
         hostId, 
@@ -22,8 +23,8 @@ export default function AvatarCard({
         actions
     } = useGameContext();
 
-    if (!player) return null;
     const [isRevealed, setIsRevealed] = React.useState(false);
+    if (!player) return null;
 
     // Derived Selection Logic
     const isSelected = selectedTarget === player.id;
@@ -34,14 +35,18 @@ export default function AvatarCard({
 
     const isMe = player.id === myId;
     const isDead = player.status === 'dead';
+    const isMyHunterTurn = phase === 'DAY_HUNTER_DECIDE' && gameState.hunterDeadId === myId;
     
     const pId = String(player.id);
     const isVictim = Array.isArray(wolfTarget) 
         ? wolfTarget.some(t => String(t) === pId) 
         : String(wolfTarget) === pId;
-    
+        
     const hasPublicRole = !!player.role && player.role !== 'scanned';
-    const showCardFace = (isMe && isRevealed) || isDead || (hasPublicRole && !isMe); 
+    
+    // Determine if we should show the card face
+    // If it's my Hunter turn, I shouldn't see others roles yet.
+    const showCardFace = (isMe && isRevealed) || (player.role && (isDead || (hasPublicRole && !isMe))); 
     
     const roleKey = (player.role || 'UNKNOWN').toUpperCase();
     const roleIcon = RoleIcons[roleKey] || RoleIcons.UNKNOWN;
@@ -57,6 +62,10 @@ export default function AvatarCard({
     const isSelectable = !isDead && !isTargetDisabled; 
     const canInteract = handleSelect && isSelectable;
 
+    // Visual State
+    const dimEffect = (isDead && !isMe) || (isDead && isMe && !isMyHunterTurn);
+    const blurEffect = (isDead && !isMe) || (isDead && isMe && !isMyHunterTurn);
+
     return (
         <div 
             className={`
@@ -64,10 +73,9 @@ export default function AvatarCard({
                 bg-surface/60 backdrop-blur-sm border border-white/5 rounded-[var(--radius-lg)] shadow-lg
                 transition-all duration-300 ease-out overflow-hidden
                 ${canInteract ? 'cursor-pointer hover:bg-surface hover:shadow-xl hover:-translate-y-1' : ''}
-                ${!canInteract && !isMe ? 'opacity-90' : ''}
-                ${!isSelectable && !isMe ? 'opacity-40 grayscale blur-[1px] cursor-not-allowed' : ''}
+                ${dimEffect ? 'opacity-40 grayscale' : ''}
+                ${blurEffect ? 'blur-[1px]' : ''}
                 ${isSelected ? 'ring-2 ring-primary border-transparent bg-primary/10 shadow-[0_0_20px_rgba(99,102,241,0.3)]' : ''}
-                ${isDead || isTargetDisabled ? 'opacity-30 grayscale blur-[2px] pointer-events-none' : ''}
                 ${isVictim ? 'ring-2 ring-purple-500 bg-purple-500/10' : ''}
                 ${inspectedRole === 'WOLF' ? 'ring-2 ring-danger bg-danger/10' : ''}
                 ${inspectedRole && inspectedRole !== 'WOLF' ? 'ring-2 ring-emerald-500 bg-emerald-500/10' : ''}
@@ -117,9 +125,10 @@ export default function AvatarCard({
                             {roleIcon}
                         </div>
                         <div className="text-xs font-bold uppercase tracking-wider text-ink/90 scale-75 md:scale-100 origin-center transition-transform">
-                            {roleKey ? t(`roles.${roleKey}`, roleKey) : t('unknown_role')}
+                         {roleKey ? t(`roles.${roleKey}`, roleKey) : t('unknown_role')}
                         </div>
-                         {isDead && <div className="mt-1 px-2 py-0.5 bg-zinc-800 text-muted rounded text-[10px] uppercase tracking-wider">{t('deceased')}</div>}
+                         {isDead && !isMyHunterTurn && <div className="mt-1 px-2 py-0.5 bg-zinc-800 text-muted rounded text-[10px] uppercase tracking-wider">{t('deceased')}</div>}
+                         {isMyHunterTurn && <div className="mt-1 px-2 py-0.5 bg-primary/20 text-primary border border-primary/20 rounded text-[10px] uppercase tracking-widest font-black animate-pulse">{t('hunter_active')}</div>}
                     </div>
                 ) : (
                     // --- BACK (Hidden) ---

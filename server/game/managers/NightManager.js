@@ -21,7 +21,9 @@ class NightManager {
             wolfVotes: {},
             witchAction: null,
             seerTarget: null,
-            seerResult: null // Explicitly field for Seer result
+            seerResult: null,
+            poisonedId: null, // New
+            wolfKillId: null  // New
         };
     }
 
@@ -125,17 +127,28 @@ class NightManager {
                 actualDeath = null;
             }
 
-            if (actualDeath) deadIds.push(actualDeath);
+            if (actualDeath) {
+                deadIds.push(actualDeath);
+                this.actions.wolfKillId = actualDeath;
+            }
         }
 
         if (witchAction && witchAction.type === 'poison') {
-            if (!deadIds.includes(witchAction.targetId)) deadIds.push(witchAction.targetId);
+            const poisonId = witchAction.targetId;
+            if (!deadIds.includes(poisonId)) {
+                deadIds.push(poisonId);
+            }
+            this.actions.poisonedId = poisonId; // Critical for Hunter logic
         }
 
         // Update Guard's long-term memory
         this.guardState.lastTargetId = guardTarget;
 
-        return deadIds;
+        return { 
+            deadIds, 
+            poisonedId: this.actions.poisonedId,
+            wolfKillId: this.actions.wolfKillId
+        };
     }
 }
 

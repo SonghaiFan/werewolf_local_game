@@ -22,6 +22,7 @@ export default function Landing() {
         seer: true,
         witch: true,
         guard: true,
+        hunter: true,
         winCondition: 'wipeout'
     });
 

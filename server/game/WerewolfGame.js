@@ -25,6 +25,12 @@ class WerewolfGame {
         this.winner = null;
         this.banishCount = 0;
         
+        // Hunter specific
+        this.hunterDeadId = null;
+        this.hunterShootTarget = null;
+        this.poisonedId = null;
+        this.phaseBeforeHunter = null;
+        
         // Mapping Ephemeral Socket ID -> Persistent Player ID
         this.socketToPid = new Map();
     }
@@ -114,6 +120,15 @@ class WerewolfGame {
                 }
             }
 
+            if (me.role === ROLES.HUNTER) {
+                if (this.poisonedId === playerId) {
+                    info.isPoisoned = true;
+                }
+                if (this.phase === PHASES.DAY_HUNTER_DECIDE && this.hunterDeadId === playerId) {
+                    // Not necessarily hasActed, since they might still be choosing
+                }
+            }
+
             if (me.role === ROLES.WOLF) {
                 info.nightTarget = this.nightManager.actions.wolfTarget;
                 info.wolfVotes = this.nightManager.actions.wolfVotes;
@@ -172,8 +187,9 @@ class WerewolfGame {
         
         const isDead = me && me.status === 'dead';
         const isMyLastWords = this.phase === PHASES.DAY_LEAVE_SPEECH && this.executedPlayerId === playerId;
+        const isMyHunterTurn = this.phase === PHASES.DAY_HUNTER_DECIDE && this.hunterDeadId === playerId;
         
-        if ((isDead && !isMyLastWords) || this.phase === PHASES.FINISHED) {
+        if ((isDead && !isMyLastWords && !isMyHunterTurn) || this.phase === PHASES.FINISHED) {
              Object.values(this.players).forEach(p => {
                  publicState.players[p.id].role = p.role;
              });
@@ -271,7 +287,7 @@ class WerewolfGame {
 
         if (effectiveConfig && typeof effectiveConfig === 'object') {
              // 3a. Custom Config from Host
-             const { wolves = 0, seer = false, witch = false, guard = false } = effectiveConfig;
+             const { wolves = 0, seer = false, witch = false, guard = false, hunter = false } = effectiveConfig;
              
              // Add Wolves
              for (let i = 0; i < wolves; i++) roles.push(ROLES.WOLF);
@@ -280,11 +296,12 @@ class WerewolfGame {
              if (seer) roles.push(ROLES.SEER);
              if (witch) roles.push(ROLES.WITCH);
              if (guard) roles.push(ROLES.GUARD);
+             if (hunter) roles.push(ROLES.HUNTER);
              
              // Validation: If config exceeds count, we might have issues, but UI prevents this.
              // If config is less, we fill with villagers below.
              
-             this.addLog(`JUDGE: Custom Rules - Wolves: ${wolves}, Seer: ${seer?'Yes':'No'}, Witch: ${witch?'Yes':'No'}, Guard: ${guard?'Yes':'No'}.`);
+             this.addLog(`JUDGE: Custom Rules - Wolves: ${wolves}, Seer: ${seer?'Yes':'No'}, Witch: ${witch?'Yes':'No'}, Guard: ${guard?'Yes':'No'}, Hunter: ${hunter?'Yes':'No'}.`);
              
         } else {
             // 3b. Standard Auto-Config (Fallback)
@@ -293,13 +310,13 @@ class WerewolfGame {
                  roles.push(ROLES.WOLF, ROLES.WOLF);
                  roles.push(ROLES.SEER, ROLES.WITCH);
              } else if (count >= 9 && count < 12) {
-                  // 9-11: 3 Wolves, 1 Seer, 1 Witch, rest Villagers (Hunter placeholder as Villager)
+                  // 9-11: 3 Wolves, 1 Seer, 1 Witch, 1 Hunter, rest Villagers
                   roles.push(ROLES.WOLF, ROLES.WOLF, ROLES.WOLF);
-                  roles.push(ROLES.SEER, ROLES.WITCH);
+                  roles.push(ROLES.SEER, ROLES.WITCH, ROLES.HUNTER);
              } else if (count >= 12) {
-                  // 12+: 4 Wolves, 1 Seer, 1 Witch, rest Villagers
+                  // 12+: 4 Wolves, 1 Seer, 1 Witch, 1 Hunter, 1 Guard, rest Villagers
                   roles.push(ROLES.WOLF, ROLES.WOLF, ROLES.WOLF, ROLES.WOLF);
-                  roles.push(ROLES.SEER, ROLES.WITCH);
+                  roles.push(ROLES.SEER, ROLES.WITCH, ROLES.HUNTER, ROLES.GUARD);
              } else {
                   // Fallback for small usage / debugging (<6)
                   // e.g. 3 players -> 1 Wolf, 1 Seer, 1 Villager
@@ -416,9 +433,20 @@ class WerewolfGame {
         if(this.onGameUpdate) this.onGameUpdate(this);
     }
 
-    triggerVoice(phase, overrideText = null) {
-        const text = overrideText || VOICE_MESSAGES[phase];
+    triggerVoice(phaseOrText, ...args) {
+        // If phaseOrText is a valid phase key in VOICE_MESSAGES, use that.
+        // Otherwise, treat phaseOrText as the literal text to speak.
+        let text = VOICE_MESSAGES[phaseOrText];
+        
+        if (typeof text === 'function') {
+            text = text(...args);
+        } else if (!text) {
+            // If it's not a phase key, it's either null or the actual text
+            text = phaseOrText;
+        }
+        
         if (text) {
+            console.log(`[Voice] Triggering cue: ${text}`);
             this.onVoiceCue(text);
         }
     }
@@ -426,8 +454,10 @@ class WerewolfGame {
     // --- Action Proxies ---
 
     resolveNight() {
-        const deadIds = this.nightManager.resolve(this);
+        const { deadIds, poisonedId } = this.nightManager.resolve(this);
         this.pendingDeaths = deadIds;
+        this.poisonedId = poisonedId; 
+        
         // Always announce deaths first (User Rule: Day breaks -> Deaths -> Election)
         this.startDayAnnounce();
     }
@@ -438,7 +468,10 @@ class WerewolfGame {
 
     applyPendingDeaths() {
         this.pendingDeaths.forEach(id => {
-            if(this.players[id]) this.players[id].status = 'dead';
+            if(this.players[id]) {
+                this.players[id].status = 'dead';
+                this.checkDeathTriggers(id, 'night');
+            }
         });
         
         // 3. ANNOUNCE DEATHS & CHECK FOR LAST WORDS
@@ -492,6 +525,89 @@ class WerewolfGame {
         
         // Clear pending
         this.pendingDeaths = [];
+
+        // Check if Hunter needs to act now
+        if (this.hunterDeadId) {
+            this.phaseBeforeHunter = PHASES.DAY_ANNOUNCE;
+            setTimeout(() => {
+                this.advancePhase(PHASES.DAY_HUNTER_DECIDE);
+            }, 3000);
+        }
+    }
+
+    checkDeathTriggers(deadId, cause) {
+        const player = this.players[deadId];
+        if (!player) return;
+
+        if (player.role === ROLES.HUNTER) {
+            // Rule: Hunter cannot shoot if poisoned
+            if (cause === 'night' && this.poisonedId === deadId) {
+                // Silently skip - no public announcement
+                return;
+            }
+            this.hunterDeadId = deadId;
+        }
+    }
+
+    handleNightAction(playerId, action) {
+        const player = this.players[playerId];
+        
+        // Hunter Decision Phase
+        if (this.phase === PHASES.DAY_HUNTER_DECIDE && playerId === this.hunterDeadId) {
+            const me = this.players[playerId];
+            if (me) me.hunterShotAction = true;
+
+            if (action.type === 'shoot') {
+                const target = this.players[action.targetId];
+                if (target && target.status === 'alive') {
+                    target.status = 'dead';
+                    this.hunterShootTarget = action.targetId;
+                    this.addLog(`JUDGE: The Hunter shot and killed ${String(target.avatar || '?').padStart(2, '0')}号玩家.`);
+                    this.triggerVoice('HUNTER_SHOT', String(target.avatar || '?'));
+                    
+                    // Check if the person shot was also a hunter? (Chain reaction)
+                    this.checkDeathTriggers(action.targetId, 'shoot');
+                }
+            } else {
+                this.addLog("JUDGE: The Hunter chose not to shoot.");
+            }
+
+            // Advance after a short delay
+            setTimeout(() => {
+                this.hunterDeadId = null; // Mark current as acted
+                
+                const nextHunterId = this.findNextPendingHunter();
+                if (nextHunterId) {
+                    this.hunterDeadId = nextHunterId;
+                    this.advancePhase(PHASES.DAY_HUNTER_DECIDE);
+                } else {
+                    if (this.hunterCallback) {
+                        const cb = this.hunterCallback;
+                        this.hunterCallback = null;
+                        cb();
+                    } else if (this.phaseBeforeHunter === PHASES.DAY_ANNOUNCE) {
+                        this.advancePhase(PHASES.DAY_DISCUSSION);
+                    } else {
+                        this.startNightOrEnd();
+                    }
+                }
+            }, 2000);
+            return;
+        }
+
+        if (!player || player.status !== 'alive') return;
+        const success = this.nightManager.handleAction(this, playerId, action);
+        if (success && this.onGameUpdate) this.onGameUpdate(this);
+    }
+
+    findNextPendingHunter() {
+        // Return any DEAD Hunter who hasn't shot yet. 
+        // We'll track shot status on the player object for simplicity.
+        return Object.values(this.players).find(p => 
+            p.status === 'dead' && 
+            p.role === ROLES.HUNTER && 
+            !p.hunterShotAction
+        )?.id;
     }
     
     startNightOrEnd() {

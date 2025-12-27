@@ -12,6 +12,8 @@ const VOICE_MESSAGES = {
     [PHASES.DAY_VOTE]: "讨论结束。请投票放逐玩家。",
     DAY_VOTE_TIE: "平票。请重新投票。",
     [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
+    [PHASES.DAY_HUNTER_DECIDE]: "猎人请开枪。",
+    HUNTER_SHOT: (index) => `猎人开枪带走了 ${index} 号玩家。`,
 
     // Events
     GAME_START_CONFIRM: "请确认身份。", 

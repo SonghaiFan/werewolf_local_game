@@ -4,6 +4,7 @@ const VillagerRole = require('./roles/VillagerRole');
 const SeerRole = require('./roles/SeerRole');
 const WitchRole = require('./roles/WitchRole');
 const GuardRole = require('./roles/GuardRole');
+const HunterRole = require('./roles/HunterRole');
 
 /**
  * Role Definitions Registry
@@ -14,7 +15,8 @@ const ROLE_DEFINITIONS = {
     [ROLES.VILLAGER]: VillagerRole,
     [ROLES.SEER]: SeerRole,
     [ROLES.WITCH]: WitchRole,
-    [ROLES.GUARD]: GuardRole
+    [ROLES.GUARD]: GuardRole,
+    [ROLES.HUNTER]: HunterRole
 };
 
 module.exports = ROLE_DEFINITIONS;
