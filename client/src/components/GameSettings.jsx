@@ -19,7 +19,7 @@ export default function GameSettings({ t, gameConfig, setGameConfig, showPresets
                             key={num}
                             className="py-1.5 text-[10px] font-black rounded-lg bg-black/20 border border-border/50 hover:border-primary/50 hover:text-primary transition-all text-muted/60 uppercase"
                             onClick={() => {
-                                if (num === 6) setGameConfig({ wolves: 2, seer: true, witch: false, guard: false, hunter: false, winCondition: 'side_kill' });
+                                if (num === 6) setGameConfig({ wolves: 2, seer: true, witch: true, guard: false, hunter: false, winCondition: 'wipeout' });
                                 if (num === 9) setGameConfig({ wolves: 3, seer: true, witch: true, guard: false, hunter: true, winCondition: 'wipeout' });
                                 if (num === 12) setGameConfig({ wolves: 4, seer: true, witch: true, guard: true, hunter: true, winCondition: 'wipeout' });
                             }}
