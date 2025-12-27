@@ -1,5 +1,7 @@
 # 🐺 Werewolf Local | 极简局域网狼人杀
 
+![Werewolf Local Screenshot](client/public/game_screenshot.png)
+
 [English](#english) | [中文](#中文)
 
 ---
