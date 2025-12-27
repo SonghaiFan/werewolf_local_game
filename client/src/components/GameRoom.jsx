@@ -235,8 +235,8 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
                                  <div className="text-[9px] uppercase tracking-wider text-muted text-center mb-1 opacity-60">{t('you')}</div>
                                  <AvatarCard 
                                      player={mePlayer}
-                                     onSelect={null}
                                      className="shadow-2xl !bg-surface"
+                                     size={'8rem'}
                                  />
                             </div>
 

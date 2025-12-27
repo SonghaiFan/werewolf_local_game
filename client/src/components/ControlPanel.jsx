@@ -102,6 +102,15 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
              );
         }
 
+        if (phase === 'NIGHT_START') {
+             return (
+                 <div className="mt-auto p-4 bg-surface/20 rounded-[var(--radius-lg)] border border-white/5 backdrop-blur-sm text-center animate-in">
+                    <div className="font-mono text-[10px] mb-2 text-muted opacity-60 uppercase tracking-[0.2em]">{t('night_falls')}</div>
+                    <p className="text-sm text-white/90 font-medium animate-pulse">{t('close_eyes', 'Please close your eyes')}</p>
+                 </div>
+             );
+        }
+
         if (phase === 'WAITING') {
              const hostname = window.location.hostname;
              const effectiveHost = (serverIP && (hostname === 'localhost' || hostname === '127.0.0.1')) 
@@ -265,8 +274,13 @@ export default function ControlPanel({ onlyActions = false, onlyLogs = false }) 
                                     ${action.disabled 
                                         ? 'bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed shadow-none opacity-50' 
                                         : 'bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white'}`} 
-                                onClick={() => !action.disabled && actions.onAction(action.type, action.needsTarget)}
-                                disabled={action.disabled}
+                                onClick={() => {
+                                    if (!action.disabled) {
+                                        actions.onAction(action.type, action.needsTarget);
+                                    } else if (action.disabledReason) {
+                                        alert(t(action.disabledReason));
+                                    }
+                                }}
                             >
                                 {t(action.label)} {action.disabled ? `(${t('consumed', 'Consumed')})` : ''}
                             </button>

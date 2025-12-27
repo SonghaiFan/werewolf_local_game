@@ -117,6 +117,7 @@ class WerewolfGame {
 
             if (me.role === ROLES.GUARD) {
                 info.guardState = this.nightManager.guardState;
+                info.guardTarget = this.nightManager.actions.guardTarget;
                 if (this.phase === PHASES.NIGHT_GUARD && this.nightManager.actions.guardTarget !== undefined) {
                     info.hasActed = true;
                 }
@@ -377,6 +378,10 @@ class WerewolfGame {
         this.triggerVoice('NIGHT_START_CLOSE_EYES');
         this.addLog(`JUDGE: ${closeText}`);
         
+        this.phase = PHASES.NIGHT_START;
+        this.nightManager.resetNight();
+        if(this.onGameUpdate) this.onGameUpdate(this);
+        
         setTimeout(() => {
             this.round = targetRound;
             this.advancePhase(PHASES.NIGHT_GUARD);
@@ -425,7 +430,6 @@ class WerewolfGame {
                 break;
             case PHASES.NIGHT_WOLVES:
                 this.addLog("JUDGE: Night falls. Wolves, please wake up and hunt.");
-                this.nightManager.resetNight();
                 break;
             case PHASES.NIGHT_WITCH:
                 this.addLog("JUDGE: Wolves have closed their eyes. Witch, please wake up.");
@@ -688,9 +692,7 @@ class WerewolfGame {
         if (winResult) {
             this.finishGame(winResult);
         } else {
-            setTimeout(() => {
-                this.startNightPhase(this.round + 1);
-            }, 2000);
+            this.startNightPhase(this.round + 1);
         }
     }
 
@@ -713,10 +715,10 @@ class WerewolfGame {
         if (wolfCount === 0) return 'VILLAGERS';
 
         // 3. Wolf Win: Majority (Vote Dominance)
-        // If Wolves > Good, they can force any vote during the day.
-        // We only check this STRICTLY >. Parity (==) allows game to continue (e.g., 2v2).
-        if (wolfCount > goodCount) {
-             this.addLog("JUDGE: Wolves have taken control of the village (Majority).");
+        // Rule: If Wolves >= Good, they can control the vote (tie or win) and kill at night.
+        // User requested: "Equal numbers = Wolf Win".
+        if (wolfCount >= goodCount) {
+             this.addLog("JUDGE: Wolves have taken control of the village (Parity/Majority).");
              return 'WEREWOLVES';
         }
 

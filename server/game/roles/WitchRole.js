@@ -19,7 +19,8 @@ module.exports = {
             type: 'save', 
             label: 'save_victim', 
             needsTarget: false, 
-            disabled: witchState.saveUsed || currentWitchActions.save || !nightActions.wolfTarget || isSelfSave
+            disabled: witchState.saveUsed || currentWitchActions.save || !nightActions.wolfTarget || isSelfSave,
+            disabledReason: isSelfSave ? 'cannot_save_self' : null
         });
         
         actions.push({ 

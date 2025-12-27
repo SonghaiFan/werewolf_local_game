@@ -47,7 +47,7 @@ class DayManager {
         if (game.phase === PHASES.DAY_LEAVE_SPEECH) {
              if (playerId === game.executedPlayerId || playerId === game.hostId) {
                   game.addLog("JUDGE: Last words concluded.");
-                  setTimeout(() => game.startNightOrEnd(), 1000);
+                  setTimeout(() => game.startNightOrEnd(), 100);
              }
              return;
         }
@@ -65,7 +65,7 @@ class DayManager {
         
         if (this.currentSpeakerIndex >= this.speakingOrder.length) {
             game.addLog("JUDGE: All speeches concluded.");
-            setTimeout(() => game.advancePhase(PHASES.DAY_VOTE), 1000);
+            setTimeout(() => game.advancePhase(PHASES.DAY_VOTE), 100);
         } else {
             const nextId = this.speakingOrder[this.currentSpeakerIndex];
             const nextP = game.players[nextId];

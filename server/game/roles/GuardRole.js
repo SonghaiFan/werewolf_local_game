@@ -11,19 +11,25 @@ module.exports = {
         
         const lastTargetId = game.nightManager.guardState.lastTargetId;
         const disabledTargets = [];
+        const disabledReasons = {};
         
         // Rule: Cannot protect the same person twice in a row
-        if (lastTargetId) disabledTargets.push(lastTargetId);
+        if (lastTargetId) {
+            disabledTargets.push(lastTargetId);
+            disabledReasons[lastTargetId] = 'cannot_guard_consecutive';
+        }
         
         // Rule: Generally cannot protect self (as per user request)
         disabledTargets.push(player.id);
+        disabledReasons[player.id] = 'cannot_guard_self';
         
         return [
             { 
                 type: 'protect', 
                 label: 'protect_target', 
                 needsTarget: true,
-                disabledTargets: disabledTargets
+                disabledTargets: disabledTargets,
+                disabledReasons: disabledReasons
             },
             { 
                 type: 'skip', 

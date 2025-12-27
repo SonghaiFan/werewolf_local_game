@@ -51,12 +51,15 @@ export default function AvatarCard({
     const roleKey = (player.role || 'UNKNOWN').toUpperCase();
     const roleIcon = RoleIcons[roleKey] || RoleIcons.UNKNOWN;
 
-    const isTargetDisabled = useMemo(() => {
+    const { isTargetDisabled, disabledReason } = useMemo(() => {
         const availableActions = gameState.me?.availableActions || [];
-        // If any target-needing action disables this player, we treat them as globally unselectable for current phase
-        return availableActions.some(action => 
+        const action = availableActions.find(action => 
             action.needsTarget && action.disabledTargets && action.disabledTargets.includes(player.id)
         );
+        return {
+            isTargetDisabled: !!action,
+            disabledReason: action?.disabledReasons?.[player.id]
+        };
     }, [gameState.me?.availableActions, player.id]);
 
     const isSelectable = (!isDead || isMyHunterTurn) && !isTargetDisabled && player.status !== 'dead'; 
@@ -85,7 +88,13 @@ export default function AvatarCard({
                 borderRadius: 'var(--radius-lg)',
                 width: size
             }}
-            onClick={() => canInteract && handleSelect(player.id)}
+            onClick={() => {
+                if (canInteract) {
+                    handleSelect(player.id);
+                } else if (disabledReason) {
+                    alert(t(disabledReason));
+                }
+            }}
         >
             {/* Top Bar: Player Name & Status */}
             {/* Top Bar: Index First, Name Second */}
@@ -115,7 +124,7 @@ export default function AvatarCard({
                     <div 
                         className="w-full h-full flex flex-col items-center justify-center animate-in zoom-in duration-300 cursor-pointer"
                         onClick={(e) => {
-                            if (isMe && !isDead) {
+                            if (isMe && !isDead && !canInteract) {
                                 e.stopPropagation();
                                 setIsRevealed(false);
                             }
@@ -135,7 +144,10 @@ export default function AvatarCard({
                     <div 
                         className="w-full h-full flex items-center justify-center relative group"
                         onClick={(e) => { 
-                            if(isMe && !isDead) { e.stopPropagation(); setIsRevealed(true); } 
+                            if(isMe && !isDead && !canInteract) { 
+                                e.stopPropagation(); 
+                                setIsRevealed(true); 
+                            } 
                         }}
                     >
                         {/* Large Number (Background) */}
@@ -157,6 +169,14 @@ export default function AvatarCard({
 
             {/* Status Badges Overlay */}
             <div className="absolute bottom-2 left-2 flex flex-col gap-1 z-20 pointer-events-none">
+                {/* Guard Protection Target */}
+                {gameState.me?.guardTarget === player.id && (
+                     <div className="bg-sky-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1">
+                        <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+                        <span>{t('roles.GUARD')}</span>
+                     </div>
+                )}
+
                 {isVictim && (
                     <div className="bg-purple-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg animate-pulse">
                         {t('victim')}
