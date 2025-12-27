@@ -10,7 +10,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
   const { t } = useTranslation();
   const { gameState, inspectedPlayers, setInspectedPlayers } =
     useGameState(socket);
-  const { phase, round } = gameState;
+  const { phase } = gameState;
 
   const [selectedTarget, setSelectedTarget] = useState(null);
 

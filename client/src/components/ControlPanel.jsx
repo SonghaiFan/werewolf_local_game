@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useGameContext } from "../context/GameContext";
 import BasePanel, {
@@ -17,10 +17,11 @@ export default function ControlPanel({
   onlyLogs = false,
 }) {
   const { t } = useTranslation();
-  const { gameState, myId, executedId } = useGameContext();
+  const { gameState, myId, executedId, hostId } = useGameContext();
 
   const { phase, logs } = gameState;
   const myStatus = gameState.me?.status;
+  const isHost = hostId === myId;
 
   // Host Settings State
   const [gameConfig, setGameConfig] = useState({
@@ -32,15 +33,29 @@ export default function ControlPanel({
     winCondition: "wipeout",
   });
 
+  const hasSyncedConfig = useRef(false);
+
   // Sync config from server state
   useEffect(() => {
     if (gameState.config) {
-      setGameConfig((prev) => ({
-        ...prev,
-        ...gameState.config,
-      }));
+      if (isHost) {
+        // Only sync once for host to avoid overwriting local changes
+        if (!hasSyncedConfig.current) {
+          setGameConfig((prev) => ({
+            ...prev,
+            ...gameState.config,
+          }));
+          hasSyncedConfig.current = true;
+        }
+      } else {
+        // Always sync for non-hosts
+        setGameConfig((prev) => ({
+          ...prev,
+          ...gameState.config,
+        }));
+      }
     }
-  }, [gameState.config]);
+  }, [gameState.config, isHost]);
 
   if (onlyLogs) {
     return <LogPanel logs={logs} />;
