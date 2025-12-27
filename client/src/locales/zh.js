@@ -40,7 +40,6 @@ const zh = {
   last_words: "遗言",
   leaving_words: "{{name}} 发表遗言中...",
   execution: "处决",
-  you_executed: "你已被放逐。",
   vote_required: "投票",
   confirm_vote: "确认投票",
   voted: "已投",
