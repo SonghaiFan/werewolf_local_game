@@ -8,7 +8,13 @@ export default function LogPanel({ logs }) {
   }, [logs]);
 
   return (
-    <div className="flex-grow flex flex-col justify-end font-medium text-xs list-none overflow-y-auto p-2 h-full scrollbar-hide space-y-1">
+    <div
+      className="flex-grow flex flex-col justify-end font-medium text-xs list-none overflow-y-auto p-2 h-full scrollbar-hide space-y-1"
+      style={{
+        maskImage: "linear-gradient(to bottom, transparent, black 40%)",
+        WebkitMaskImage: "linear-gradient(to bottom, transparent, black 40%)",
+      }}
+    >
       {logs.slice(-5).map((log, i) => (
         <div
           key={i}

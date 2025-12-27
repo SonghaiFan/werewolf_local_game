@@ -237,7 +237,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
           <footer className="shrink-0 flex flex-col gap-4 pb-6 px-4">
             {/* Logs - Full Width, Floating Above Controls */}
             <div className="w-full h-[60px] relative mask-image-gradient-to-t flex items-end justify-center">
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-bg via-bg/90 to-transparent pointer-events-none h-6 z-10" />
+              <div className="absolute inset-x-0 bottom-0 pointer-events-none h-6 z-10" />
               <div className="w-full max-w-lg">
                 <ControlPanel onlyLogs={true} />
               </div>
