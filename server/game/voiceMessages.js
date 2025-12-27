@@ -1,39 +1,55 @@
-const { PHASES } = require('./constants');
+const { PHASES, ROLES } = require("./constants");
+
+const ROLE_NAMES = {
+  [ROLES.GUARD]: "守卫",
+  [ROLES.WOLF]: "狼人",
+  [ROLES.WITCH]: "女巫",
+  [ROLES.SEER]: "预言家",
+  [ROLES.HUNTER]: "猎人",
+  [ROLES.VILLAGER]: "村民",
+};
 
 // Centralized voice messages configuration
 const VOICE_MESSAGES = {
-    // Phases
-    [PHASES.NIGHT_GUARD]: "守卫请睁眼。",
-    [PHASES.NIGHT_WOLVES]: (hasGuard) => hasGuard ? "守卫请闭眼。狼人请睁眼。" : "狼人请睁眼。",
-    [PHASES.NIGHT_WITCH]: "狼人请闭眼。女巫请睁眼。",
-    [PHASES.NIGHT_SEER]: (hasWitch) => hasWitch ? "女巫请闭眼。预言家请睁眼。" : "狼人请闭眼。预言家请睁眼。",
+  ROLE_NAMES,
 
-    [PHASES.DAY_ANNOUNCE]: "天亮了。所有人都醒过来。",
-    [PHASES.DAY_DISCUSSION]: "请开始讨论昨晚发生的事情。",
-    [PHASES.DAY_VOTE]: "讨论结束。请投票放逐玩家。",
-    [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
-    [PHASES.DAY_HUNTER_DECIDE]: "猎人请开枪。",
-    
-    // Events & Outcomes
-    DAY_VOTE_TIE: "平票。请重新投票。",
-    HUNTER_SHOT: (index) => `猎人开枪带走了 ${index} 号玩家。`,
-    
-    GAME_START_CONFIRM: "请确认身份。", 
-    NIGHT_START_CLOSE_EYES: "天黑请闭眼。", 
-    
-    DEATH_ANNOUNCE: (indices) => `昨晚死亡的是 ${indices}。`,
-    DEATH_PEACEFUL: () => "昨晚是个平安夜。",
-    
-    DEATH_LAST_WORDS: (announcement) => `${announcement} 请发表遗言。`,
-    NIGHT_DISCUSSION: (announcement) => `${announcement} 请开始讨论昨晚发生的事情。`,
-    
-    BANISH_LEAVE_SPEECH: (index) => `${index}号玩家出局，请发表遗言。`,
-    BANISH_GENERIC: (index) => `${index}号玩家出局。`,
-    
-    NEXT_SPEAKER: (index) => `请${index}号玩家发言。`,
+  // Dynamic Night Construction
+  OPEN_EYES: (roleName) => `${roleName}请睁眼。`,
+  CLOSE_EYES: (roleName) => `${roleName}请闭眼。`,
 
-    WINNER_VILLAGERS: "游戏结束。好人阵营胜利。",
-    WINNER_WEREWOLVES: "游戏结束。狼人阵营胜利。",
+  // Phases (Legacy/Fallback)
+  [PHASES.NIGHT_GUARD]: "守卫请睁眼。",
+  [PHASES.NIGHT_WOLVES]: "狼人请睁眼。",
+  [PHASES.NIGHT_WITCH]: "女巫请睁眼。",
+  [PHASES.NIGHT_SEER]: "预言家请睁眼。",
+
+  [PHASES.DAY_ANNOUNCE]: "天亮了。所有人都醒过来。",
+  [PHASES.DAY_DISCUSSION]: "请开始讨论昨晚发生的事情。",
+  [PHASES.DAY_VOTE]: "讨论结束。请投票放逐玩家。",
+  [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
+  [PHASES.DAY_HUNTER_DECIDE]: "猎人请开枪。",
+
+  // Events & Outcomes
+  DAY_VOTE_TIE: "平票。请重新投票。",
+  HUNTER_SHOT: (index) => `猎人开枪带走了 ${index} 号玩家。`,
+
+  GAME_START_CONFIRM: "请确认身份。",
+  NIGHT_START_CLOSE_EYES: "天黑请闭眼。",
+
+  DEATH_ANNOUNCE: (indices) => `昨晚死亡的是 ${indices}。`,
+  DEATH_PEACEFUL: () => "昨晚是个平安夜。",
+
+  DEATH_LAST_WORDS: (announcement) => `${announcement} 请发表遗言。`,
+  NIGHT_DISCUSSION: (announcement) =>
+    `${announcement} 请开始讨论昨晚发生的事情。`,
+
+  BANISH_LEAVE_SPEECH: (index) => `${index}号玩家出局，请发表遗言。`,
+  BANISH_GENERIC: (index) => `${index}号玩家出局。`,
+
+  NEXT_SPEAKER: (index) => `请${index}号玩家发言。`,
+
+  WINNER_VILLAGERS: "游戏结束。好人阵营胜利。",
+  WINNER_WEREWOLVES: "游戏结束。狼人阵营胜利。",
 };
 
 module.exports = VOICE_MESSAGES;
