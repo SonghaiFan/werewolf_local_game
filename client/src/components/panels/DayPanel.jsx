@@ -1,12 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useGameContext } from "../../context/GameContext";
-import {
-  PanelSection,
-  PanelInfo,
-  PanelActions,
-  PanelProcessControl,
-  IdleMessage,
-} from "./BasePanel";
+import { PanelSection, PanelInfo } from "./BasePanel";
 import { VoteSection } from "./sections/VoteSection";
 import { SpeechSection } from "./sections/SpeechSection";
 

@@ -3,7 +3,6 @@ import {
   PanelInfo,
   PanelActions,
   PanelProcessControl,
-  IdleMessage,
 } from "../BasePanel";
 import { IdleSection } from "./IdleSection";
 

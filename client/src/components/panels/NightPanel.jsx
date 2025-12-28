@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useGameContext } from "../../context/GameContext";
-import { PanelSection, PanelInfo, IdleMessage } from "./BasePanel";
+import { IdleMessage } from "./BasePanel";
 import { ActionSection } from "./sections/ActionSection";
 import { IdleSection } from "./sections/IdleSection";
 
