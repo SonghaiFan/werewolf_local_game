@@ -2,7 +2,7 @@ const { ROLES, PHASES } = require("./constants");
 const NightManager = require("./managers/NightManager");
 const DayManager = require("./managers/DayManager");
 const ROLE_DEFINITIONS = require("./RoleDefinitions");
-const VOICE_MESSAGES = require("./JudgeScript");
+const SCRIPT = require("./JudgeScript");
 const FLOW_DEFINITION = require("./GameFlow");
 const { buildRoleDeck } = require("./utils/roleDeck");
 const { buildNightFlow } = require("./utils/nightFlow");
@@ -26,6 +26,7 @@ class WerewolfGame {
     this.executedPlayerId = null;
     this.pendingDeaths = [];
     this.metadata = this.createDefaultMetadata();
+    this.locale = config?.locale || SCRIPT.DEFAULT_LOCALE;
 
     this.nightManager = new NightManager();
     this.dayManager = new DayManager();
@@ -57,18 +58,31 @@ class WerewolfGame {
 
   // --- Core Logic ---
 
+  resolveLine(keyOrText, params = {}) {
+    return SCRIPT.renderLine(keyOrText, params, this.locale);
+  }
+
   addLog(message) {
     const time = new Date().toLocaleTimeString("en-US", { hour12: false });
     this.logs.push(`[${time}] ${message}`);
   }
 
+  print(message) {
+    this.addLog(`JUDGE: ${message}`);
+  }
+
+  read(keyOrText, params) {
+    const text = this.resolveLine(keyOrText, params);
+    if (text) {
+      this.triggerVoice(text);
+    }
+  }
+
   /**
    * Unified judge utterance: add log and trigger voice with same text.
    */
-  say(text) {
-    if (!text) return;
-    this.addLog(`JUDGE: ${text}`);
-    this.triggerVoice(text);
+  say(keyOrText, params) {
+    this.announce(keyOrText, params);
   }
 
   seatLabel(playerIdOrObj) {
@@ -82,11 +96,11 @@ class WerewolfGame {
   /**
    * Convenience: log a judge message and optionally trigger a voice cue.
    */
-  announce(message, voiceKey = null) {
-    this.addLog(`JUDGE: ${message}`);
-    if (voiceKey) {
-      this.triggerVoice(voiceKey);
-    }
+  announce(messageKeyOrText, params, voiceKey = null) {
+    const message = this.resolveLine(messageKeyOrText, params);
+    const voiceText = this.resolveLine(voiceKey || message, params);
+    if (message) this.print(message);
+    if (voiceText) this.read(voiceText);
   }
 
   createDefaultMetadata() {
@@ -180,6 +194,7 @@ class WerewolfGame {
     const count = playerIds.length;
 
     const effectiveConfig = config || this.initialConfig;
+    this.locale = effectiveConfig?.locale || this.locale || SCRIPT.DEFAULT_LOCALE;
     this.metadata.mayorEnabled = !!effectiveConfig?.enableMayor;
     const roles = buildRoleDeck(count, effectiveConfig, this.addLog.bind(this));
 
@@ -189,10 +204,7 @@ class WerewolfGame {
     });
 
     this.addLog("JUDGE: Game Starting... Roles assigned.");
-
-    const confirmText = VOICE_MESSAGES.GAME_START_CONFIRM;
-    this.addLog(`JUDGE: ${confirmText}`);
-    this.triggerVoice("GAME_START_CONFIRM");
+    this.say("GAME_START_CONFIRM");
 
     this.phase = PHASES.GAME_START;
 
@@ -205,9 +217,7 @@ class WerewolfGame {
   }
 
   startNightPhase(targetRound) {
-    const closeText = VOICE_MESSAGES.NIGHT_START_CLOSE_EYES;
-    this.triggerVoice("NIGHT_START_CLOSE_EYES");
-    this.addLog(`JUDGE: ${closeText}`);
+    this.say("NIGHT_START_CLOSE_EYES");
 
     this.phase = PHASES.NIGHT_START;
     this.nightManager.resetNight();
@@ -299,7 +309,7 @@ class WerewolfGame {
     // Dynamic Voice Generation for Night Phases
     if (this.nightFlow && this.nightFlow.includes(newPhase)) {
       const idx = this.nightFlow.indexOf(newPhase);
-      let voiceText = "";
+      const voiceParts = [];
 
       // 1. Close eyes for previous role
       if (idx > 0) {
@@ -308,8 +318,10 @@ class WerewolfGame {
           (d) => d.nightPhase === prevPhase
         );
         if (prevRoleDef) {
-          const name = VOICE_MESSAGES.ROLE_NAMES[prevRoleDef.id];
-          if (name) voiceText += VOICE_MESSAGES.CLOSE_EYES(name);
+          const closeText = this.resolveLine("CLOSE_EYES", {
+            role: prevRoleDef.id,
+          });
+          if (closeText) voiceParts.push(closeText);
         }
       }
 
@@ -318,25 +330,24 @@ class WerewolfGame {
         (d) => d.nightPhase === newPhase
       );
       if (currRoleDef) {
-        const name = VOICE_MESSAGES.ROLE_NAMES[currRoleDef.id];
-        if (name) voiceText += VOICE_MESSAGES.OPEN_EYES(name);
+        const openText = this.resolveLine("OPEN_EYES", {
+          role: currRoleDef.id,
+        });
+        if (openText) voiceParts.push(openText);
       }
 
-      if (voiceText) {
-        this.triggerVoice(voiceText);
-      } else {
-        // Fallback
-        if (flow && flow.voice) {
-          this.triggerVoice(flow.voice);
-        }
+      if (voiceParts.length > 0) {
+        this.read(voiceParts.join(" "));
+      } else if (flow && flow.voice) {
+        this.read(flow.voice);
       }
     } else {
       // Standard Voice Trigger
       if (flow && flow.voice) {
-        this.triggerVoice(flow.voice);
+        this.read(flow.voice);
       } else {
         // Fallback or manual triggers
-        this.triggerVoice(newPhase);
+        this.read(newPhase);
       }
     }
 
@@ -349,21 +360,12 @@ class WerewolfGame {
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 
-  triggerVoice(phaseOrText, ...args) {
-    // If phaseOrText is a valid phase key in VOICE_MESSAGES, use that.
-    // Otherwise, treat phaseOrText as the literal text to speak.
-    let text = VOICE_MESSAGES[phaseOrText];
-
-    if (typeof text === "function") {
-      text = text(...args);
-    } else if (!text) {
-      // If it's not a phase key, it's either null or the actual text
-      text = phaseOrText;
-    }
-
-    if (text) {
-      console.log(`[Voice] Triggering cue: ${text}`);
-      this.onVoiceCue(text);
+  triggerVoice(keyOrText, params) {
+    const text = this.resolveLine(keyOrText, params);
+    const finalText = text || keyOrText;
+    if (finalText) {
+      console.log(`[Voice] Triggering cue: ${finalText}`);
+      this.onVoiceCue(finalText);
     }
   }
 
@@ -393,16 +395,14 @@ class WerewolfGame {
     let hasDeaths = this.pendingDeaths.length > 0;
 
     if (hasDeaths) {
-      const indices = this.pendingDeaths
-        .map((pid) => `${this.players[pid]?.avatar || "?"}号玩家`)
+      const seats = this.pendingDeaths
+        .map((pid) => this.seatLabel(this.players[pid]))
         .join(", ");
-      announcement = VOICE_MESSAGES.DEATH_ANNOUNCE(indices);
-      this.addLog(
-        `JUDGE: Sun rises. Last night, ${this.pendingDeaths.length} player(s) died.`
-      );
+      announcement = this.resolveLine("DEATH_ANNOUNCE", { seats });
+      this.say("DEATH_ANNOUNCE", { seats });
     } else {
-      announcement = VOICE_MESSAGES.DEATH_PEACEFUL();
-      this.addLog("JUDGE: Sun rises. It was a peaceful night.");
+      announcement = this.resolveLine("DEATH_PEACEFUL");
+      this.say("DEATH_PEACEFUL");
     }
 
     // Broadcast the update (deaths handled)
@@ -457,7 +457,7 @@ class WerewolfGame {
       this.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
       this.onGameUpdate(this);
 
-      this.triggerVoice(VOICE_MESSAGES.DEATH_LAST_WORDS(announcement));
+      this.read("DEATH_LAST_WORDS", { announcement });
     } else {
       if (this.shouldRunMayorFlow()) {
         this.startMayorNomination();
@@ -466,7 +466,7 @@ class WerewolfGame {
         this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
         this.onGameUpdate(this);
 
-        this.triggerVoice(VOICE_MESSAGES.NIGHT_DISCUSSION(announcement));
+        this.read("NIGHT_DISCUSSION", { announcement });
 
         this.dayManager.startDiscussion(this);
       }
@@ -550,7 +550,7 @@ class WerewolfGame {
     this.metadata.mayorPassers = [];
     this.phase = PHASES.DAY_MAYOR_NOMINATE;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_NOMINATE} ---`);
-    this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_NOMINATE]);
+    this.say(PHASES.DAY_MAYOR_NOMINATE);
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 
@@ -564,21 +564,13 @@ class WerewolfGame {
     const set = new Set(this.metadata.mayorNominees || []);
     if (set.has(playerId)) {
       set.delete(playerId);
-      this.say(
-        VOICE_MESSAGES.LINES?.MAYOR_PASS
-          ? VOICE_MESSAGES.LINES.MAYOR_PASS(this.seatLabel(player))
-          : `${this.seatLabel(player)} 取消上警。`
-      );
+      this.say("MAYOR_PASS", { seat: this.seatLabel(player) });
       this.metadata.mayorPassers = Array.from(
         new Set([...(this.metadata.mayorPassers || []), playerId])
       );
     } else {
       set.add(playerId);
-      this.say(
-        VOICE_MESSAGES.LINES?.MAYOR_NOMINATE
-          ? VOICE_MESSAGES.LINES.MAYOR_NOMINATE(this.seatLabel(player))
-          : `${this.seatLabel(player)} 上警竞选警长。`
-      );
+      this.say("MAYOR_NOMINATE", { seat: this.seatLabel(player) });
       this.metadata.mayorPassers = (this.metadata.mayorPassers || []).filter(
         (id) => id !== playerId
       );
@@ -598,11 +590,7 @@ class WerewolfGame {
     this.metadata.mayorPassers = Array.from(
       new Set([...(this.metadata.mayorPassers || []), playerId])
     );
-    this.say(
-      VOICE_MESSAGES.LINES?.MAYOR_PASS
-        ? VOICE_MESSAGES.LINES.MAYOR_PASS(this.seatLabel(player))
-        : `${this.seatLabel(player)} 放弃竞选。`
-    );
+    this.say("MAYOR_PASS", { seat: this.seatLabel(player) });
     this.maybeAdvanceMayorNominate();
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
@@ -631,7 +619,7 @@ class WerewolfGame {
     if (this.phase === PHASES.DAY_MAYOR_SPEECH) {
       this.phase = PHASES.DAY_MAYOR_WITHDRAW;
       this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_WITHDRAW} ---`);
-      this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_WITHDRAW]);
+      this.say(PHASES.DAY_MAYOR_WITHDRAW);
       if (this.onGameUpdate) this.onGameUpdate(this);
       return;
     }
@@ -642,7 +630,7 @@ class WerewolfGame {
     if (this.phase === PHASES.DAY_MAYOR_PK_SPEECH) {
       this.phase = PHASES.DAY_MAYOR_PK_VOTE;
       this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_PK_VOTE} ---`);
-      this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_PK_VOTE]);
+      this.say(PHASES.DAY_MAYOR_PK_VOTE);
       if (this.onGameUpdate) this.onGameUpdate(this);
       return;
     }
@@ -693,7 +681,7 @@ class WerewolfGame {
     const before = this.metadata.mayorNominees || [];
     this.metadata.mayorNominees = before.filter((id) => id !== playerId);
     const seat = this.seatLabel(player);
-    this.say(VOICE_MESSAGES.LINES.MAYOR_PASS(seat));
+    this.say("MAYOR_PASS", { seat });
 
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
@@ -711,17 +699,14 @@ class WerewolfGame {
     this.dayManager.setSpeakingQueue(nominees);
     this.phase = PHASES.DAY_MAYOR_SPEECH;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_SPEECH} ---`);
-    this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_SPEECH]);
+    this.say(PHASES.DAY_MAYOR_SPEECH);
 
     // Trigger first speaker cue
     if (nominees.length > 0) {
       const firstId = nominees[0];
       const firstP = this.players[firstId];
       if (firstP) {
-        const cueLine =
-          VOICE_MESSAGES.LINES?.NEXT_SPEAKER?.(this.seatLabel(firstP)) ||
-          VOICE_MESSAGES.NEXT_SPEAKER(firstP.avatar || "?");
-        this.say(cueLine);
+        this.say("NEXT_SPEAKER", { seat: this.seatLabel(firstP) });
       }
     }
     if (this.onGameUpdate) this.onGameUpdate(this);
@@ -748,10 +733,7 @@ class WerewolfGame {
         isMayor: true,
       };
       const seat = this.seatLabel(this.players[mayorId]);
-      const line = VOICE_MESSAGES.LINES?.MAYOR_ELECT
-        ? VOICE_MESSAGES.LINES.MAYOR_ELECT(seat)
-        : `警长当选：${seat}`;
-      this.say(line);
+      this.say("MAYOR_ELECT", { seat });
       this.metadata.mayorNominees = [];
       this.metadata.mayorPkCandidates = [];
       this.phase = PHASES.DAY_DISCUSSION;
@@ -764,7 +746,7 @@ class WerewolfGame {
     this.metadata.mayorVotes = {};
     this.phase = PHASES.DAY_MAYOR_VOTE;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_VOTE} ---`);
-    this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_VOTE]);
+    this.say(PHASES.DAY_MAYOR_VOTE);
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 
@@ -788,7 +770,7 @@ class WerewolfGame {
         this.dayManager.setSpeakingQueue(this.metadata.mayorPkCandidates);
         this.phase = PHASES.DAY_MAYOR_PK_SPEECH;
         this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_PK_SPEECH} ---`);
-        this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_PK_SPEECH]);
+        this.say(PHASES.DAY_MAYOR_PK_SPEECH);
         if (this.onGameUpdate) this.onGameUpdate(this);
         return;
       }
@@ -801,13 +783,10 @@ class WerewolfGame {
         isMayor: true,
       };
       const seat = this.seatLabel(this.players[mayorId]);
-      const line = VOICE_MESSAGES.LINES?.MAYOR_ELECT
-        ? VOICE_MESSAGES.LINES.MAYOR_ELECT(seat)
-        : `警长当选：${seat}`;
-      this.say(line);
+      this.say("MAYOR_ELECT", { seat });
     } else {
       this.metadata.mayorSkipped = true;
-      this.say(VOICE_MESSAGES.LINES?.MAYOR_NONE || "警长竞选无结果，跳过。");
+      this.say("MAYOR_NONE");
     }
 
     this.metadata.mayorVotes = {};
@@ -847,7 +826,7 @@ class WerewolfGame {
     // Play Winner Voice
     const voiceKey =
       winner === "VILLAGERS" ? "WINNER_VILLAGERS" : "WINNER_WEREWOLVES";
-    this.onVoiceCue(VOICE_MESSAGES[voiceKey]);
+    this.read(voiceKey);
 
     if (this.onGameUpdate) this.onGameUpdate(this);
   }

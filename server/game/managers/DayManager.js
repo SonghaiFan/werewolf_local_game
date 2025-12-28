@@ -1,7 +1,5 @@
 const { PHASES } = require("../constants");
 const SCRIPT = require("../JudgeScript");
-const VOICE_MESSAGES = SCRIPT;
-const LINES = SCRIPT.LINES || {};
 
 const seatLabel = (player) =>
   `${String(player?.avatar || "?").padStart(2, "0")}号`;
@@ -35,12 +33,7 @@ class DayManager {
     if (order.length > 0) {
       const nextId = order[0];
       const nextP = game.players[nextId];
-      const cue = VOICE_MESSAGES.NEXT_SPEAKER(nextP.avatar);
-      game.say(
-        SCRIPT.LINES.DISCUSSION_START
-          ? SCRIPT.LINES.DISCUSSION_START(seatLabel(nextP))
-          : cue
-      );
+      game.say("DISCUSSION_START", { seat: seatLabel(nextP) });
     } else {
       // Should unlikely happen
       game.nextPhase();
@@ -65,29 +58,20 @@ class DayManager {
     this.currentSpeakerIndex++;
 
     if (this.currentSpeakerIndex >= this.speakingOrder.length) {
-      const msg =
-        game.phase === PHASES.DAY_LEAVE_SPEECH ? "遗言结束。" : "发言结束。";
-      game.say(msg);
+      const endKey =
+        game.phase === PHASES.DAY_LEAVE_SPEECH
+          ? "LAST_WORDS_END"
+          : "SPEECH_END";
+      game.say(endKey);
       setTimeout(() => game.nextPhase(), 100);
     } else {
       const nextId = this.speakingOrder[this.currentSpeakerIndex];
       const nextP = game.players[nextId];
 
       if (game.phase === PHASES.DAY_LEAVE_SPEECH) {
-        const code = nextP.avatar || "?";
-        const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
-        game.say(
-          SCRIPT.LINES.NEXT_LAST_WORDS
-            ? SCRIPT.LINES.NEXT_LAST_WORDS(seatLabel(nextP))
-            : text
-        );
+        game.say("NEXT_LAST_WORDS", { seat: seatLabel(nextP) });
       } else {
-        const text = VOICE_MESSAGES.NEXT_SPEAKER(nextP.avatar);
-        game.say(
-          SCRIPT.LINES.NEXT_SPEAKER
-            ? SCRIPT.LINES.NEXT_SPEAKER(seatLabel(nextP))
-            : text
-        );
+        game.say("NEXT_SPEAKER", { seat: seatLabel(nextP) });
       }
     }
 
@@ -129,7 +113,7 @@ class DayManager {
     }
 
     if (Object.keys(this.votes).length === expectedVoters.length) {
-      if (LINES.VOTES_TALLYING) game.say(LINES.VOTES_TALLYING);
+      game.say("VOTES_TALLYING");
       setTimeout(() => this.resolve(game), 1500);
     }
   }
@@ -140,7 +124,7 @@ class DayManager {
     // Set speaking queue to candidates
     this.setSpeakingQueue(candidates);
 
-    if (LINES.ENTER_PK) game.say(LINES.ENTER_PK);
+    game.say("ENTER_PK");
 
     // Advance to PK Speech
     game.advancePhase(PHASES.DAY_PK_SPEECH);
@@ -149,12 +133,7 @@ class DayManager {
     if (candidates.length > 0) {
       const firstId = candidates[0];
       const firstP = game.players[firstId];
-      const cue = VOICE_MESSAGES.NEXT_SPEAKER(firstP.avatar);
-      game.say(
-        SCRIPT.LINES.NEXT_SPEAKER
-          ? SCRIPT.LINES.NEXT_SPEAKER(seatLabel(firstP))
-          : cue
-      );
+      game.say("NEXT_SPEAKER", { seat: seatLabel(firstP) });
     }
   }
 
@@ -183,12 +162,9 @@ class DayManager {
 
     // Log + voice the details
     if (voteDetails.length > 0) {
-      const msg = LINES.VOTES_DETAIL
-        ? LINES.VOTES_DETAIL(voteDetails.join(", "))
-        : `Votes: ${voteDetails.join(", ")}`;
-      game.say(msg);
+      game.say("VOTES_DETAIL", { detail: voteDetails.join(", ") });
     } else {
-      game.say(LINES.VOTES_NONE || "No votes cast.");
+      game.say("VOTES_NONE");
     }
 
     let maxVotes = 0;
@@ -217,11 +193,7 @@ class DayManager {
       const victim = candidates[0];
       game.pkCandidates = null; // Clear PK state if resolved
       game.players[victim].status = "dead";
-      if (LINES.BANISH_EXECUTE) {
-        game.say(LINES.BANISH_EXECUTE(game.players[victim].name));
-      } else {
-        game.say(`The village has voted to execute ${game.players[victim].name}.`);
-      }
+      game.say("BANISH_EXECUTE", { seat: seatLabel(game.players[victim]) });
 
       game.checkDeathTriggers(victim, "vote"); // Check for Hunter
 
@@ -242,9 +214,9 @@ class DayManager {
           // Set queue for single banishment
           this.setSpeakingQueue([victim]);
 
-          const code = game.players[victim].avatar || "?";
-          const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
-          game.triggerVoice(text);
+          game.read("BANISH_LEAVE_SPEECH", {
+            seat: seatLabel(game.players[victim]),
+          });
 
           if (game.onGameUpdate) game.onGameUpdate(game);
         };
@@ -263,8 +235,7 @@ class DayManager {
       // Check if this is already a PK vote
       if (game.phase === PHASES.DAY_PK_VOTE) {
         // Second Tie -> Peaceful Day
-        const text = VOICE_MESSAGES.DAY_PK_TIE;
-        game.say(text);
+        game.say("DAY_PK_TIE");
         game.executedPlayerId = null;
         game.pkCandidates = []; // Clear PK state
 
@@ -277,8 +248,7 @@ class DayManager {
       }
 
       // First Tie -> Enter PK
-      const text = VOICE_MESSAGES.DAY_VOTE_TIE;
-      game.say(text);
+      game.say("DAY_VOTE_TIE");
 
       game.executedPlayerId = null;
 
