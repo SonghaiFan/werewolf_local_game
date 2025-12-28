@@ -28,6 +28,7 @@ export default function DayPanel() {
     onDayVote,
     onMayorNominate,
     onMayorWithdraw,
+    onMayorPass,
     onMayorVote,
     onMayorAdvance,
   } = actions;
@@ -95,7 +96,7 @@ export default function DayPanel() {
         voteButtonClass={`btn-primary ${
           isRunning ? "bg-blue-900/40 border-blue-500/40" : ""
         }`}
-        onAbstain={onEndSpeech}
+        onAbstain={onMayorPass}
         abstainLabel={t("skip", "Skip")}
         onCloseVote={onMayorAdvance}
         closeVoteLabel={t("advance", "Advance")}

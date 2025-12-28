@@ -71,6 +71,14 @@ class WerewolfGame {
     this.triggerVoice(text);
   }
 
+  seatLabel(playerIdOrObj) {
+    const player =
+      typeof playerIdOrObj === "object"
+        ? playerIdOrObj
+        : this.players[playerIdOrObj];
+    return `${String(player?.avatar || "?").padStart(2, "0")}号`;
+  }
+
   /**
    * Convenience: log a judge message and optionally trigger a voice cue.
    */
@@ -89,6 +97,7 @@ class WerewolfGame {
       mayorPkCandidates: [],
       mayorVotes: {},
       mayorSkipped: false,
+      mayorPassers: [],
     };
   }
 
@@ -538,9 +547,10 @@ class WerewolfGame {
     this.metadata.mayorNominees = [];
     this.metadata.mayorPkCandidates = [];
     this.metadata.mayorVotes = {};
+    this.metadata.mayorPassers = [];
     this.phase = PHASES.DAY_MAYOR_NOMINATE;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_NOMINATE} ---`);
-    this.announce("警长竞选：请提交提名。");
+    this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_NOMINATE]);
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 
@@ -554,13 +564,60 @@ class WerewolfGame {
     const set = new Set(this.metadata.mayorNominees || []);
     if (set.has(playerId)) {
       set.delete(playerId);
-      this.addLog(`JUDGE: ${player.name} 取消上警。`);
+      this.say(
+        VOICE_MESSAGES.LINES?.MAYOR_PASS
+          ? VOICE_MESSAGES.LINES.MAYOR_PASS(this.seatLabel(player))
+          : `${this.seatLabel(player)} 取消上警。`
+      );
+      this.metadata.mayorPassers = Array.from(
+        new Set([...(this.metadata.mayorPassers || []), playerId])
+      );
     } else {
       set.add(playerId);
-      this.addLog(`JUDGE: ${player.name} 上警竞选警长。`);
+      this.say(
+        VOICE_MESSAGES.LINES?.MAYOR_NOMINATE
+          ? VOICE_MESSAGES.LINES.MAYOR_NOMINATE(this.seatLabel(player))
+          : `${this.seatLabel(player)} 上警竞选警长。`
+      );
+      this.metadata.mayorPassers = (this.metadata.mayorPassers || []).filter(
+        (id) => id !== playerId
+      );
     }
     this.metadata.mayorNominees = Array.from(set);
+    this.maybeAdvanceMayorNominate();
     if (this.onGameUpdate) this.onGameUpdate(this);
+  }
+
+  handleMayorPass(playerId) {
+    if (this.phase !== PHASES.DAY_MAYOR_NOMINATE) return;
+    const player = this.players[playerId];
+    if (!player || player.status !== "alive") return;
+    this.metadata.mayorNominees = (this.metadata.mayorNominees || []).filter(
+      (id) => id !== playerId
+    );
+    this.metadata.mayorPassers = Array.from(
+      new Set([...(this.metadata.mayorPassers || []), playerId])
+    );
+    this.say(
+      VOICE_MESSAGES.LINES?.MAYOR_PASS
+        ? VOICE_MESSAGES.LINES.MAYOR_PASS(this.seatLabel(player))
+        : `${this.seatLabel(player)} 放弃竞选。`
+    );
+    this.maybeAdvanceMayorNominate();
+    if (this.onGameUpdate) this.onGameUpdate(this);
+  }
+
+  maybeAdvanceMayorNominate() {
+    const alive = Object.values(this.players).filter(
+      (p) => p.status === "alive"
+    ).length;
+    const responded = new Set([
+      ...(this.metadata.mayorNominees || []),
+      ...(this.metadata.mayorPassers || []),
+    ]);
+    if (responded.size >= alive) {
+      this.advanceMayorPhase();
+    }
   }
 
   advanceMayorPhase() {
@@ -635,7 +692,7 @@ class WerewolfGame {
     if (!player || player.status !== "alive") return;
     const before = this.metadata.mayorNominees || [];
     this.metadata.mayorNominees = before.filter((id) => id !== playerId);
-    this.addLog(`JUDGE: ${player.name} 退选警长。`);
+    this.say(VOICE_MESSAGES.LINES?.MAYOR_PASS ? VOICE_MESSAGES.LINES.MAYOR_PASS(String(player.avatar || player.name)) : `${player.name} 退选警长。`);
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 

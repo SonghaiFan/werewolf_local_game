@@ -257,6 +257,16 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("mayor_pass", ({ roomId }) => {
+    const game = games.get(roomId);
+    if (!game) return;
+    const pid = game.socketToPid.get(socket.id);
+    if (pid) {
+      game.handleMayorPass(pid);
+      broadcastState(game);
+    }
+  });
+
   socket.on("mayor_withdraw", ({ roomId }) => {
     const game = games.get(roomId);
     if (!game) return;

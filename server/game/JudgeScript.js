@@ -68,6 +68,8 @@ const LINES = {
   DAY_PK_TIE: "再次平票，今天平安。",
   BANISH_EXECUTE: (seat) => `投票放逐：${seat}。`,
   HUNTER_RECONNECT: (name) => `${name} 重新连接。`,
+  MAYOR_PASS: (seat) => `${seat} 放弃竞选。`,
+  MAYOR_NOMINATE: (seat) => `${seat} 上警竞选警长。`,
 };
 
 module.exports = { ...VOICE_MESSAGES, LINES };

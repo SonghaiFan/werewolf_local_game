@@ -88,6 +88,18 @@ function buildPlayerState(game, playerId) {
         info.hasActed = true;
       }
     }
+    if (
+      game.phase === PHASES.DAY_MAYOR_NOMINATE &&
+      (game.metadata.mayorNominees || []).includes(playerId)
+    ) {
+      info.hasActed = true;
+    }
+    if (
+      game.phase === PHASES.DAY_MAYOR_NOMINATE &&
+      (game.metadata.mayorPassers || []).includes(playerId)
+    ) {
+      info.hasActed = true;
+    }
 
     if (me.role === ROLES.GUARD) {
       info.guardState = game.nightManager.guardState;

@@ -139,6 +139,13 @@ export function useGameActions({
     lockBriefly();
   }, [emitWithRoom, resetSelections, actionLock, lockBriefly]);
 
+  const onMayorPass = useCallback(() => {
+    if (actionLock) return;
+    emitWithRoom("mayor_pass");
+    resetSelections();
+    lockBriefly();
+  }, [emitWithRoom, resetSelections, actionLock, lockBriefly]);
+
   const onMayorVote = useCallback(() => {
     if (actionLock) return;
     if (!selectedTarget) {
@@ -185,6 +192,7 @@ export function useGameActions({
     onResolvePhase,
     onMayorNominate,
     onMayorWithdraw,
+    onMayorPass,
     onMayorVote,
     onMayorAdvance,
     onSkipTurn,
