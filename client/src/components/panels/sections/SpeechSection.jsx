@@ -56,22 +56,12 @@ export function SpeechSection({
 
       {isHost && (
         <PanelProcessControl>
-          {!isMyTurn && (
-            <button
-              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
-              onClick={onEndSpeech}
-            >
-              {t("admin_skip")}
-            </button>
-          )}
-          {onAdvance && (
-            <button
-              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
-              onClick={onAdvance}
-            >
-              {t("advance", "Advance")}
-            </button>
-          )}
+          <button
+            className="btn-secondary w-full text-[10px] uppercase tracking-widest"
+            onClick={onAdvance || onEndSpeech}
+          >
+            {t("advance", "Advance")}
+          </button>
         </PanelProcessControl>
       )}
     </PanelSection>

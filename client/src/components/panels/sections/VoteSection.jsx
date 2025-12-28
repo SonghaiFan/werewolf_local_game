@@ -57,12 +57,6 @@ export function VoteSection({
     <PanelSection title={title}>
       {hasInfo && (
         <PanelInfo>
-          {candidateNames && candidateListLabel && (
-            <div className="text-sm text-muted">
-              {candidateListLabel}: {candidateNames}
-            </div>
-          )}
-
           {hint && <div className="text-[10px] text-muted/60 mt-1">{hint}</div>}
         </PanelInfo>
       )}

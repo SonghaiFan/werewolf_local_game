@@ -52,19 +52,10 @@ export default function DayPanel() {
     return (
       <SpeechSection
         {...commonProps}
-        title={isMeDying ? t("last_words") : t("execution")}
-        speaking={{ currentSpeakerId: executedId }}
+        title={isMeDying ? t("last_words") : t("listening")}
+        speaking={speaking}
         myId={myId}
         onEndSpeech={onEndSpeech}
-        customLabel={
-          !isMeDying ? (
-            <p className="text-sm text-muted font-normal">
-              {t("leaving_words", {
-                name: players?.[executedId]?.name || "Player",
-              })}
-            </p>
-          ) : null
-        }
       >
         {isMeDying && role === "HUNTER" && isPoisoned && (
           <PanelInfo type="danger" className="mb-4">
