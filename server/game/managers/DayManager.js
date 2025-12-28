@@ -33,7 +33,7 @@ class DayManager {
     if (order.length > 0) {
       const nextId = order[0];
       const nextP = game.players[nextId];
-      game.say("DISCUSSION_START", { seat: seatLabel(nextP) });
+      game.announce("DISCUSSION_START", { seat: seatLabel(nextP) });
     } else {
       // Should unlikely happen
       game.nextPhase();
@@ -62,16 +62,16 @@ class DayManager {
         game.phase === PHASES.DAY_LEAVE_SPEECH
           ? "LAST_WORDS_END"
           : "SPEECH_END";
-      game.say(endKey);
+      game.announce(endKey);
       setTimeout(() => game.nextPhase(), 100);
     } else {
       const nextId = this.speakingOrder[this.currentSpeakerIndex];
       const nextP = game.players[nextId];
 
       if (game.phase === PHASES.DAY_LEAVE_SPEECH) {
-        game.say("NEXT_LAST_WORDS", { seat: seatLabel(nextP) });
+        game.announce("NEXT_LAST_WORDS", { seat: seatLabel(nextP) });
       } else {
-        game.say("NEXT_SPEAKER", { seat: seatLabel(nextP) });
+        game.announce("NEXT_SPEAKER", { seat: seatLabel(nextP) });
       }
     }
 
@@ -113,7 +113,7 @@ class DayManager {
     }
 
     if (Object.keys(this.votes).length === expectedVoters.length) {
-      game.say("VOTES_TALLYING");
+      game.announce("VOTES_TALLYING");
       setTimeout(() => this.resolve(game), 1500);
     }
   }
@@ -124,7 +124,7 @@ class DayManager {
     // Set speaking queue to candidates
     this.setSpeakingQueue(candidates);
 
-    game.say("ENTER_PK");
+    game.announce("ENTER_PK");
 
     // Advance to PK Speech
     game.advancePhase(PHASES.DAY_PK_SPEECH);
@@ -133,7 +133,7 @@ class DayManager {
     if (candidates.length > 0) {
       const firstId = candidates[0];
       const firstP = game.players[firstId];
-      game.say("NEXT_SPEAKER", { seat: seatLabel(firstP) });
+      game.announce("NEXT_SPEAKER", { seat: seatLabel(firstP) });
     }
   }
 
@@ -162,9 +162,9 @@ class DayManager {
 
     // Log + voice the details
     if (voteDetails.length > 0) {
-      game.say("VOTES_DETAIL", { detail: voteDetails.join(", ") });
+      game.announce("VOTES_DETAIL", { detail: voteDetails.join(", ") });
     } else {
-      game.say("VOTES_NONE");
+      game.announce("VOTES_NONE");
     }
 
     let maxVotes = 0;
@@ -193,7 +193,9 @@ class DayManager {
       const victim = candidates[0];
       game.pkCandidates = null; // Clear PK state if resolved
       game.players[victim].status = "dead";
-      game.say("BANISH_EXECUTE", { seat: seatLabel(game.players[victim]) });
+      game.announce("BANISH_EXECUTE", {
+        seat: seatLabel(game.players[victim]),
+      });
 
       game.checkDeathTriggers(victim, "vote"); // Check for Hunter
 
@@ -235,7 +237,7 @@ class DayManager {
       // Check if this is already a PK vote
       if (game.phase === PHASES.DAY_PK_VOTE) {
         // Second Tie -> Peaceful Day
-        game.say("DAY_PK_TIE");
+        game.announce("DAY_PK_TIE");
         game.executedPlayerId = null;
         game.pkCandidates = []; // Clear PK state
 
@@ -248,7 +250,7 @@ class DayManager {
       }
 
       // First Tie -> Enter PK
-      game.say("DAY_VOTE_TIE");
+      game.announce("DAY_VOTE_TIE");
 
       game.executedPlayerId = null;
 

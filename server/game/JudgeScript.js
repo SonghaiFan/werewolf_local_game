@@ -40,7 +40,7 @@ const lines = {
   }),
 
   [PHASES.DAY_ANNOUNCE]: {
-    zh: "天亮了。所有人都醒过来。",
+    zh: "天亮了。所有人请睁眼。",
     en: "Dawn breaks. Everyone wakes up.",
   },
   [PHASES.DAY_DISCUSSION]: {
@@ -231,9 +231,7 @@ function renderLine(keyOrText, params = {}, locale = DEFAULT_LOCALE) {
     typeof entry === "function" ? entry(enrichedParams, locale) : entry;
 
   const text =
-    payload?.[locale] ??
-    payload?.[DEFAULT_LOCALE] ??
-    fallback(keyOrText);
+    payload?.[locale] ?? payload?.[DEFAULT_LOCALE] ?? fallback(keyOrText);
 
   return text;
 }
