@@ -626,14 +626,11 @@ class WerewolfGame {
       this.finalizeMayorVote();
     }
     if (this.phase === PHASES.DAY_MAYOR_SPEECH) {
-      this.phase = PHASES.DAY_MAYOR_WITHDRAW;
-      this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_WITHDRAW} ---`);
       console.log(
         "[Mayor] Transitioning to Withdraw. Nominees:",
         this.metadata.mayorNominees
       );
-      this.enterMayorWithdraw();
-      if (this.onGameUpdate) this.onGameUpdate(this);
+      this.advancePhase(PHASES.DAY_MAYOR_WITHDRAW);
       return;
     }
     if (this.phase === PHASES.DAY_MAYOR_WITHDRAW) {
