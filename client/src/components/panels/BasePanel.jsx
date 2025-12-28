@@ -14,7 +14,7 @@ export function PanelTitle({ children }) {
 
 export function PanelSection({ children, title, className = "" }) {
   return (
-    <div className={`mt-auto ${className}`}>
+    <div className={`mt-auto w-full max-w-md mx-auto ${className}`}>
       {title && <PanelTitle>{title}</PanelTitle>}
       {children}
     </div>

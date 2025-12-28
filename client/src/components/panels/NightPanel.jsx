@@ -10,7 +10,6 @@ export default function NightPanel() {
   const role = gameState.me?.role;
   const hasActed = gameState.me?.hasActed;
   const availableActions = gameState.me?.availableActions || [];
-  const isPoisoned = gameState.me?.isPoisoned;
   const onAction = actions.onAction;
 
   if (phase === "NIGHT_START") {
@@ -41,22 +40,6 @@ export default function NightPanel() {
     );
   }
 
-  // Private Warning for Poisoned Hunter
-  if (role === "HUNTER" && isPoisoned) {
-    return (
-      <PanelSection>
-        <PanelInfo type="danger">
-          <div className="font-mono text-[10px] mb-2 text-danger uppercase tracking-[0.2em]">
-            {t("roles.HUNTER")}
-          </div>
-          <p className="text-sm text-danger/80 font-medium">
-            {t("hunter_poisoned_hint")}
-          </p>
-        </PanelInfo>
-      </PanelSection>
-    );
-  }
-
   if (availableActions.length === 0) {
     return (
       <PanelSection>
@@ -76,10 +59,10 @@ export default function NightPanel() {
   const skipAction = availableActions.find((a) => a.type === "skip");
 
   return (
-    <PanelSection className="space-y-3">
-      <div className="text-[10px] text-primary font-bold uppercase tracking-widest mb-1 text-center opacity-60">
-        {t(`${role?.toLowerCase()}_wake`, t("identity"))}
-      </div>
+    <PanelSection
+      title={t(`${role?.toLowerCase()}_wake`, t("identity"))}
+      className="space-y-3"
+    >
       <div
         className={`grid ${
           mainActions.length > 1 ? "grid-cols-2" : "grid-cols-1"

@@ -34,11 +34,13 @@ const zh = {
   please_confirm_identity: "请确认身份",
   discussions_open: "讨论",
   current_speaker: "当前发言",
-  listening: "聆听中...",
-  end_speech: "结束发言",
-  judge_speaking: "法官发言中...",
+  your_turn_speaking: "请发言",
+  player_speaking: "{{number}}号",
+  listening: "聆听",
+  end_speech: "结束",
+  judge_speaking: "法官",
   last_words: "遗言",
-  leaving_words: "{{name}} 发表遗言中...",
+  leaving_words: "{{name}}",
   execution: "处决",
   vote_required: "投票",
   confirm_vote: "确认投票",
@@ -95,7 +97,7 @@ const zh = {
   hunter_wake: "猎人请开枪。选择带走目标。",
   shoot_target: "开枪射击",
   hunter_active: "猎人正在行动。",
-  hunter_poisoned_hint: "你已被女巫毒杀，法力受限，无法开枪。",
+  hunter_poisoned_hint: "你已被女巫毒杀，无法开枪。",
 
   // 角色名称 / Role Names
   roles: {
