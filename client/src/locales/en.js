@@ -114,7 +114,7 @@ const en = {
   mayor: "MAYOR",
   enable_mayor: "Enable mayor election on day 1",
   mayor_nomination_title: "Mayor Nomination",
-  mayor_nomination_desc: "Select a player to nominate for mayor.",
+  mayor_nomination_desc: "Run for mayor or skip.",
   mayor_nominees_label: "Nominees",
   mayor_vote_title: "Mayor Vote",
   mayor_vote_nominees: "Nominees",

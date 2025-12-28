@@ -114,7 +114,7 @@ const zh = {
   mayor: "警长",
   enable_mayor: "开启首日警长竞选",
   mayor_nomination_title: "警长提名",
-  mayor_nomination_desc: "选择一名玩家进行提名。",
+  mayor_nomination_desc: "选择上警或跳过。",
   mayor_nominees_label: "已上警",
   mayor_vote_title: "警长投票",
   mayor_vote_nominees: "候选人",

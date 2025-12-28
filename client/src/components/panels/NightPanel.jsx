@@ -1,7 +1,12 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import { useGameContext } from "../../context/GameContext";
-import { PanelSection, PanelInfo } from "./BasePanel";
+import {
+  PanelSection,
+  PanelInfo,
+  PanelActions,
+  PanelProcessControl,
+} from "./BasePanel";
 
 export default function NightPanel() {
   const { t } = useTranslation();
@@ -63,11 +68,7 @@ export default function NightPanel() {
       title={t(`${role?.toLowerCase()}_wake`, t("identity"))}
       className="space-y-3"
     >
-      <div
-        className={`grid ${
-          mainActions.length > 1 ? "grid-cols-2" : "grid-cols-1"
-        } gap-3`}
-      >
+      <PanelActions>
         {mainActions.map((action) => (
           <button
             key={action.type}
@@ -76,7 +77,7 @@ export default function NightPanel() {
                                   action.disabled
                                     ? "bg-zinc-800 text-zinc-500 border-zinc-700/30 cursor-not-allowed shadow-none opacity-50"
                                     : "bg-primary/10 text-primary border-primary/20 hover:bg-primary hover:text-white"
-                                }`}
+                                } ${mainActions.length === 1 ? "col-span-2" : ""}`}
             onClick={() => {
               if (!action.disabled) {
                 onAction(action.type, action.needsTarget);
@@ -89,14 +90,16 @@ export default function NightPanel() {
             {action.disabled ? `(${t("consumed", "Consumed")})` : ""}
           </button>
         ))}
-      </div>
+      </PanelActions>
       {skipAction && (
-        <button
-          className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100"
-          onClick={() => onAction("skip", false)}
-        >
-          {t("do_nothing")}
-        </button>
+        <PanelProcessControl>
+          <button
+            className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100"
+            onClick={() => onAction("skip", false)}
+          >
+            {t("do_nothing")}
+          </button>
+        </PanelProcessControl>
       )}
     </PanelSection>
   );

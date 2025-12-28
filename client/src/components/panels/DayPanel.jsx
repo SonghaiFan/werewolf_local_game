@@ -1,11 +1,23 @@
 import { useTranslation } from "react-i18next";
 import { useGameContext } from "../../context/GameContext";
-import { PanelSection, PanelInfo } from "./BasePanel";
+import {
+  PanelSection,
+  PanelInfo,
+  PanelActions,
+  PanelProcessControl,
+} from "./BasePanel";
 
 export default function DayPanel() {
   const { t } = useTranslation();
-  const { gameState, myId, hostId, executedId, metadata, actions, selectedTarget } =
-    useGameContext();
+  const {
+    gameState,
+    myId,
+    hostId,
+    executedId,
+    metadata,
+    actions,
+    selectedTarget,
+  } = useGameContext();
   const { phase, players, speaking, pkCandidates } = gameState;
   const isHost = hostId === myId;
   const hasActed = gameState.me?.hasActed;
@@ -29,9 +41,14 @@ export default function DayPanel() {
               {t("hunter_poisoned_hint")}
             </PanelInfo>
           )}
-          <button className="btn-primary w-full" onClick={onEndSpeech}>
-            {t("end_speech")}
-          </button>
+          <PanelActions>
+            <button
+              className="btn-primary w-full col-span-2"
+              onClick={onEndSpeech}
+            >
+              {t("end_speech")}
+            </button>
+          </PanelActions>
         </PanelSection>
       );
     }
@@ -45,12 +62,14 @@ export default function DayPanel() {
           </p>
         </PanelInfo>
         {isHost && (
-          <button
-            className="text-[10px] text-muted underline hover:text-white mt-4 mx-auto block"
-            onClick={onEndSpeech}
-          >
-            {t("admin_skip")}
-          </button>
+          <PanelProcessControl>
+            <button
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
+              onClick={onEndSpeech}
+            >
+              {t("admin_skip")}
+            </button>
+          </PanelProcessControl>
         )}
       </PanelSection>
     );
@@ -73,30 +92,30 @@ export default function DayPanel() {
     const isRunning = nominees.includes(myId);
     return (
       <PanelSection title={t("mayor_nomination_title", "Mayor Nomination")}>
-        <PanelInfo>
-          <p className="text-sm text-muted">
-            {t("mayor_nomination_desc", "Select a player to nominate.")}
-          </p>
-          {nominees.length > 0 && (
-            <div className="text-xs text-muted mt-2">
-              {t("mayor_nominees_label", "Nominees")}: {nominees.length}
-            </div>
-          )}
-        </PanelInfo>
-        <div className="flex gap-3 mt-2">
+        <PanelActions>
           <button
-            className={`btn-primary w-full ${isRunning ? "bg-blue-900/40 border-blue-500/40" : ""}`}
+            className={`btn-primary w-full ${
+              isRunning ? "bg-blue-900/40 border-blue-500/40" : ""
+            }`}
             onClick={() => onMayorNominate(myId)}
           >
             {isRunning ? t("withdraw", "Withdraw") : t("nominate", "Nominate")}
           </button>
-          <button
-            className="btn-secondary text-[10px] uppercase tracking-widest"
-            onClick={onMayorAdvance}
-          >
-            {t("advance", "Advance")}
+          <button className="btn-secondary w-full" onClick={onEndSpeech}>
+            {t("skip", "Skip")}
           </button>
-        </div>
+        </PanelActions>
+
+        {isHost && (
+          <PanelProcessControl>
+            <button
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
+              onClick={onMayorAdvance}
+            >
+              {t("advance", "Advance")}
+            </button>
+          </PanelProcessControl>
+        )}
       </PanelSection>
     );
   }
@@ -134,28 +153,35 @@ export default function DayPanel() {
       <PanelSection title={t("mayor_vote_title", "Mayor Vote")}>
         <PanelInfo>
           <div className="text-sm text-muted">
-            {t("mayor_vote_nominees", "Nominees")}: {nomineeNames || t("none", "None")}
+            {t("mayor_vote_nominees", "Nominees")}:{" "}
+            {nomineeNames || t("none", "None")}
           </div>
           <div className="text-xs text-muted mt-1">
-            {t("mayor_vote_selected", "Selected")}: {targetName || t("none", "None")}
+            {t("mayor_vote_selected", "Selected")}:{" "}
+            {targetName || t("none", "None")}
           </div>
           <div className="text-[10px] text-muted/60 mt-1">
             {t("mayor_vote_hint")}
           </div>
         </PanelInfo>
-        <div className="flex gap-3 mt-2">
-          <button className="btn-primary w-full" onClick={onMayorVote}>
+        <PanelActions>
+          <button
+            className="btn-primary w-full col-span-2"
+            onClick={onMayorVote}
+          >
             {t("vote", "Vote")}
           </button>
-          {isHost && (
+        </PanelActions>
+        {isHost && (
+          <PanelProcessControl>
             <button
-              className="btn-secondary text-[10px] uppercase tracking-widest"
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
               onClick={onMayorAdvance}
             >
               {t("close_vote", "Close Vote")}
             </button>
-          )}
-        </div>
+          </PanelProcessControl>
+        )}
       </PanelSection>
     );
   }
@@ -186,27 +212,32 @@ export default function DayPanel() {
           <div className="font-black tracking-tight">{speakerLabel}</div>
         </PanelInfo>
         {isMyTurn && (
-          <button className="btn-primary w-full mt-2" onClick={onEndSpeech}>
-            {t("end_speech")}
-          </button>
-        )}
-        {isHost && !isMyTurn && (
-          <div className="text-center mt-3">
+          <PanelActions>
             <button
-              className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100"
+              className="btn-primary w-full col-span-2"
               onClick={onEndSpeech}
             >
-              {t("admin_skip")}
+              {t("end_speech")}
             </button>
-          </div>
+          </PanelActions>
         )}
         {isHost && (
-          <button
-            className="btn-secondary w-full mt-3 text-[10px] uppercase tracking-widest"
-            onClick={onMayorAdvance}
-          >
-            {t("advance", "Advance")}
-          </button>
+          <PanelProcessControl>
+            {!isMyTurn && (
+              <button
+                className="btn-secondary w-full text-[10px] uppercase tracking-widest"
+                onClick={onEndSpeech}
+              >
+                {t("admin_skip")}
+              </button>
+            )}
+            <button
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
+              onClick={onMayorAdvance}
+            >
+              {t("advance", "Advance")}
+            </button>
+          </PanelProcessControl>
         )}
       </PanelSection>
     );
@@ -229,21 +260,26 @@ export default function DayPanel() {
             {t("mayor_withdraw_desc", "Withdraw to exit the ballot.")}
           </p>
         </PanelInfo>
-        <div className="flex gap-3 mt-2">
-          {nominees.includes(myId) && (
-            <button className="btn-secondary w-full" onClick={onMayorWithdraw}>
+        {nominees.includes(myId) && (
+          <PanelActions>
+            <button
+              className="btn-secondary w-full col-span-2"
+              onClick={onMayorWithdraw}
+            >
               {t("withdraw", "Withdraw")}
             </button>
-          )}
-          {isHost && (
+          </PanelActions>
+        )}
+        {isHost && (
+          <PanelProcessControl>
             <button
-              className="btn-primary w-full text-[10px] uppercase tracking-widest"
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
               onClick={onMayorAdvance}
             >
               {t("advance", "Advance")}
             </button>
-          )}
-        </div>
+          </PanelProcessControl>
+        )}
       </PanelSection>
     );
   }
@@ -284,22 +320,28 @@ export default function DayPanel() {
             {t("mayor_pk_candidates", "PK candidates")}: {nomineeNames}
           </div>
           <div className="text-xs text-muted mt-1">
-            {t("mayor_vote_selected", "Selected")}: {targetName || t("none", "None")}
+            {t("mayor_vote_selected", "Selected")}:{" "}
+            {targetName || t("none", "None")}
           </div>
         </PanelInfo>
-        <div className="flex gap-3 mt-2">
-          <button className="btn-danger w-full" onClick={onMayorVote}>
+        <PanelActions>
+          <button
+            className="btn-danger w-full col-span-2"
+            onClick={onMayorVote}
+          >
             {t("vote", "Vote")}
           </button>
-          {isHost && (
+        </PanelActions>
+        {isHost && (
+          <PanelProcessControl>
             <button
-              className="btn-secondary text-[10px] uppercase tracking-widest"
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
               onClick={onMayorAdvance}
             >
               {t("close_vote", "Close Vote")}
             </button>
-          )}
-        </div>
+          </PanelProcessControl>
+        )}
       </PanelSection>
     );
   }
@@ -325,20 +367,25 @@ export default function DayPanel() {
         </PanelInfo>
 
         {isMyTurn && (
-          <button className="btn-primary w-full mt-2" onClick={onEndSpeech}>
-            {t("end_speech")}
-          </button>
+          <PanelActions>
+            <button
+              className="btn-primary w-full col-span-2"
+              onClick={onEndSpeech}
+            >
+              {t("end_speech")}
+            </button>
+          </PanelActions>
         )}
 
         {isHost && !isMyTurn && (
-          <div className="text-center mt-3">
+          <PanelProcessControl>
             <button
-              className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100"
+              className="btn-secondary w-full text-[10px] uppercase tracking-widest"
               onClick={onEndSpeech}
             >
               {t("admin_skip")}
             </button>
-          </div>
+          </PanelProcessControl>
         )}
       </PanelSection>
     );
@@ -380,7 +427,7 @@ export default function DayPanel() {
 
     return (
       <PanelSection title={t("vote_required")}>
-        <div className="flex flex-col gap-3">
+        <PanelActions>
           <button
             className="btn-danger hover:shadow-red-500/20"
             onClick={() => onDayVote()}
@@ -393,7 +440,7 @@ export default function DayPanel() {
           >
             {t("abstain")}
           </button>
-        </div>
+        </PanelActions>
       </PanelSection>
     );
   }

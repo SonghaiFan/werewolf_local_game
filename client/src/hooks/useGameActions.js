@@ -13,12 +13,18 @@ export function useGameActions({
 }) {
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [prevPhase, setPrevPhase] = useState(gameState.phase);
+  const [actionLock, setActionLock] = useState(false);
+  const lockBriefly = useCallback(() => {
+    setActionLock(true);
+    setTimeout(() => setActionLock(false), 800);
+  }, []);
 
   if (gameState.phase !== prevPhase) {
     setPrevPhase(gameState.phase);
     if (gameState.phase === "WAITING") {
       setSelectedTarget(null);
     }
+    setActionLock(false);
   }
 
   const emitWithRoom = useCallback(
@@ -56,6 +62,7 @@ export function useGameActions({
 
   const onAction = useCallback(
     (type, needsTarget) => {
+      if (actionLock) return;
       if (needsTarget && !selectedTarget) {
         alert(t("select_target_first"));
         return;
@@ -65,12 +72,14 @@ export function useGameActions({
         action: { type, targetId: selectedTarget },
       });
       resetSelections();
+      lockBriefly();
     },
-    [emitWithRoom, resetSelections, selectedTarget, t]
+    [emitWithRoom, resetSelections, selectedTarget, t, actionLock, lockBriefly]
   );
 
   const onWitchAction = useCallback(
     (type) => {
+      if (actionLock) return;
       if (type === "poison" && !selectedTarget) {
         alert(t("select_poison_target"));
         return;
@@ -79,12 +88,14 @@ export function useGameActions({
         action: { type, targetId: selectedTarget },
       });
       resetSelections();
+      lockBriefly();
     },
-    [emitWithRoom, resetSelections, selectedTarget, t]
+    [emitWithRoom, resetSelections, selectedTarget, t, actionLock, lockBriefly]
   );
 
   const onDayVote = useCallback(
     (targetIdOverride) => {
+      if (actionLock) return;
       const targetId =
         typeof targetIdOverride === "string"
           ? targetIdOverride
@@ -93,56 +104,76 @@ export function useGameActions({
       if (targetId) {
         emitWithRoom("day_vote", { targetId });
         resetSelections();
+        lockBriefly();
       } else {
         alert(t("select_vote_target"));
       }
     },
-    [emitWithRoom, resetSelections, selectedTarget, t]
+    [emitWithRoom, resetSelections, selectedTarget, t, actionLock, lockBriefly]
   );
 
   const onResolvePhase = useCallback(() => {
+    if (actionLock) return;
     emitWithRoom("resolve_phase");
-  }, [emitWithRoom]);
+    lockBriefly();
+  }, [emitWithRoom, actionLock, lockBriefly]);
 
   const onMayorNominate = useCallback(
     (targetIdOverride) => {
+      if (actionLock) return;
       const targetId = targetIdOverride || selectedTarget || myId;
       if (!targetId) {
         alert(t("select_target_first"));
         return;
       }
       emitWithRoom("mayor_nominate", { targetId });
+      lockBriefly();
     },
-    [emitWithRoom, selectedTarget, myId, t]
+    [emitWithRoom, selectedTarget, myId, t, actionLock, lockBriefly]
   );
 
   const onMayorWithdraw = useCallback(() => {
+    if (actionLock) return;
     emitWithRoom("mayor_withdraw");
     resetSelections();
-  }, [emitWithRoom, resetSelections]);
+    lockBriefly();
+  }, [emitWithRoom, resetSelections, actionLock, lockBriefly]);
 
   const onMayorVote = useCallback(() => {
+    if (actionLock) return;
     if (!selectedTarget) {
       alert(t("select_target_first"));
       return;
     }
     emitWithRoom("mayor_vote", { targetId: selectedTarget });
     resetSelections();
-  }, [emitWithRoom, resetSelections, selectedTarget, t]);
+    lockBriefly();
+  }, [emitWithRoom, resetSelections, selectedTarget, t, actionLock, lockBriefly]);
 
   const onMayorAdvance = useCallback(() => {
+    if (actionLock) return;
     emitWithRoom("mayor_advance");
-  }, [emitWithRoom]);
+    lockBriefly();
+  }, [emitWithRoom, actionLock, lockBriefly]);
 
   const onEndSpeech = useCallback(() => {
+    if (actionLock) return;
     emitWithRoom("end_speech");
-  }, [emitWithRoom]);
+    lockBriefly();
+  }, [emitWithRoom, actionLock, lockBriefly]);
 
   const onPlayAgain = useCallback(() => {
     emitWithRoom("play_again");
     setInspectedPlayers({});
     resetSelections();
   }, [emitWithRoom, resetSelections, setInspectedPlayers]);
+
+  const onSkipTurn = useCallback(() => {
+    if (actionLock) return;
+    emitWithRoom("night_action", { action: { type: "skip" } });
+    resetSelections();
+    lockBriefly();
+  }, [emitWithRoom, resetSelections, actionLock, lockBriefly]);
 
   const actions = {
     onStartGame,
@@ -156,7 +187,7 @@ export function useGameActions({
     onMayorWithdraw,
     onMayorVote,
     onMayorAdvance,
-    onSkipTurn: resetSelections,
+    onSkipTurn,
     onEndSpeech,
     onPlayAgain,
     onNightAction: onAction,
