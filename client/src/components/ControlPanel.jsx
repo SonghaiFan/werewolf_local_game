@@ -4,7 +4,7 @@ import { useGameContext } from "../context/GameContext";
 import BasePanel, {
   PanelSection,
   PanelInfo,
-  DeadMessage,
+  IdleMessage,
 } from "./panels/BasePanel";
 import WaitingPanel from "./panels/WaitingPanel";
 import NightPanel from "./panels/NightPanel";
@@ -70,7 +70,7 @@ export default function ControlPanel({
     // 1. Global States (Dead / Finished)
     if (phase === "FINISHED") return <GameOverPanel />;
     if (myStatus === "dead" && !isMyLastWords && !isMyHunterTurn) {
-      return <DeadMessage t={t} />;
+      return <IdleMessage>{t("you_are_dead", "You are dead")}</IdleMessage>;
     }
 
     // 2. Phase-specific rendering

@@ -36,7 +36,7 @@ module.exports = {
 
     actions.push({
       type: "skip",
-      label: "do_nothing",
+      label: "skip",
       needsTarget: false,
     });
 

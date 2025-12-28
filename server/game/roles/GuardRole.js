@@ -33,7 +33,7 @@ module.exports = {
       },
       {
         type: "skip",
-        label: "do_nothing",
+        label: "skip",
         needsTarget: false,
       },
     ];

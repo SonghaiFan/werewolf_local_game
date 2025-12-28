@@ -41,28 +41,24 @@ export function PanelInfo({ children, type = "default" }) {
 
 export function PanelActions({ children, className = "" }) {
   return (
-    <div className={`grid grid-cols-2 gap-3 mt-4 ${className}`}>
-      {children}
-    </div>
+    <div className={`grid grid-cols-2 gap-3 mt-4 ${className}`}>{children}</div>
   );
 }
 
 export function PanelProcessControl({ children, className = "" }) {
   return (
-    <div className={`flex flex-col gap-2 mt-4 ${className}`}>
-      {children}
-    </div>
+    <div className={`flex flex-col gap-2 mt-4 ${className}`}>{children}</div>
   );
 }
 
-export function DeadMessage({ t }) {
+export function IdleMessage({ children }) {
   return (
     <PanelSection>
       <button
         className="btn-secondary w-full opacity-50 cursor-not-allowed bg-transparent border-dashed"
         disabled
       >
-        {t("you_are_dead")}
+        {children}
       </button>
     </PanelSection>
   );

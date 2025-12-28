@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { socket } from "../socket";
 import ControlPanel from "./ControlPanel";
 import AvatarCard from "./AvatarCard";

@@ -75,7 +75,7 @@ const en = {
   witch_wake: "WAKE UP. POTION READY.",
   save_victim: "SAVE VICTIM",
   poison_target: "POISON TARGET",
-  do_nothing: "DO NOTHING",
+  skip: "SKIP",
   witch_active: "Witch is active.",
   cannot_save_self: "CANNOT SAVE YOURSELF",
   consumed: "Consumed",

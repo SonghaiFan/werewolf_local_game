@@ -75,7 +75,7 @@ const zh = {
   witch_wake: "女巫请睁眼。药水已备。",
   save_victim: "救活目标",
   poison_target: "毒杀目标",
-  do_nothing: "过",
+  skip: "过",
   witch_active: "女巫正在行动。",
   cannot_save_self: "无法自救",
   consumed: "已消耗",

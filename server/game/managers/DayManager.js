@@ -1,5 +1,5 @@
 const { PHASES, ROLES } = require("../constants");
-const VOICE_MESSAGES = require("../voiceMessages");
+const VOICE_MESSAGES = require("../JudgeScript");
 
 class DayManager {
   constructor() {
