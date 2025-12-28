@@ -17,10 +17,8 @@ export function VoteSection({
   // Info Display
   candidates = [],
   candidateListLabel,
-  selectedTarget,
   players,
   hint,
-  showTarget = true,
 
   // Actions
   onVote,
@@ -45,12 +43,6 @@ export function VoteSection({
     return <IdleSection content={t("waiting_for_others")} animate={true} />;
   }
 
-  // 3. Voting UI
-  const targetName =
-    selectedTarget && players?.[selectedTarget]
-      ? players[selectedTarget].name
-      : t("select_vote_target");
-
   const candidateNames =
     candidates.length > 0
       ? candidates
@@ -59,7 +51,7 @@ export function VoteSection({
           .join(", ")
       : null;
 
-  const hasInfo = (candidateNames && candidateListLabel) || showTarget || hint;
+  const hasInfo = (candidateNames && candidateListLabel) || hint;
 
   return (
     <PanelSection title={title}>
@@ -68,13 +60,6 @@ export function VoteSection({
           {candidateNames && candidateListLabel && (
             <div className="text-sm text-muted">
               {candidateListLabel}: {candidateNames}
-            </div>
-          )}
-
-          {showTarget && (
-            <div className="text-xs text-muted mt-1">
-              {t("mayor_vote_selected", "Selected")}:{" "}
-              {targetName || t("none", "None")}
             </div>
           )}
 

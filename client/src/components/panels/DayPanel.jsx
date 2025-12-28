@@ -201,6 +201,7 @@ export default function DayPanel() {
         candidates={metadata?.mayorPkCandidates || []}
         candidateListLabel={t("mayor_pk_candidates", "PK candidates")}
         selectedTarget={selectedTarget}
+        showTarget={false}
         onVote={onMayorVote}
         voteLabel={t("vote", "Vote")}
         voteButtonClass="btn-danger"
@@ -238,11 +239,6 @@ export default function DayPanel() {
         voteButtonClass="btn-danger"
         onAbstain={() => onDayVote("abstain")}
         abstainLabel={t("abstain")}
-        // For Day Vote, we don't explicitly list candidates in the panel info usually,
-        // but we could if we wanted to pass pkCandidates.
-        // The original code didn't show selected target name either, but VoteSection does if selectedTarget is passed.
-        // We can pass selectedTarget if we want to show "Selected: PlayerName".
-        // Assuming selectedTarget is available in context for Day Vote too.
         selectedTarget={selectedTarget}
       />
     );
