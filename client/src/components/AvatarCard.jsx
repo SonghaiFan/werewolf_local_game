@@ -70,7 +70,9 @@ export default function AvatarCard({
   const isMayorVotePhase = phase === "DAY_MAYOR_VOTE";
   const isMayorPkVotePhase = phase === "DAY_MAYOR_PK_VOTE";
   const isDayVotePhase =
-    phase === "DAY_VOTE" || phase === "DAY_PK_VOTE" || phase === "DAY_ELIMINATION";
+    phase === "DAY_VOTE" ||
+    phase === "DAY_PK_VOTE" ||
+    phase === "DAY_ELIMINATION";
 
   const hasPublicRole = !!player.role && player.role !== "scanned";
 
@@ -352,35 +354,15 @@ export default function AvatarCard({
         <div className="absolute bottom-2 right-2 pointer-events-none flex gap-1 flex-wrap justify-end items-end">
           {isMayor && (
             <div
-              className="relative w-8 h-8 -mr-1 -mb-1"
+              className="bg-amber-500 text-white w-5 h-5 rounded-full flex items-center justify-center border-2 border-surface shadow-sm"
               title={t("mayor", "Mayor")}
             >
-              <div className="absolute inset-0 bg-yellow-500/30 blur-md rounded-full animate-pulse"></div>
               <svg
                 viewBox="0 0 24 24"
-                className="w-full h-full drop-shadow-md"
-                fill="none"
+                fill="currentColor"
+                className="w-3 h-3"
               >
-                <path
-                  d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"
-                  fill="url(#sheriff-gradient)"
-                  stroke="#B45309"
-                  strokeWidth="1.5"
-                  strokeLinejoin="round"
-                />
-                <defs>
-                  <linearGradient
-                    id="sheriff-gradient"
-                    x1="12"
-                    y1="2"
-                    x2="12"
-                    y2="22"
-                    gradientUnits="userSpaceOnUse"
-                  >
-                    <stop stopColor="#FCD34D" />
-                    <stop offset="1" stopColor="#F59E0B" />
-                  </linearGradient>
-                </defs>
+                <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z" />
               </svg>
             </div>
           )}
@@ -392,6 +374,27 @@ export default function AvatarCard({
           {!isMayor && !isMayorPk && isMayorNominee && (
             <div className="px-2 py-1 bg-blue-500/60 text-white text-[9px] font-bold rounded-full shadow-sm uppercase tracking-wider">
               {t("mayor_nominee", "Running")}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Mayor Withdraw Status Overlay */}
+      {phase === "DAY_MAYOR_WITHDRAW" && isMayorNominee && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/40 backdrop-blur-[1px]">
+          {metadata?.mayorWithdrawResponded?.includes(player.id) ? (
+            metadata?.mayorNominees?.includes(player.id) ? (
+              <div className="bg-emerald-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-wider">
+                {t("staying", "Staying")}
+              </div>
+            ) : (
+              <div className="bg-red-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-wider">
+                {t("withdrawn", "Withdrawn")}
+              </div>
+            )
+          ) : (
+            <div className="bg-surface/80 text-muted text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-wider animate-pulse">
+              {t("thinking", "Thinking...")}
             </div>
           )}
         </div>

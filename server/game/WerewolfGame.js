@@ -107,6 +107,7 @@ class WerewolfGame {
       mayorPassers: [],
       mayorWithdrawQueue: [],
       mayorWithdrawResponded: [],
+      mayorWithdrawStarted: false,
     };
   }
 
@@ -551,6 +552,7 @@ class WerewolfGame {
     this.metadata.mayorPassers = [];
     this.metadata.mayorWithdrawQueue = [];
     this.metadata.mayorWithdrawResponded = [];
+    this.metadata.mayorWithdrawStarted = false;
     this.phase = PHASES.DAY_MAYOR_NOMINATE;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_NOMINATE} ---`);
     this.announce(PHASES.DAY_MAYOR_NOMINATE);
@@ -686,6 +688,8 @@ class WerewolfGame {
   }
 
   enterMayorWithdraw() {
+    if (this.metadata.mayorWithdrawStarted) return;
+    this.metadata.mayorWithdrawStarted = true;
     this.metadata.mayorWithdrawQueue = [
       ...(this.metadata.mayorNominees || []),
     ];
@@ -862,6 +866,7 @@ class WerewolfGame {
     this.metadata.mayorVotes = {};
     this.metadata.mayorNominees = [];
     this.metadata.mayorPkCandidates = [];
+    this.metadata.mayorWithdrawStarted = false;
 
     // Move to discussion
     this.phase = PHASES.DAY_DISCUSSION;
