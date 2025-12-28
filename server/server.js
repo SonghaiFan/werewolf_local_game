@@ -267,12 +267,12 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("mayor_withdraw", ({ roomId }) => {
+  socket.on("mayor_withdraw", ({ roomId, withdraw = true }) => {
     const game = games.get(roomId);
     if (!game) return;
     const pid = game.socketToPid.get(socket.id);
     if (pid) {
-      game.handleMayorWithdraw(pid);
+      game.handleMayorWithdraw(pid, withdraw);
       broadcastState(game);
     }
   });

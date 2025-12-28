@@ -181,6 +181,10 @@ const lines = {
     zh: `${seat} 放弃竞选。`,
     en: `${seat} quits the race.`,
   }),
+  MAYOR_STAY: ({ seat }) => ({
+    zh: `${seat} 继续参选。`,
+    en: `${seat} stays in the race.`,
+  }),
   MAYOR_NOMINATE: ({ seat }) => ({
     zh: `${seat} 上警竞选警长。`,
     en: `${seat} is running for mayor.`,

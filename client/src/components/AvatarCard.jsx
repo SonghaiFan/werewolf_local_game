@@ -69,6 +69,8 @@ export default function AvatarCard({
   const isMayorPk = metadata?.mayorPkCandidates?.includes(player.id);
   const isMayorVotePhase = phase === "DAY_MAYOR_VOTE";
   const isMayorPkVotePhase = phase === "DAY_MAYOR_PK_VOTE";
+  const isDayVotePhase =
+    phase === "DAY_VOTE" || phase === "DAY_PK_VOTE" || phase === "DAY_ELIMINATION";
 
   const hasPublicRole = !!player.role && player.role !== "scanned";
 
@@ -109,6 +111,25 @@ export default function AvatarCard({
     (isMayorVotePhase && !isMayorNominee) ||
     (isMayorPkVotePhase && !isMayorPk);
   const blurEffect = (isDead && !isMe) || (isDead && isMe && !isMyHunterTurn);
+
+  const voteMap =
+    isDayVotePhase && gameState.votes
+      ? gameState.votes
+      : (isMayorVotePhase || isMayorPkVotePhase) && metadata?.mayorVotes
+      ? metadata.mayorVotes
+      : {};
+
+  const votersForPlayer = useMemo(() => {
+    if (!voteMap) return [];
+    return Object.entries(voteMap)
+      .filter(([, targetId]) => String(targetId) === String(player.id))
+      .map(([voterId]) => gameState.players?.[voterId])
+      .filter(Boolean);
+  }, [voteMap, player.id, gameState.players]);
+
+  const seatLabel = (p) => String(p?.avatar || "?").padStart(2, "0");
+  const voteBadgeClass =
+    isMayorVotePhase || isMayorPkVotePhase ? "bg-indigo-500" : "bg-danger";
 
   return (
     <div
@@ -328,10 +349,39 @@ export default function AvatarCard({
 
       {/* Status Badges (Mayor flow) */}
       {(isMayor || isMayorNominee || isMayorPk) && (
-        <div className="absolute bottom-2 right-2 pointer-events-none flex gap-1 flex-wrap justify-end">
+        <div className="absolute bottom-2 right-2 pointer-events-none flex gap-1 flex-wrap justify-end items-end">
           {isMayor && (
-            <div className="px-2 py-1 bg-blue-500 text-white text-[9px] font-bold rounded-full shadow-sm uppercase tracking-wider">
-              {t("mayor", "Mayor")}
+            <div
+              className="relative w-8 h-8 -mr-1 -mb-1"
+              title={t("mayor", "Mayor")}
+            >
+              <div className="absolute inset-0 bg-yellow-500/30 blur-md rounded-full animate-pulse"></div>
+              <svg
+                viewBox="0 0 24 24"
+                className="w-full h-full drop-shadow-md"
+                fill="none"
+              >
+                <path
+                  d="M12 2l2.4 7.2h7.6l-6 4.8 2.4 7.2-6-4.8-6 4.8 2.4-7.2-6-4.8h7.6z"
+                  fill="url(#sheriff-gradient)"
+                  stroke="#B45309"
+                  strokeWidth="1.5"
+                  strokeLinejoin="round"
+                />
+                <defs>
+                  <linearGradient
+                    id="sheriff-gradient"
+                    x1="12"
+                    y1="2"
+                    x2="12"
+                    y2="22"
+                    gradientUnits="userSpaceOnUse"
+                  >
+                    <stop stopColor="#FCD34D" />
+                    <stop offset="1" stopColor="#F59E0B" />
+                  </linearGradient>
+                </defs>
+              </svg>
             </div>
           )}
           {!isMayor && isMayorPk && (
@@ -347,21 +397,19 @@ export default function AvatarCard({
         </div>
       )}
 
-      {/* Voting Indicator */}
-      {player.isVoting &&
-        (phase === "DAY_VOTE" || phase === "DAY_ELIMINATION") && (
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40">
-            {player.hasAbstained ? (
-              <div className="bg-zinc-500 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg opacity-90">
-                {t("abstain")}
-              </div>
-            ) : (
-              <div className="bg-danger text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg shadow-red-500/20 animate-bounce">
-                {t("voted")}
-              </div>
-            )}
-          </div>
-        )}
+      {/* Vote markers: show who voted for this player */}
+      {votersForPlayer.length > 0 && (
+        <div className="absolute top-2 right-2 z-30 flex flex-wrap gap-1 justify-end max-w-[65%]">
+          {votersForPlayer.map((voter) => (
+            <div
+              key={voter.id}
+              className={`${voteBadgeClass} text-white text-[10px] font-bold px-2 py-1 rounded-full shadow-md shadow-black/20 border border-white/10`}
+            >
+              {seatLabel(voter)}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Wolf Proposal Indicators */}
       {wolfVotes &&

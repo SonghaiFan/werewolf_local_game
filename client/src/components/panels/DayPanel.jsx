@@ -28,6 +28,7 @@ export default function DayPanel() {
     onDayVote,
     onMayorNominate,
     onMayorWithdraw,
+    onMayorStay,
     onMayorPass,
     onMayorVote,
     onMayorAdvance,
@@ -144,22 +145,100 @@ export default function DayPanel() {
 
   // --- MAYOR WITHDRAW ---
   if (phase === "DAY_MAYOR_WITHDRAW") {
+    const queue = metadata?.mayorWithdrawQueue || [];
     const nominees = metadata?.mayorNominees || [];
+    const responded = metadata?.mayorWithdrawResponded || [];
+
+    // Am I still a nominee and haven't responded?
+    const canDecide = nominees.includes(myId) && !responded.includes(myId);
+
     return (
-      <VoteSection
-        {...commonProps}
-        title={t("mayor_withdraw_title", "Withdraw?")}
-        candidates={nominees}
-        candidateListLabel={t("mayor_nominees_label", "Nominees")}
-        hint={t("mayor_withdraw_desc", "Withdraw to exit the ballot.")}
-        showTarget={false}
-        canVote={nominees.includes(myId)}
-        onVote={onMayorWithdraw}
-        voteLabel={t("withdraw", "Withdraw")}
-        voteButtonClass="btn-secondary"
-        onCloseVote={onMayorAdvance}
-        closeVoteLabel={t("advance", "Advance")}
-      />
+      <PanelSection
+        title={t("mayor_withdraw_title", "Mayor Election: Withdraw Phase")}
+      >
+        <div className="flex flex-col gap-4">
+          <PanelInfo>
+            {t(
+              "mayor_withdraw_desc",
+              "Candidates can choose to withdraw or stay."
+            )}
+          </PanelInfo>
+
+          {/* Candidates Status List */}
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {queue.map((pid) => {
+              const player = players[pid];
+              if (!player) return null;
+
+              const hasDecided = responded.includes(pid);
+              const isStillRunning = nominees.includes(pid);
+
+              let statusText = t("thinking", "Thinking...");
+              let statusColor = "text-muted";
+
+              if (hasDecided) {
+                if (isStillRunning) {
+                  statusText = t("staying", "Staying");
+                  statusColor = "text-emerald-400";
+                } else {
+                  statusText = t("withdrawn", "Withdrawn");
+                  statusColor = "text-red-400";
+                }
+              }
+
+              return (
+                <div
+                  key={pid}
+                  className="flex flex-col items-center p-2 bg-surface/30 rounded border border-white/5"
+                >
+                  <span className="font-mono font-bold text-lg">
+                    {player.avatar}
+                  </span>
+                  <span className="text-xs truncate w-full text-center opacity-80">
+                    {player.name}
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold uppercase mt-1 ${statusColor}`}
+                  >
+                    {statusText}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Action Buttons */}
+          {canDecide ? (
+            <div className="flex gap-3 mt-2">
+              <button
+                className="btn-secondary flex-1 py-3"
+                onClick={onMayorWithdraw}
+              >
+                {t("withdraw", "Withdraw")}
+              </button>
+              <button className="btn-primary flex-1 py-3" onClick={onMayorStay}>
+                {t("stay", "Stay")}
+              </button>
+            </div>
+          ) : (
+            <div className="text-center text-muted text-sm animate-pulse mt-2">
+              {t("waiting_others", "Waiting for other candidates...")}
+            </div>
+          )}
+
+          {/* Host Force Advance */}
+          {isHost && (
+            <div className="mt-4 pt-4 border-t border-white/10 flex justify-center">
+              <button
+                className="btn-ghost text-xs text-muted hover:text-white"
+                onClick={onMayorAdvance}
+              >
+                {t("force_advance", "Force Advance")}
+              </button>
+            </div>
+          )}
+        </div>
+      </PanelSection>
     );
   }
 

@@ -105,6 +105,8 @@ class WerewolfGame {
       mayorVotes: {},
       mayorSkipped: false,
       mayorPassers: [],
+      mayorWithdrawQueue: [],
+      mayorWithdrawResponded: [],
     };
   }
 
@@ -543,6 +545,8 @@ class WerewolfGame {
     this.metadata.mayorPkCandidates = [];
     this.metadata.mayorVotes = {};
     this.metadata.mayorPassers = [];
+    this.metadata.mayorWithdrawQueue = [];
+    this.metadata.mayorWithdrawResponded = [];
     this.phase = PHASES.DAY_MAYOR_NOMINATE;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_NOMINATE} ---`);
     this.announce(PHASES.DAY_MAYOR_NOMINATE);
@@ -559,7 +563,9 @@ class WerewolfGame {
     const set = new Set(this.metadata.mayorNominees || []);
     if (set.has(playerId)) {
       set.delete(playerId);
-      this.announce("MAYOR_PASS", { seat: this.seatLabel(player) });
+      this.print(
+        this.resolveLine("MAYOR_PASS", { seat: this.seatLabel(player) })
+      );
       this.metadata.mayorPassers = Array.from(
         new Set([...(this.metadata.mayorPassers || []), playerId])
       );
@@ -585,7 +591,9 @@ class WerewolfGame {
     this.metadata.mayorPassers = Array.from(
       new Set([...(this.metadata.mayorPassers || []), playerId])
     );
-    this.announce("MAYOR_PASS", { seat: this.seatLabel(player) });
+    this.print(
+      this.resolveLine("MAYOR_PASS", { seat: this.seatLabel(player) })
+    );
     this.maybeAdvanceMayorNominate();
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
@@ -614,7 +622,11 @@ class WerewolfGame {
     if (this.phase === PHASES.DAY_MAYOR_SPEECH) {
       this.phase = PHASES.DAY_MAYOR_WITHDRAW;
       this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_WITHDRAW} ---`);
-      this.announce(PHASES.DAY_MAYOR_WITHDRAW);
+      this.print(PHASES.DAY_MAYOR_WITHDRAW);
+      this.metadata.mayorWithdrawQueue = [
+        ...(this.metadata.mayorNominees || []),
+      ];
+      this.metadata.mayorWithdrawResponded = [];
       if (this.onGameUpdate) this.onGameUpdate(this);
       return;
     }
@@ -669,15 +681,61 @@ class WerewolfGame {
     }
   }
 
-  handleMayorWithdraw(playerId) {
+  maybeAdvanceMayorWithdraw() {
+    const queue = this.metadata.mayorWithdrawQueue || [];
+    const respondedList = this.metadata.mayorWithdrawResponded || [];
+    const respondedSet = new Set(respondedList);
+
+    console.log(
+      `[MayorWithdraw] Checking advance. Queue: ${queue.length}, Responded: ${respondedList.length}`
+    );
+
+    // 1. Simple Count Check (Optimization)
+    if (respondedList.length >= queue.length) {
+      console.log(`[MayorWithdraw] All responded (count). Advancing.`);
+      this.startMayorVote();
+      return;
+    }
+
+    // 2. Liveness Check (Handle disconnects/deaths)
+    const pending = queue.filter((pid) => {
+      const p = this.players[pid];
+      // If player is missing, dead, or disconnected, they don't block
+      if (!p || p.status === "dead" || p.status === "disconnected")
+        return false;
+      // If player is alive and connected, check if they responded
+      return !respondedSet.has(pid);
+    });
+
+    console.log(`[MayorWithdraw] Pending players: ${pending}`);
+
+    if (pending.length === 0) {
+      console.log(`[MayorWithdraw] All active players responded. Advancing.`);
+      this.startMayorVote();
+    }
+  }
+
+  handleMayorWithdraw(playerId, withdraw = true) {
     if (this.phase !== PHASES.DAY_MAYOR_WITHDRAW) return;
     const player = this.players[playerId];
     if (!player || player.status !== "alive") return;
     const before = this.metadata.mayorNominees || [];
-    this.metadata.mayorNominees = before.filter((id) => id !== playerId);
     const seat = this.seatLabel(player);
-    this.announce("MAYOR_PASS", { seat });
 
+    const responded = new Set(this.metadata.mayorWithdrawResponded || []);
+    responded.add(playerId);
+    this.metadata.mayorWithdrawResponded = Array.from(responded);
+
+    if (withdraw) {
+      this.metadata.mayorNominees = before.filter((id) => id !== playerId);
+      this.print(this.resolveLine("MAYOR_PASS", { seat }));
+    } else {
+      this.print(
+        this.resolveLine("MAYOR_STAY", { seat }) || `${seat} 继续参选。`
+      );
+    }
+
+    this.maybeAdvanceMayorWithdraw();
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 

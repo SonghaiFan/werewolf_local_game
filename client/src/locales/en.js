@@ -46,6 +46,7 @@ const en = {
   confirm_vote: "CONFIRM VOTE",
   voted: "VOTED",
   abstain: "ABSTAIN",
+  stay: "Stay",
   voting_not_open: "Voting is not open yet!",
   select_vote_target: "Select a player to vote for!",
   game_over: "GAME OVER",

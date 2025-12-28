@@ -12,16 +12,6 @@ function buildPublicState(game) {
       status: player.status,
       isReady: player.isReady,
       specialFlags: player.specialFlags || {},
-      isVoting:
-        (game.phase === PHASES.DAY_VOTE ||
-          game.phase === PHASES.DAY_PK_VOTE ||
-          game.phase === PHASES.DAY_ELIMINATION) &&
-        game.dayManager.votes[pid] !== undefined,
-      hasAbstained:
-        (game.phase === PHASES.DAY_VOTE ||
-          game.phase === PHASES.DAY_PK_VOTE ||
-          game.phase === PHASES.DAY_ELIMINATION) &&
-        game.dayManager.votes[pid] === "abstain",
       role: game.phase === PHASES.FINISHED ? player.role : undefined,
     };
   });
@@ -57,6 +47,12 @@ function buildPublicState(game) {
     winner: game.winner,
     config: game.initialConfig,
     metadata: game.metadata || {},
+    votes:
+      game.phase === PHASES.DAY_VOTE ||
+      game.phase === PHASES.DAY_PK_VOTE ||
+      game.phase === PHASES.DAY_ELIMINATION
+        ? { ...game.dayManager.votes }
+        : undefined,
   };
 }
 

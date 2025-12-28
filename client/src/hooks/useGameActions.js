@@ -134,7 +134,14 @@ export function useGameActions({
 
   const onMayorWithdraw = useCallback(() => {
     if (actionLock) return;
-    emitWithRoom("mayor_withdraw");
+    emitWithRoom("mayor_withdraw", { withdraw: true });
+    resetSelections();
+    lockBriefly();
+  }, [emitWithRoom, resetSelections, actionLock, lockBriefly]);
+
+  const onMayorStay = useCallback(() => {
+    if (actionLock) return;
+    emitWithRoom("mayor_withdraw", { withdraw: false });
     resetSelections();
     lockBriefly();
   }, [emitWithRoom, resetSelections, actionLock, lockBriefly]);
@@ -192,6 +199,7 @@ export function useGameActions({
     onResolvePhase,
     onMayorNominate,
     onMayorWithdraw,
+    onMayorStay,
     onMayorPass,
     onMayorVote,
     onMayorAdvance,

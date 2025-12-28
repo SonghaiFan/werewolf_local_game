@@ -62,7 +62,7 @@ class DayManager {
         game.phase === PHASES.DAY_LEAVE_SPEECH
           ? "LAST_WORDS_END"
           : "SPEECH_END";
-      game.announce(endKey);
+      game.print(endKey);
       setTimeout(() => game.nextPhase(), 100);
     } else {
       const nextId = this.speakingOrder[this.currentSpeakerIndex];
@@ -154,17 +154,20 @@ class DayManager {
         voteDetails.push(`${voterSeat}->弃票`);
       } else {
         let w = 1;
+        if (game.metadata && game.metadata.mayorId === voterId) {
+          w = 1.5;
+        }
         voteCounts[targetId] = (voteCounts[targetId] || 0) + w;
         const targetSeat = seatLabel(game.players[targetId]);
-        voteDetails.push(`${voterSeat}->${targetSeat}`);
+        voteDetails.push(`${voterSeat}->${targetSeat}${w > 1 ? "(1.5票)" : ""}`);
       }
     });
 
-    // Log + voice the details
+    // Log only (no voice) for vote details
     if (voteDetails.length > 0) {
-      game.announce("VOTES_DETAIL", { detail: voteDetails.join(", ") });
+      game.print(game.resolveLine("VOTES_DETAIL", { detail: voteDetails.join(", ") }));
     } else {
-      game.announce("VOTES_NONE");
+      game.print(game.resolveLine("VOTES_NONE"));
     }
 
     let maxVotes = 0;
