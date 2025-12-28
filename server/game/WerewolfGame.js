@@ -631,7 +631,7 @@ class WerewolfGame {
     if (this.phase === PHASES.DAY_MAYOR_SPEECH) {
       this.phase = PHASES.DAY_MAYOR_WITHDRAW;
       this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_WITHDRAW} ---`);
-      this.announce("警长竞选：是否有人退选？");
+      this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_WITHDRAW]);
       if (this.onGameUpdate) this.onGameUpdate(this);
       return;
     }
@@ -642,7 +642,7 @@ class WerewolfGame {
     if (this.phase === PHASES.DAY_MAYOR_PK_SPEECH) {
       this.phase = PHASES.DAY_MAYOR_PK_VOTE;
       this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_PK_VOTE} ---`);
-      this.announce("警长PK投票开始。");
+      this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_PK_VOTE]);
       if (this.onGameUpdate) this.onGameUpdate(this);
       return;
     }
@@ -692,7 +692,9 @@ class WerewolfGame {
     if (!player || player.status !== "alive") return;
     const before = this.metadata.mayorNominees || [];
     this.metadata.mayorNominees = before.filter((id) => id !== playerId);
-    this.say(VOICE_MESSAGES.LINES?.MAYOR_PASS ? VOICE_MESSAGES.LINES.MAYOR_PASS(String(player.avatar || player.name)) : `${player.name} 退选警长。`);
+    const seat = this.seatLabel(player);
+    this.say(VOICE_MESSAGES.LINES.MAYOR_PASS(seat));
+
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 
@@ -709,15 +711,17 @@ class WerewolfGame {
     this.dayManager.setSpeakingQueue(nominees);
     this.phase = PHASES.DAY_MAYOR_SPEECH;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_SPEECH} ---`);
-    this.announce("警长竞选：上警玩家依次发言。");
+    this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_SPEECH]);
 
     // Trigger first speaker cue
     if (nominees.length > 0) {
       const firstId = nominees[0];
       const firstP = this.players[firstId];
       if (firstP) {
-        const cue = VOICE_MESSAGES.NEXT_SPEAKER(firstP.avatar || "?");
-        this.onVoiceCue(cue);
+        const cueLine =
+          VOICE_MESSAGES.LINES?.NEXT_SPEAKER?.(this.seatLabel(firstP)) ||
+          VOICE_MESSAGES.NEXT_SPEAKER(firstP.avatar || "?");
+        this.say(cueLine);
       }
     }
     if (this.onGameUpdate) this.onGameUpdate(this);
@@ -743,7 +747,11 @@ class WerewolfGame {
         ...(this.players[mayorId].specialFlags || {}),
         isMayor: true,
       };
-      this.announce(`警长当选：${this.players[mayorId].name}`);
+      const seat = this.seatLabel(this.players[mayorId]);
+      const line = VOICE_MESSAGES.LINES?.MAYOR_ELECT
+        ? VOICE_MESSAGES.LINES.MAYOR_ELECT(seat)
+        : `警长当选：${seat}`;
+      this.say(line);
       this.metadata.mayorNominees = [];
       this.metadata.mayorPkCandidates = [];
       this.phase = PHASES.DAY_DISCUSSION;
@@ -756,7 +764,7 @@ class WerewolfGame {
     this.metadata.mayorVotes = {};
     this.phase = PHASES.DAY_MAYOR_VOTE;
     this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_VOTE} ---`);
-    this.announce("警长竞选：请投票。");
+    this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_VOTE]);
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
 
@@ -780,7 +788,7 @@ class WerewolfGame {
         this.dayManager.setSpeakingQueue(this.metadata.mayorPkCandidates);
         this.phase = PHASES.DAY_MAYOR_PK_SPEECH;
         this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_PK_SPEECH} ---`);
-        this.announce("警长平票，进入PK发言。");
+        this.say(VOICE_MESSAGES[PHASES.DAY_MAYOR_PK_SPEECH]);
         if (this.onGameUpdate) this.onGameUpdate(this);
         return;
       }
@@ -792,13 +800,14 @@ class WerewolfGame {
         ...(this.players[mayorId].specialFlags || {}),
         isMayor: true,
       };
-      this.announce(
-        `警长当选：${this.players[mayorId].name}`,
-        PHASES.DAY_MAYOR_VOTE
-      );
+      const seat = this.seatLabel(this.players[mayorId]);
+      const line = VOICE_MESSAGES.LINES?.MAYOR_ELECT
+        ? VOICE_MESSAGES.LINES.MAYOR_ELECT(seat)
+        : `警长当选：${seat}`;
+      this.say(line);
     } else {
       this.metadata.mayorSkipped = true;
-      this.announce("警长竞选无结果，跳过。", PHASES.DAY_MAYOR_VOTE);
+      this.say(VOICE_MESSAGES.LINES?.MAYOR_NONE || "警长竞选无结果，跳过。");
     }
 
     this.metadata.mayorVotes = {};

@@ -70,6 +70,8 @@ const LINES = {
   HUNTER_RECONNECT: (name) => `${name} 重新连接。`,
   MAYOR_PASS: (seat) => `${seat} 放弃竞选。`,
   MAYOR_NOMINATE: (seat) => `${seat} 上警竞选警长。`,
+  MAYOR_ELECT: (seat) => `警长当选：${seat}`,
+  MAYOR_NONE: "警长竞选无结果，跳过。",
 };
 
 module.exports = { ...VOICE_MESSAGES, LINES };
