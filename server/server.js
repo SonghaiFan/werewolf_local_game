@@ -4,7 +4,7 @@ const { Server } = require("socket.io");
 const path = require("path");
 const cors = require("cors");
 const os = require("os");
-const { WerewolfGame, PHASES } = require("./game");
+const { WerewolfGame } = require("./game");
 
 // Helper to get Local LAN IP
 function getLocalExternalIP() {
@@ -68,20 +68,19 @@ io.on("connection", (socket) => {
 
   // Helper to broadcast state to room
   const broadcastState = (game) => {
-    const room = io.in(game.id);
-    const sockets = room.allSockets ? room.allSockets() : []; // Varies by version, just iterate logic:
+    // Send personalized state to each player in the room
+    const socketsInRoom = io.sockets.adapter.rooms.get(game.id);
+    if (!socketsInRoom) return;
 
-    // We need to send personalized state to each player
-    io.sockets.adapter.rooms.get(game.id)?.forEach((socketId) => {
+    for (const socketId of socketsInRoom) {
       const socket = io.sockets.sockets.get(socketId);
-      if (socket) {
-        const pid = game.socketToPid.get(socketId);
-        // Only send state if we can identify the player (or maybe they are a spectator? for now require pid)
-        if (pid) {
-          socket.emit("game_state", game.getPlayerState(pid));
-        }
-      }
-    });
+      if (!socket) continue;
+
+      const pid = game.socketToPid.get(socketId);
+      if (!pid) continue;
+
+      socket.emit("game_state", game.getPlayerState(pid));
+    }
   };
 
   socket.on("create_game", ({ name, config, pid }) => {
@@ -297,18 +296,6 @@ io.on("connection", (socket) => {
         player.status = "disconnected";
         game.addLog(`Player ${player.name} disconnected.`);
 
-        // Do NOT remove player logic. Just mark disconnected.
-        // Cleanup logic could be a timeout if needed, but for accidental refresh, keep it.
-        // However, we must ensure socketToPid is cleaned up to prevent leaks?
-        // Actually no, if they never come back we have a zombie player.
-        // For a Local LAN game, this is acceptable.
-
-        // Note: If game has not started (WAITING), we MIGHT want to remove them?
-        // For waiting room, if they leave, we remove them to free up the "seat" visualization?
-        // But if they just refreshed, they want their seat back.
-        // Let's keep them even in WAITING for 1 min? Too complex.
-        // User Request: "accidently exit room and rejoin" - implies they want to be back.
-        // So we keep them.
         broadcastState(game);
       }
     }
