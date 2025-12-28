@@ -303,10 +303,6 @@ class WerewolfGame {
     this.phase = newPhase;
     this.logs.push(`--- PHASE: ${newPhase} ---`);
 
-    if (newPhase === PHASES.DAY_MAYOR_WITHDRAW) {
-      this.enterMayorWithdraw();
-    }
-
     // Dynamic Voice Generation for Night Phases
     if (this.nightFlow && this.nightFlow.includes(newPhase)) {
       const idx = this.nightFlow.indexOf(newPhase);
@@ -347,7 +343,6 @@ class WerewolfGame {
       if (flow && flow.voice) {
         this.read(flow.voice);
       } else {
-        // Fallback or manual triggers
         this.read(newPhase);
       }
     }
@@ -686,11 +681,9 @@ class WerewolfGame {
 
   enterMayorWithdraw() {
     if (this.metadata.mayorWithdrawStarted) return;
-    this.metadata.mayorWithdrawStarted = true;
-    this.metadata.mayorWithdrawQueue = [
-      ...(this.metadata.mayorNominees || []),
-    ];
+    this.metadata.mayorWithdrawQueue = [...(this.metadata.mayorNominees || [])];
     this.metadata.mayorWithdrawResponded = [];
+    this.metadata.mayorWithdrawStarted = true;
     console.log(
       "[Mayor] Withdraw Queue set to:",
       this.metadata.mayorWithdrawQueue
