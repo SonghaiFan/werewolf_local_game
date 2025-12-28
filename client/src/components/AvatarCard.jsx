@@ -140,7 +140,7 @@ export default function AvatarCard({
             {String(player.avatar || "0").padStart(2, "0")}
           </span>
           <span className="truncate text-[9px] text-muted/60 font-medium uppercase tracking-wide">
-            {player.name} {isMe && t("you")}
+            {player.name}
           </span>
         </div>
         {isPkCandidate && (
