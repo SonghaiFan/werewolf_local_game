@@ -85,7 +85,7 @@ export function VoteSection({
       {isHost && onCloseVote && (
         <PanelProcessControl>
           <button
-            className="btn-secondary w-full text-[10px] uppercase tracking-widest"
+            className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100"
             onClick={onCloseVote}
           >
             {closeVoteLabel || t("close_vote")}

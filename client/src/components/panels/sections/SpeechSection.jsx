@@ -40,9 +40,6 @@ export function SpeechSection({
       <PanelInfo type={isMyTurn ? "primary" : "default"}>
         <div className="font-black tracking-tight">{speakerLabel}</div>
       </PanelInfo>
-
-      {children}
-
       {isMyTurn && (
         <PanelActions>
           <button
@@ -54,13 +51,15 @@ export function SpeechSection({
         </PanelActions>
       )}
 
+      {children}
+
       {isHost && (
         <PanelProcessControl>
           <button
-            className="btn-secondary w-full text-[10px] uppercase tracking-widest"
+            className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100"
             onClick={onAdvance || onEndSpeech}
           >
-            {t("advance", "Advance")}
+            {t("advance")}
           </button>
         </PanelProcessControl>
       )}

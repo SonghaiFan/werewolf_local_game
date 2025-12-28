@@ -95,9 +95,9 @@ export default function DayPanel() {
           isRunning ? "bg-blue-900/40 border-blue-500/40" : ""
         }`}
         onAbstain={onMayorPass}
-        abstainLabel={t("skip", "Skip")}
+        abstainLabel={t("giveup")}
         onCloseVote={onMayorAdvance}
-        closeVoteLabel={t("advance", "Advance")}
+        closeVoteLabel={t("advance")}
       />
     );
   }
@@ -159,7 +159,7 @@ export default function DayPanel() {
               {t("withdraw", "Withdraw")}
             </button>
             <button className="btn-primary py-3" onClick={onMayorStay}>
-              {t("stay", "Stay")}
+              {t("stay")}
             </button>
           </PanelActions>
         ) : (
@@ -170,10 +170,10 @@ export default function DayPanel() {
         {isHost && (
           <PanelProcessControl>
             <button
-              className="btn-ghost text-xs text-muted hover:text-white"
+              className="btn-outline w-full py-2 text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100"
               onClick={onMayorAdvance}
             >
-              {t("force_advance", "Force Advance")}
+              {t("advance")}
             </button>
           </PanelProcessControl>
         )}

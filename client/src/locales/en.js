@@ -52,7 +52,7 @@ const en = {
   game_over: "GAME OVER",
   play_again: "PLAY AGAIN",
   reboot: "REBOOT SYSTEM",
-  admin_skip: "(Admin Skip)",
+  advance: "ADVANCE",
 
   // --- ROLES & ACTIONS ---
   identity: "IDENTITY",
@@ -130,8 +130,8 @@ const en = {
   mayor_pk_candidate: "PK",
   mayor_vote_hint: "Only non-candidates can vote for nominees.",
   nominate: "Nominate",
-  advance: "Advance",
   withdraw: "Withdraw",
+  giveup: "Give Up",
   vote: "Vote",
   close_vote: "Close Vote",
   none: "None",

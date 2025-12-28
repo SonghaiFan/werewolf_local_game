@@ -52,7 +52,7 @@ const zh = {
   game_over: "游戏结束",
   play_again: "再来一局",
   reboot: "重启系统",
-  admin_skip: "(管理员跳过)",
+  advance: "推进",
 
   // --- 身份与行动 / ROLES & ACTIONS ---
   identity: "身份代号",
@@ -127,7 +127,7 @@ const zh = {
   mayor_pk_vote_title: "警长PK投票",
   mayor_pk_candidates: "PK候选",
   nominate: "上警",
-  advance: "推进",
+  giveup: "放弃",
   withdraw: "退水",
   vote: "投票",
   close_vote: "结束投票",
