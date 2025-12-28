@@ -20,15 +20,6 @@ module.exports = {
       const target = game.players[action.targetId];
       // Format result clearly: 'WOLF' or 'GOOD'
       const result = target
-        ? target.role === ROLES.SEER
-          ? "GOOD"
-          : target.role === ROLES.WOLF
-          ? "WOLF"
-          : "GOOD"
-        : "UNKNOWN";
-      // Wait, original logic was: target.role === ROLES.WOLF ? 'WOLF' : 'GOOD'
-      // I should stick to that.
-      const simpleResult = target
         ? target.role === ROLES.WOLF
           ? "WOLF"
           : "GOOD"
@@ -36,12 +27,12 @@ module.exports = {
 
       nightManager.actions.seerResult = {
         targetId: action.targetId,
-        status: simpleResult,
+        status: result,
       };
 
       game.addLog("JUDGE: The Seer has acted.");
       setTimeout(() => game.nextPhase(), 1500);
-      return { targetId: action.targetId, role: simpleResult };
+      return { targetId: action.targetId, role: result };
     }
     return false;
   },
