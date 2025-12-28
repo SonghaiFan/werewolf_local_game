@@ -270,9 +270,9 @@ export default function AvatarCard({
       <div className="absolute bottom-2 left-2 flex flex-col gap-1 z-20 pointer-events-none">
         {/* Guard Protection Target */}
         {gameState.me?.guardTarget === player.id && (
-          <div className="bg-sky-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg flex items-center gap-1">
+          <div className="bg-sky-500 text-white w-5 h-5 rounded-full flex items-center justify-center border-2 border-surface shadow-sm text-[10px]">
             <svg
-              className="w-3 h-3"
+              className="w-2.5 h-2.5 text-white"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
@@ -282,7 +282,6 @@ export default function AvatarCard({
             >
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
             </svg>
-            <span>{t("roles.GUARD")}</span>
           </div>
         )}
 
