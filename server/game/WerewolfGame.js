@@ -63,6 +63,15 @@ class WerewolfGame {
   }
 
   /**
+   * Unified judge utterance: add log and trigger voice with same text.
+   */
+  say(text) {
+    if (!text) return;
+    this.addLog(`JUDGE: ${text}`);
+    this.triggerVoice(text);
+  }
+
+  /**
    * Convenience: log a judge message and optionally trigger a voice cue.
    */
   announce(message, voiceKey = null) {

@@ -55,4 +55,19 @@ const VOICE_MESSAGES = {
   WINNER_WEREWOLVES: "游戏结束。狼人阵营胜利。",
 };
 
-module.exports = VOICE_MESSAGES;
+// Judge log/script lines (non-voice)
+const LINES = {
+  DISCUSSION_START: (seat) => `讨论开始，${seat}先发言。`,
+  NEXT_LAST_WORDS: (seat) => `下一位遗言：${seat}。`,
+  NEXT_SPEAKER: (seat) => `轮到${seat}发言。`,
+  VOTES_DETAIL: (detail) => `投票详情：${detail}`,
+  VOTES_NONE: "无人投票。",
+  VOTES_TALLYING: "票已收齐，正在结算。",
+  ENTER_PK: "进入PK环节，候选人依次发言。",
+  DAY_VOTE_TIE: "平票，进入PK。",
+  DAY_PK_TIE: "再次平票，今天平安。",
+  BANISH_EXECUTE: (seat) => `投票放逐：${seat}。`,
+  HUNTER_RECONNECT: (name) => `${name} 重新连接。`,
+};
+
+module.exports = { ...VOICE_MESSAGES, LINES };

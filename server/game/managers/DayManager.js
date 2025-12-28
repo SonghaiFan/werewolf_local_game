@@ -1,5 +1,10 @@
-const { PHASES, ROLES } = require("../constants");
-const VOICE_MESSAGES = require("../JudgeScript");
+const { PHASES } = require("../constants");
+const SCRIPT = require("../JudgeScript");
+const VOICE_MESSAGES = SCRIPT;
+const LINES = SCRIPT.LINES || {};
+
+const seatLabel = (player) =>
+  `${String(player?.avatar || "?").padStart(2, "0")}号`;
 
 class DayManager {
   constructor() {
@@ -30,13 +35,12 @@ class DayManager {
     if (order.length > 0) {
       const nextId = order[0];
       const nextP = game.players[nextId];
-      game.addLog(
-        `JUDGE: Discussion starts. ${nextP.name}, you have the floor.`
+      const cue = VOICE_MESSAGES.NEXT_SPEAKER(nextP.avatar);
+      game.say(
+        SCRIPT.LINES.DISCUSSION_START
+          ? SCRIPT.LINES.DISCUSSION_START(seatLabel(nextP))
+          : cue
       );
-
-      // Trigger specific voice for first speaker
-      const text = VOICE_MESSAGES.NEXT_SPEAKER(nextP.avatar);
-      game.onVoiceCue(text);
     } else {
       // Should unlikely happen
       game.nextPhase();
@@ -62,24 +66,28 @@ class DayManager {
 
     if (this.currentSpeakerIndex >= this.speakingOrder.length) {
       const msg =
-        game.phase === PHASES.DAY_LEAVE_SPEECH
-          ? "Last words concluded."
-          : "All speeches concluded.";
-      game.addLog(`JUDGE: ${msg}`);
+        game.phase === PHASES.DAY_LEAVE_SPEECH ? "遗言结束。" : "发言结束。";
+      game.say(msg);
       setTimeout(() => game.nextPhase(), 100);
     } else {
       const nextId = this.speakingOrder[this.currentSpeakerIndex];
       const nextP = game.players[nextId];
 
       if (game.phase === PHASES.DAY_LEAVE_SPEECH) {
-        game.addLog(`JUDGE: Next player for last words: ${nextP.name}.`);
         const code = nextP.avatar || "?";
         const text = VOICE_MESSAGES.BANISH_LEAVE_SPEECH(code);
-        game.triggerVoice(PHASES.DAY_LEAVE_SPEECH, text);
+        game.say(
+          SCRIPT.LINES.NEXT_LAST_WORDS
+            ? SCRIPT.LINES.NEXT_LAST_WORDS(seatLabel(nextP))
+            : text
+        );
       } else {
-        game.addLog(`JUDGE: Next speaker is ${nextP.name}.`);
         const text = VOICE_MESSAGES.NEXT_SPEAKER(nextP.avatar);
-        game.onVoiceCue(text);
+        game.say(
+          SCRIPT.LINES.NEXT_SPEAKER
+            ? SCRIPT.LINES.NEXT_SPEAKER(seatLabel(nextP))
+            : text
+        );
       }
     }
 
@@ -121,7 +129,7 @@ class DayManager {
     }
 
     if (Object.keys(this.votes).length === expectedVoters.length) {
-      game.addLog("JUDGE: All votes received. Tallying...");
+      if (LINES.VOTES_TALLYING) game.say(LINES.VOTES_TALLYING);
       setTimeout(() => this.resolve(game), 1500);
     }
   }
@@ -132,7 +140,7 @@ class DayManager {
     // Set speaking queue to candidates
     this.setSpeakingQueue(candidates);
 
-    game.addLog("JUDGE: Entering PK Session. Candidates will speak.");
+    if (LINES.ENTER_PK) game.say(LINES.ENTER_PK);
 
     // Advance to PK Speech
     game.advancePhase(PHASES.DAY_PK_SPEECH);
@@ -142,7 +150,11 @@ class DayManager {
       const firstId = candidates[0];
       const firstP = game.players[firstId];
       const cue = VOICE_MESSAGES.NEXT_SPEAKER(firstP.avatar);
-      game.onVoiceCue(cue);
+      game.say(
+        SCRIPT.LINES.NEXT_SPEAKER
+          ? SCRIPT.LINES.NEXT_SPEAKER(seatLabel(firstP))
+          : cue
+      );
     }
   }
 
@@ -157,29 +169,26 @@ class DayManager {
 
     // Tally and build detail log
     Object.entries(this.votes).forEach(([voterId, targetId]) => {
-      const voterName =
-        game.players[voterId]?.avatar ||
-        game.players[voterId]?.name ||
-        "Unknown";
+      const voterSeat = seatLabel(game.players[voterId]);
 
       if (targetId === "abstain") {
-        voteDetails.push(`${voterName}->弃票`);
+        voteDetails.push(`${voterSeat}->弃票`);
       } else {
         let w = 1;
         voteCounts[targetId] = (voteCounts[targetId] || 0) + w;
-        const targetName =
-          game.players[targetId]?.avatar ||
-          game.players[targetId]?.name ||
-          "Unknown";
-        voteDetails.push(`${voterName}->${targetName}`);
+        const targetSeat = seatLabel(game.players[targetId]);
+        voteDetails.push(`${voterSeat}->${targetSeat}`);
       }
     });
 
-    // Log the details
+    // Log + voice the details
     if (voteDetails.length > 0) {
-      game.addLog(`JUDGE: Votes: ${voteDetails.join(", ")}`);
+      const msg = LINES.VOTES_DETAIL
+        ? LINES.VOTES_DETAIL(voteDetails.join(", "))
+        : `Votes: ${voteDetails.join(", ")}`;
+      game.say(msg);
     } else {
-      game.addLog(`JUDGE: No votes cast.`);
+      game.say(LINES.VOTES_NONE || "No votes cast.");
     }
 
     let maxVotes = 0;
@@ -208,9 +217,11 @@ class DayManager {
       const victim = candidates[0];
       game.pkCandidates = null; // Clear PK state if resolved
       game.players[victim].status = "dead";
-      game.addLog(
-        `JUDGE: The village has voted to execute ${game.players[victim].name}.`
-      );
+      if (LINES.BANISH_EXECUTE) {
+        game.say(LINES.BANISH_EXECUTE(game.players[victim].name));
+      } else {
+        game.say(`The village has voted to execute ${game.players[victim].name}.`);
+      }
 
       game.checkDeathTriggers(victim, "vote"); // Check for Hunter
 
@@ -253,8 +264,7 @@ class DayManager {
       if (game.phase === PHASES.DAY_PK_VOTE) {
         // Second Tie -> Peaceful Day
         const text = VOICE_MESSAGES.DAY_PK_TIE;
-        game.addLog(`JUDGE: ${text}`);
-        game.onVoiceCue(text);
+        game.say(text);
         game.executedPlayerId = null;
         game.pkCandidates = []; // Clear PK state
 
@@ -268,8 +278,7 @@ class DayManager {
 
       // First Tie -> Enter PK
       const text = VOICE_MESSAGES.DAY_VOTE_TIE;
-      game.addLog(`JUDGE: ${text}`);
-      game.onVoiceCue(text);
+      game.say(text);
 
       game.executedPlayerId = null;
 
