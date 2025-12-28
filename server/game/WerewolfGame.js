@@ -302,6 +302,10 @@ class WerewolfGame {
     this.phase = newPhase;
     this.logs.push(`--- PHASE: ${newPhase} ---`);
 
+    if (newPhase === PHASES.DAY_MAYOR_WITHDRAW) {
+      this.enterMayorWithdraw();
+    }
+
     // Dynamic Voice Generation for Night Phases
     if (this.nightFlow && this.nightFlow.includes(newPhase)) {
       const idx = this.nightFlow.indexOf(newPhase);
@@ -622,11 +626,11 @@ class WerewolfGame {
     if (this.phase === PHASES.DAY_MAYOR_SPEECH) {
       this.phase = PHASES.DAY_MAYOR_WITHDRAW;
       this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_WITHDRAW} ---`);
-      this.print(PHASES.DAY_MAYOR_WITHDRAW);
-      this.metadata.mayorWithdrawQueue = [
-        ...(this.metadata.mayorNominees || []),
-      ];
-      this.metadata.mayorWithdrawResponded = [];
+      console.log(
+        "[Mayor] Transitioning to Withdraw. Nominees:",
+        this.metadata.mayorNominees
+      );
+      this.enterMayorWithdraw();
       if (this.onGameUpdate) this.onGameUpdate(this);
       return;
     }
@@ -679,6 +683,18 @@ class WerewolfGame {
     } else if (this.onGameUpdate) {
       this.onGameUpdate(this);
     }
+  }
+
+  enterMayorWithdraw() {
+    this.metadata.mayorWithdrawQueue = [
+      ...(this.metadata.mayorNominees || []),
+    ];
+    this.metadata.mayorWithdrawResponded = [];
+    console.log(
+      "[Mayor] Withdraw Queue set to:",
+      this.metadata.mayorWithdrawQueue
+    );
+    this.announce(PHASES.DAY_MAYOR_WITHDRAW);
   }
 
   maybeAdvanceMayorWithdraw() {
@@ -741,6 +757,7 @@ class WerewolfGame {
 
   startMayorSpeech() {
     const nominees = this.metadata.mayorNominees;
+    console.log("[Mayor] Starting Speech. Nominees:", nominees);
     if (!nominees || nominees.length === 0) {
       this.metadata.mayorSkipped = true;
       this.phase = PHASES.DAY_DISCUSSION;
