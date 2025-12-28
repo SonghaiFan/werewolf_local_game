@@ -11,6 +11,7 @@ function buildPublicState(game) {
       avatar: player.avatar,
       status: player.status,
       isReady: player.isReady,
+      specialFlags: player.specialFlags || {},
       isVoting:
         (game.phase === PHASES.DAY_VOTE ||
           game.phase === PHASES.DAY_PK_VOTE ||
@@ -29,7 +30,9 @@ function buildPublicState(game) {
   if (
     (game.phase === PHASES.DAY_DISCUSSION ||
       game.phase === PHASES.DAY_PK_SPEECH ||
-      game.phase === PHASES.DAY_LEAVE_SPEECH) &&
+      game.phase === PHASES.DAY_LEAVE_SPEECH ||
+      game.phase === PHASES.DAY_MAYOR_SPEECH ||
+      game.phase === PHASES.DAY_MAYOR_PK_SPEECH) &&
     game.dayManager.speakingOrder
   ) {
     speakingData = {
@@ -53,6 +56,7 @@ function buildPublicState(game) {
     hostId: game.hostId,
     winner: game.winner,
     config: game.initialConfig,
+    metadata: game.metadata || {},
   };
 }
 
@@ -62,6 +66,7 @@ function buildPlayerState(game, playerId) {
 
   if (me) {
     let info = { ...me };
+    info.specialFlags = me.specialFlags || {};
 
     if (publicState.players[playerId]) {
       publicState.players[playerId].role = me.role;

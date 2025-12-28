@@ -6,7 +6,8 @@ export function useGameState(socket) {
     players: {},
     logs: [],
     round: 0,
-    me: { role: null, status: "alive" },
+    metadata: {},
+    me: { role: null, status: "alive", specialFlags: {} },
   });
   const [inspectedPlayers, setInspectedPlayers] = useState({});
 

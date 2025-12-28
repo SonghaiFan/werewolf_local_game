@@ -31,6 +31,7 @@ export default function ControlPanel({
     guard: true,
     hunter: true,
     winCondition: "wipeout",
+    enableMayor: false,
   });
 
   const hasSyncedConfig = useRef(false);

@@ -9,6 +9,7 @@ export function useGameActions({
   gameState,
   setInspectedPlayers,
   t,
+  myId,
 }) {
   const [selectedTarget, setSelectedTarget] = useState(null);
   const [prevPhase, setPrevPhase] = useState(gameState.phase);
@@ -103,6 +104,36 @@ export function useGameActions({
     emitWithRoom("resolve_phase");
   }, [emitWithRoom]);
 
+  const onMayorNominate = useCallback(
+    (targetIdOverride) => {
+      const targetId = targetIdOverride || selectedTarget || myId;
+      if (!targetId) {
+        alert(t("select_target_first"));
+        return;
+      }
+      emitWithRoom("mayor_nominate", { targetId });
+    },
+    [emitWithRoom, selectedTarget, myId, t]
+  );
+
+  const onMayorWithdraw = useCallback(() => {
+    emitWithRoom("mayor_withdraw");
+    resetSelections();
+  }, [emitWithRoom, resetSelections]);
+
+  const onMayorVote = useCallback(() => {
+    if (!selectedTarget) {
+      alert(t("select_target_first"));
+      return;
+    }
+    emitWithRoom("mayor_vote", { targetId: selectedTarget });
+    resetSelections();
+  }, [emitWithRoom, resetSelections, selectedTarget, t]);
+
+  const onMayorAdvance = useCallback(() => {
+    emitWithRoom("mayor_advance");
+  }, [emitWithRoom]);
+
   const onEndSpeech = useCallback(() => {
     emitWithRoom("end_speech");
   }, [emitWithRoom]);
@@ -121,6 +152,10 @@ export function useGameActions({
     onWitchAction,
     onDayVote,
     onResolvePhase,
+    onMayorNominate,
+    onMayorWithdraw,
+    onMayorVote,
+    onMayorAdvance,
     onSkipTurn: resetSelections,
     onEndSpeech,
     onPlayAgain,

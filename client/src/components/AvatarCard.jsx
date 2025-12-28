@@ -14,7 +14,7 @@ export default function AvatarCard({
     gameState,
     myId,
     phase,
-    hostId,
+    metadata,
     wolfTarget,
     inspectedPlayers,
     wolfVotes,
@@ -54,6 +54,7 @@ export default function AvatarCard({
   const isDead = player.status === "dead";
   const isMyHunterTurn =
     phase === "DAY_HUNTER_DECIDE" && gameState.hunterDeadId === myId;
+  const isMayor = player.specialFlags?.isMayor;
 
   const pId = String(player.id);
   const isVictim = Array.isArray(wolfTarget)
@@ -64,6 +65,10 @@ export default function AvatarCard({
     (phase === "DAY_PK_VOTE" || phase === "DAY_PK_SPEECH") &&
     gameState.pkCandidates &&
     gameState.pkCandidates.includes(player.id);
+  const isMayorNominee = metadata?.mayorNominees?.includes(player.id);
+  const isMayorPk = metadata?.mayorPkCandidates?.includes(player.id);
+  const isMayorVotePhase = phase === "DAY_MAYOR_VOTE";
+  const isMayorPkVotePhase = phase === "DAY_MAYOR_PK_VOTE";
 
   const hasPublicRole = !!player.role && player.role !== "scanned";
 
@@ -76,18 +81,33 @@ export default function AvatarCard({
   const roleKey = (player.role || "UNKNOWN").toUpperCase();
   const roleIcon = RoleIcons[roleKey] || RoleIcons.UNKNOWN;
 
-  const isSelectable =
+  let isSelectable =
     (!isDead || isMyHunterTurn) &&
     !isTargetDisabled &&
     player.status !== "dead";
 
-  const canInteract = handleSelect && isSelectable;
+  // Mayor voting restriction: only allow selecting nominees/PK candidates
+  if (isMayorVotePhase) {
+    isSelectable = isSelectable && isMayorNominee;
+  }
+  if (isMayorPkVotePhase) {
+    isSelectable = isSelectable && isMayorPk;
+  }
+  // Candidates themselves cannot vote; block their selection state entirely
+  const isMayorCandidateSelf =
+    (isMayorVotePhase && isMayorNominee && isMe) ||
+    (isMayorPkVotePhase && isMayorPk && isMe);
+  if (isMayorCandidateSelf) {
+    isSelectable = false;
+  }
 
-  // Visual State
+  const canInteract = handleSelect && isSelectable;
   const dimEffect =
     (isDead && !isMe) ||
     (isDead && isMe && !isMyHunterTurn) ||
-    (phase === "DAY_PK_VOTE" && !isPkCandidate);
+    (phase === "DAY_PK_VOTE" && !isPkCandidate) ||
+    (isMayorVotePhase && !isMayorNominee) ||
+    (isMayorPkVotePhase && !isMayorPk);
   const blurEffect = (isDead && !isMe) || (isDead && isMe && !isMyHunterTurn);
 
   return (
@@ -306,23 +326,24 @@ export default function AvatarCard({
         )}
       </div>
 
-      {/* Host Badge */}
-      {player.id === hostId && (
-        <div className="absolute bottom-2 right-2 pointer-events-none">
-          <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center shadow-sm">
-            <svg
-              className="w-2.5 h-2.5 text-black"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-            </svg>
-          </div>
+      {/* Status Badges (Mayor flow) */}
+      {(isMayor || isMayorNominee || isMayorPk) && (
+        <div className="absolute bottom-2 right-2 pointer-events-none flex gap-1 flex-wrap justify-end">
+          {isMayor && (
+            <div className="px-2 py-1 bg-blue-500 text-white text-[9px] font-bold rounded-full shadow-sm uppercase tracking-wider">
+              {t("mayor", "Mayor")}
+            </div>
+          )}
+          {!isMayor && isMayorPk && (
+            <div className="px-2 py-1 bg-danger text-white text-[9px] font-bold rounded-full shadow-sm uppercase tracking-wider">
+              {t("mayor_pk_candidate", "PK")}
+            </div>
+          )}
+          {!isMayor && !isMayorPk && isMayorNominee && (
+            <div className="px-2 py-1 bg-blue-500/60 text-white text-[9px] font-bold rounded-full shadow-sm uppercase tracking-wider">
+              {t("mayor_nominee", "Running")}
+            </div>
+          )}
         </div>
       )}
 

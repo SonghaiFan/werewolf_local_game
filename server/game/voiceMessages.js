@@ -24,6 +24,12 @@ const VOICE_MESSAGES = {
   [PHASES.DAY_PK_VOTE]: "请再次投票。",
   [PHASES.DAY_LEAVE_SPEECH]: "请发表遗言。",
   [PHASES.DAY_HUNTER_DECIDE]: "猎人请开枪。",
+  [PHASES.DAY_MAYOR_NOMINATE]: "警长竞选：请选择参选玩家。",
+  [PHASES.DAY_MAYOR_SPEECH]: "警长竞选：上警玩家依次发言。",
+  [PHASES.DAY_MAYOR_WITHDRAW]: "警长竞选：如需退选请操作。",
+  [PHASES.DAY_MAYOR_VOTE]: "警长竞选：请投票。",
+  [PHASES.DAY_MAYOR_PK_SPEECH]: "警长竞选平票，进入PK发言。",
+  [PHASES.DAY_MAYOR_PK_VOTE]: "警长PK投票开始。",
 
   // Events & Outcomes
   DAY_VOTE_TIE: "平票。进入PK环节。",

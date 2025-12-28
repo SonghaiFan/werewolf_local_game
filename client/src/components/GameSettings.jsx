@@ -9,6 +9,9 @@ export default function GameSettings({ t, gameConfig, setGameConfig, showPresets
         { id: 'HUNTER', label: 'hunter' }
     ];
 
+    const toggleEnableMayor = () =>
+        setGameConfig((prev) => ({ ...prev, enableMayor: !prev.enableMayor }));
+
     return (
         <div className={`space-y-6 ${className}`}>
             {/* Presets */}
@@ -63,6 +66,30 @@ export default function GameSettings({ t, gameConfig, setGameConfig, showPresets
                             );
                         })}
                     </div>
+                </div>
+
+                {/* Mayor Toggle */}
+                <div className="flex items-center justify-between bg-black/20 border border-border/50 rounded-xl px-3 py-2">
+                    <div className="flex flex-col">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-muted/60">
+                            {t('mayor', 'Mayor')}
+                        </span>
+                        <span className="text-[10px] text-muted/50">
+                            {t('enable_mayor', 'Enable mayor election on day 1')}
+                        </span>
+                    </div>
+                    <button
+                        className={`w-10 h-6 rounded-full border transition-all ${
+                            gameConfig.enableMayor ? 'bg-primary border-primary shadow-inner shadow-primary/30' : 'bg-black/40 border-border/50'
+                        }`}
+                        onClick={toggleEnableMayor}
+                    >
+                        <span
+                            className={`block w-4 h-4 bg-white rounded-full shadow transform transition-all ${
+                                gameConfig.enableMayor ? 'translate-x-4' : 'translate-x-0.5'
+                            }`}
+                        />
+                    </button>
                 </div>
 
                 {/* Win Condition Selection */}

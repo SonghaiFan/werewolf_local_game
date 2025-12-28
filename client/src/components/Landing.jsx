@@ -24,6 +24,7 @@ export default function Landing() {
     guard: true,
     hunter: true,
     winCondition: "wipeout",
+    enableMayor: false,
   });
 
   const toggleLanguage = () => {

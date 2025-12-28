@@ -19,6 +19,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
     gameState,
     setInspectedPlayers,
     t,
+    myId,
   });
 
   useVoiceJudge(socket, gameState, myId);
@@ -38,6 +39,7 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
     myId,
     hostId: gameState.hostId,
     executedId: gameState.executedId,
+    metadata: gameState.metadata || {},
     actions,
     onExit, // Expose exit to context
     inspectedPlayers,

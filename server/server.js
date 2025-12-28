@@ -237,6 +237,46 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("mayor_nominate", ({ roomId, targetId }) => {
+    const game = games.get(roomId);
+    if (!game) return;
+    const pid = game.socketToPid.get(socket.id);
+    if (pid) {
+      game.handleMayorNomination(pid, targetId);
+      broadcastState(game);
+    }
+  });
+
+  socket.on("mayor_vote", ({ roomId, targetId }) => {
+    const game = games.get(roomId);
+    if (!game) return;
+    const pid = game.socketToPid.get(socket.id);
+    if (pid) {
+      game.handleMayorVote(pid, targetId);
+      broadcastState(game);
+    }
+  });
+
+  socket.on("mayor_withdraw", ({ roomId }) => {
+    const game = games.get(roomId);
+    if (!game) return;
+    const pid = game.socketToPid.get(socket.id);
+    if (pid) {
+      game.handleMayorWithdraw(pid);
+      broadcastState(game);
+    }
+  });
+
+  socket.on("mayor_advance", ({ roomId }) => {
+    const game = games.get(roomId);
+    if (!game) return;
+    const pid = game.socketToPid.get(socket.id);
+    if (pid && pid === game.hostId) {
+      game.advanceMayorPhase();
+      broadcastState(game);
+    }
+  });
+
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
     for (const [roomId, game] of games.entries()) {
@@ -254,14 +294,11 @@ io.on("connection", (socket) => {
         // For a Local LAN game, this is acceptable.
 
         // Note: If game has not started (WAITING), we MIGHT want to remove them?
-        if (game.phase === "WAITING") {
-          // For waiting room, if they leave, we remove them to free up the "seat" visualization?
-          // But if they just refreshed, they want their seat back.
-          // Let's keep them even in WAITING for 1 min? Too complex.
-          // User Request: "accidently exit room and rejoin" - implies they want to be back.
-          // So we keep them.
-        }
-
+        // For waiting room, if they leave, we remove them to free up the "seat" visualization?
+        // But if they just refreshed, they want their seat back.
+        // Let's keep them even in WAITING for 1 min? Too complex.
+        // User Request: "accidently exit room and rejoin" - implies they want to be back.
+        // So we keep them.
         broadcastState(game);
       }
     }

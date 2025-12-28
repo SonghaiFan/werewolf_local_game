@@ -6,9 +6,7 @@ const VOICE_MESSAGES = require("./voiceMessages");
 const FLOW_DEFINITION = require("./GameFlow");
 const { buildRoleDeck } = require("./utils/roleDeck");
 const { buildNightFlow } = require("./utils/nightFlow");
-const {
-  checkWinCondition: computeWinCondition,
-} = require("./utils/winLogic");
+const { checkWinCondition: computeWinCondition } = require("./utils/winLogic");
 const { buildPublicState, buildPlayerState } = require("./utils/stateView");
 const { handleHunterDecision } = require("./utils/hunterHandler");
 
@@ -27,6 +25,7 @@ class WerewolfGame {
     this.pendingNextPhase = null;
     this.executedPlayerId = null;
     this.pendingDeaths = [];
+    this.metadata = this.createDefaultMetadata();
 
     this.nightManager = new NightManager();
     this.dayManager = new DayManager();
@@ -61,6 +60,27 @@ class WerewolfGame {
   addLog(message) {
     const time = new Date().toLocaleTimeString("en-US", { hour12: false });
     this.logs.push(`[${time}] ${message}`);
+  }
+
+  /**
+   * Convenience: log a judge message and optionally trigger a voice cue.
+   */
+  announce(message, voiceKey = null) {
+    this.addLog(`JUDGE: ${message}`);
+    if (voiceKey) {
+      this.triggerVoice(voiceKey);
+    }
+  }
+
+  createDefaultMetadata() {
+    return {
+      mayorEnabled: false,
+      mayorId: null,
+      mayorNominees: [],
+      mayorPkCandidates: [],
+      mayorVotes: {},
+      mayorSkipped: false,
+    };
   }
 
   addPlayer(socketId, name, pid) {
@@ -142,6 +162,7 @@ class WerewolfGame {
     const count = playerIds.length;
 
     const effectiveConfig = config || this.initialConfig;
+    this.metadata.mayorEnabled = !!effectiveConfig?.enableMayor;
     const roles = buildRoleDeck(count, effectiveConfig, this.addLog.bind(this));
 
     playerIds.forEach((pid, idx) => {
@@ -388,7 +409,7 @@ class WerewolfGame {
 
         // FIX: Initialize speaking queue so it's ready when we return
         this.dayManager.setSpeakingQueue(this.pendingDeaths);
-        this.nextPhaseAfterSpeech = PHASES.DAY_DISCUSSION;
+        this.nextPhaseAfterSpeech = this.getPostSpeechPhase();
       } else {
         this.phaseBeforeHunter = PHASES.DAY_DISCUSSION;
       }
@@ -414,19 +435,23 @@ class WerewolfGame {
       this.dayManager.setSpeakingQueue(this.pendingDeaths);
 
       this.phase = PHASES.DAY_LEAVE_SPEECH;
-      this.nextPhaseAfterSpeech = PHASES.DAY_DISCUSSION; // Resume to discussion
+      this.nextPhaseAfterSpeech = this.getPostSpeechPhase();
       this.logs.push(`--- PHASE: ${PHASES.DAY_LEAVE_SPEECH} ---`);
       this.onGameUpdate(this);
 
       this.triggerVoice(VOICE_MESSAGES.DEATH_LAST_WORDS(announcement));
     } else {
-      this.phase = PHASES.DAY_DISCUSSION;
-      this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
-      this.onGameUpdate(this);
+      if (this.shouldRunMayorFlow()) {
+        this.startMayorNomination();
+      } else {
+        this.phase = PHASES.DAY_DISCUSSION;
+        this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
+        this.onGameUpdate(this);
 
-      this.triggerVoice(VOICE_MESSAGES.NIGHT_DISCUSSION(announcement));
+        this.triggerVoice(VOICE_MESSAGES.NIGHT_DISCUSSION(announcement));
 
-      this.dayManager.startDiscussion(this);
+        this.dayManager.startDiscussion(this);
+      }
     }
   }
 
@@ -491,6 +516,242 @@ class WerewolfGame {
     }
   }
 
+  shouldRunMayorFlow() {
+    return (
+      this.metadata.mayorEnabled &&
+      !this.metadata.mayorId &&
+      !this.metadata.mayorSkipped &&
+      this.round === 1
+    );
+  }
+
+  startMayorNomination() {
+    this.metadata.mayorNominees = [];
+    this.metadata.mayorPkCandidates = [];
+    this.metadata.mayorVotes = {};
+    this.phase = PHASES.DAY_MAYOR_NOMINATE;
+    this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_NOMINATE} ---`);
+    this.announce("警长竞选：请提交提名。");
+    if (this.onGameUpdate) this.onGameUpdate(this);
+  }
+
+  handleMayorNomination(playerId, targetId) {
+    if (this.phase !== PHASES.DAY_MAYOR_NOMINATE) return;
+    const player = this.players[playerId];
+    if (!player || player.status !== "alive") return;
+    // Only self nomination allowed
+    if (playerId !== targetId) return;
+
+    const set = new Set(this.metadata.mayorNominees || []);
+    if (set.has(playerId)) {
+      set.delete(playerId);
+      this.addLog(`JUDGE: ${player.name} 取消上警。`);
+    } else {
+      set.add(playerId);
+      this.addLog(`JUDGE: ${player.name} 上警竞选警长。`);
+    }
+    this.metadata.mayorNominees = Array.from(set);
+    if (this.onGameUpdate) this.onGameUpdate(this);
+  }
+
+  advanceMayorPhase() {
+    if (this.phase === PHASES.DAY_MAYOR_NOMINATE) {
+      this.startMayorSpeech();
+      return;
+    }
+    if (this.phase === PHASES.DAY_MAYOR_VOTE) {
+      this.finalizeMayorVote();
+    }
+    if (this.phase === PHASES.DAY_MAYOR_SPEECH) {
+      this.phase = PHASES.DAY_MAYOR_WITHDRAW;
+      this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_WITHDRAW} ---`);
+      this.announce("警长竞选：是否有人退选？");
+      if (this.onGameUpdate) this.onGameUpdate(this);
+      return;
+    }
+    if (this.phase === PHASES.DAY_MAYOR_WITHDRAW) {
+      this.startMayorVote();
+      return;
+    }
+    if (this.phase === PHASES.DAY_MAYOR_PK_SPEECH) {
+      this.phase = PHASES.DAY_MAYOR_PK_VOTE;
+      this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_PK_VOTE} ---`);
+      this.announce("警长PK投票开始。");
+      if (this.onGameUpdate) this.onGameUpdate(this);
+      return;
+    }
+    if (this.phase === PHASES.DAY_MAYOR_PK_VOTE) {
+      this.finalizeMayorVote(true);
+      return;
+    }
+  }
+
+  handleMayorVote(playerId, targetId) {
+    const isPkVote = this.phase === PHASES.DAY_MAYOR_PK_VOTE;
+    const isMayorVote = this.phase === PHASES.DAY_MAYOR_VOTE;
+    if (!isPkVote && !isMayorVote) return;
+
+    const player = this.players[playerId];
+    if (!player || player.status !== "alive") return;
+
+    const candidates = isPkVote
+      ? this.metadata.mayorPkCandidates || []
+      : this.metadata.mayorNominees || [];
+
+    // Candidates cannot vote
+    if (candidates.includes(playerId)) return;
+
+    // Only vote for a valid candidate
+    if (!candidates.includes(targetId)) return;
+
+    this.metadata.mayorVotes[playerId] = targetId;
+
+    const aliveVoters = Object.values(this.players).filter(
+      (p) => p.status === "alive" && !candidates.includes(p.id)
+    );
+
+    const needsFinalize =
+      Object.keys(this.metadata.mayorVotes).length >= aliveVoters.length;
+
+    if (needsFinalize) {
+      this.finalizeMayorVote(isPkVote);
+    } else if (this.onGameUpdate) {
+      this.onGameUpdate(this);
+    }
+  }
+
+  handleMayorWithdraw(playerId) {
+    if (this.phase !== PHASES.DAY_MAYOR_WITHDRAW) return;
+    const player = this.players[playerId];
+    if (!player || player.status !== "alive") return;
+    const before = this.metadata.mayorNominees || [];
+    this.metadata.mayorNominees = before.filter((id) => id !== playerId);
+    this.addLog(`JUDGE: ${player.name} 退选警长。`);
+    if (this.onGameUpdate) this.onGameUpdate(this);
+  }
+
+  startMayorSpeech() {
+    const nominees = this.metadata.mayorNominees;
+    if (!nominees || nominees.length === 0) {
+      this.metadata.mayorSkipped = true;
+      this.phase = PHASES.DAY_DISCUSSION;
+      this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
+      if (this.onGameUpdate) this.onGameUpdate(this);
+      this.dayManager.startDiscussion(this);
+      return;
+    }
+    this.dayManager.setSpeakingQueue(nominees);
+    this.phase = PHASES.DAY_MAYOR_SPEECH;
+    this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_SPEECH} ---`);
+    this.announce("警长竞选：上警玩家依次发言。");
+
+    // Trigger first speaker cue
+    if (nominees.length > 0) {
+      const firstId = nominees[0];
+      const firstP = this.players[firstId];
+      if (firstP) {
+        const cue = VOICE_MESSAGES.NEXT_SPEAKER(firstP.avatar || "?");
+        this.onVoiceCue(cue);
+      }
+    }
+    if (this.onGameUpdate) this.onGameUpdate(this);
+  }
+
+  startMayorVote() {
+    const nominees = this.metadata.mayorNominees;
+    if (!nominees || nominees.length === 0) {
+      this.metadata.mayorSkipped = true;
+      this.phase = PHASES.DAY_DISCUSSION;
+      this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
+      if (this.onGameUpdate) this.onGameUpdate(this);
+      this.dayManager.startDiscussion(this);
+      return;
+    }
+
+    // If only one nominee remains, auto-elect without entering vote.
+    if (nominees.length === 1 && this.players[nominees[0]]) {
+      this.metadata.mayorVotes = {};
+      const mayorId = nominees[0];
+      this.metadata.mayorId = mayorId;
+      this.players[mayorId].specialFlags = {
+        ...(this.players[mayorId].specialFlags || {}),
+        isMayor: true,
+      };
+      this.announce(`警长当选：${this.players[mayorId].name}`);
+      this.metadata.mayorNominees = [];
+      this.metadata.mayorPkCandidates = [];
+      this.phase = PHASES.DAY_DISCUSSION;
+      this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
+      if (this.onGameUpdate) this.onGameUpdate(this);
+      this.dayManager.startDiscussion(this);
+      return;
+    }
+
+    this.metadata.mayorVotes = {};
+    this.phase = PHASES.DAY_MAYOR_VOTE;
+    this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_VOTE} ---`);
+    this.announce("警长竞选：请投票。");
+    if (this.onGameUpdate) this.onGameUpdate(this);
+  }
+
+  finalizeMayorVote(isPk = false) {
+    const votes = this.metadata.mayorVotes || {};
+    const tally = {};
+    Object.values(votes).forEach((targetId) => {
+      tally[targetId] = (tally[targetId] || 0) + 1;
+    });
+    const entries = Object.entries(tally);
+    let mayorId = null;
+    if (entries.length > 0) {
+      entries.sort((a, b) => b[1] - a[1]);
+      const top = entries[0];
+      const tied = entries.filter(([, count]) => count === top[1]);
+      if (tied.length === 1) {
+        mayorId = top[0];
+      }
+      if (tied.length > 1 && !isPk) {
+        this.metadata.mayorPkCandidates = tied.map(([id]) => id);
+        this.dayManager.setSpeakingQueue(this.metadata.mayorPkCandidates);
+        this.phase = PHASES.DAY_MAYOR_PK_SPEECH;
+        this.logs.push(`--- PHASE: ${PHASES.DAY_MAYOR_PK_SPEECH} ---`);
+        this.announce("警长平票，进入PK发言。");
+        if (this.onGameUpdate) this.onGameUpdate(this);
+        return;
+      }
+    }
+
+    if (mayorId && this.players[mayorId]) {
+      this.metadata.mayorId = mayorId;
+      this.players[mayorId].specialFlags = {
+        ...(this.players[mayorId].specialFlags || {}),
+        isMayor: true,
+      };
+      this.announce(
+        `警长当选：${this.players[mayorId].name}`,
+        PHASES.DAY_MAYOR_VOTE
+      );
+    } else {
+      this.metadata.mayorSkipped = true;
+      this.announce("警长竞选无结果，跳过。", PHASES.DAY_MAYOR_VOTE);
+    }
+
+    this.metadata.mayorVotes = {};
+    this.metadata.mayorNominees = [];
+    this.metadata.mayorPkCandidates = [];
+
+    // Move to discussion
+    this.phase = PHASES.DAY_DISCUSSION;
+    this.logs.push(`--- PHASE: ${PHASES.DAY_DISCUSSION} ---`);
+    if (this.onGameUpdate) this.onGameUpdate(this);
+    this.dayManager.startDiscussion(this);
+  }
+
+  getPostSpeechPhase() {
+    return this.shouldRunMayorFlow()
+      ? PHASES.DAY_MAYOR_NOMINATE
+      : PHASES.DAY_DISCUSSION;
+  }
+
   checkWinCondition() {
     return computeWinCondition(
       this.players,
@@ -532,6 +793,7 @@ class WerewolfGame {
     this.pendingNextPhase = null;
     this.executedPlayerId = null;
     this.pendingDeaths = [];
+    this.metadata = this.createDefaultMetadata();
 
     // Reset Managers
     this.nightManager = new NightManager();
@@ -553,6 +815,7 @@ class WerewolfGame {
       p.role = null;
       p.status = "alive";
       p.isReady = false; // Require ready again
+      p.specialFlags = {};
     });
 
     this.addLog(
