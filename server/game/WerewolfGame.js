@@ -399,7 +399,12 @@ class WerewolfGame {
         .map((pid) => this.seatLabel(this.players[pid]))
         .join(", ");
       announcement = this.resolveLine("DEATH_ANNOUNCE", { seats });
-      this.say("DEATH_ANNOUNCE", { seats });
+      // If we're about to enter last-words flow (round 1), avoid speaking twice.
+      if (this.round === 1) {
+        this.print(announcement);
+      } else {
+        this.say("DEATH_ANNOUNCE", { seats });
+      }
     } else {
       announcement = this.resolveLine("DEATH_PEACEFUL");
       this.say("DEATH_PEACEFUL");
@@ -817,16 +822,8 @@ class WerewolfGame {
   finishGame(winner) {
     this.phase = PHASES.FINISHED;
     this.winner = winner;
-    const winnerText =
-      winner === "VILLAGERS" ? "VILLAGERS (村民)" : "WEREWOLVES (狼人)";
-    this.addLog(
-      `GAME OVER. ${winnerText} WIN! (游戏结束。${winnerText} 胜利！)`
-    );
-
-    // Play Winner Voice
-    const voiceKey =
-      winner === "VILLAGERS" ? "WINNER_VILLAGERS" : "WINNER_WEREWOLVES";
-    this.read(voiceKey);
+    const side = winner === "VILLAGERS" ? "VILLAGERS" : "WEREWOLVES";
+    this.say("GAME_OVER", { side });
 
     if (this.onGameUpdate) this.onGameUpdate(this);
   }
@@ -872,9 +869,7 @@ class WerewolfGame {
       p.specialFlags = {};
     });
 
-    this.addLog(
-      "JUDGE: Game has been reset. Please get ready. (游戏已重置，请准备。)"
-    );
+    this.print(this.resolveLine("GAME_RESET"));
   }
 
   // Handlers delegated to managers

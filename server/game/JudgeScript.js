@@ -194,13 +194,17 @@ const lines = {
     en: "Mayor election has no result.",
   },
 
-  WINNER_VILLAGERS: {
-    zh: "游戏结束。好人阵营胜利。",
-    en: "Game over. Villagers win.",
+  GAME_OVER: ({ side }) => {
+    const zhSide = side === "VILLAGERS" ? "好人阵营" : "狼人阵营";
+    const enSide = side === "VILLAGERS" ? "Villagers" : "Werewolves";
+    return {
+      zh: `游戏结束。${zhSide}胜利。`,
+      en: `Game over. ${enSide} win!`,
+    };
   },
-  WINNER_WEREWOLVES: {
-    zh: "游戏结束。狼人阵营胜利。",
-    en: "Game over. Werewolves win.",
+  GAME_RESET: {
+    zh: "游戏已重置，请准备。",
+    en: "Game has been reset. Please get ready.",
   },
 };
 
