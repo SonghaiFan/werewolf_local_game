@@ -159,13 +159,17 @@ class DayManager {
         }
         voteCounts[targetId] = (voteCounts[targetId] || 0) + w;
         const targetSeat = seatLabel(game.players[targetId]);
-        voteDetails.push(`${voterSeat}->${targetSeat}${w > 1 ? "(1.5票)" : ""}`);
+        voteDetails.push(
+          `${voterSeat}->${targetSeat}${w > 1 ? "(1.5票)" : ""}`
+        );
       }
     });
 
     // Log only (no voice) for vote details
     if (voteDetails.length > 0) {
-      game.print(game.resolveLine("VOTES_DETAIL", { detail: voteDetails.join(", ") }));
+      game.print(
+        game.resolveLine("VOTES_DETAIL", { detail: voteDetails.join(", ") })
+      );
     } else {
       game.print(game.resolveLine("VOTES_NONE"));
     }
