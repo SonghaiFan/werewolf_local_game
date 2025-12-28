@@ -4,7 +4,7 @@ const FLOW_DEFINITION = {
   [PHASES.WAITING]: { next: PHASES.GAME_START },
   [PHASES.GAME_START]: { next: PHASES.NIGHT_START },
   [PHASES.NIGHT_START]: {
-    // Next is determined dynamically by calculateNightFlow
+    // Next is determined dynamically by the night flow builder
   },
 
   // Night Sequence

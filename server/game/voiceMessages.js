@@ -17,12 +17,6 @@ const VOICE_MESSAGES = {
   OPEN_EYES: (roleName) => `${roleName}请睁眼。`,
   CLOSE_EYES: (roleName) => `${roleName}请闭眼。`,
 
-  // Phases (Legacy/Fallback)
-  [PHASES.NIGHT_GUARD]: "守卫请睁眼。",
-  [PHASES.NIGHT_WOLVES]: "狼人请睁眼。",
-  [PHASES.NIGHT_WITCH]: "女巫请睁眼。",
-  [PHASES.NIGHT_SEER]: "预言家请睁眼。",
-
   [PHASES.DAY_ANNOUNCE]: "天亮了。所有人都醒过来。",
   [PHASES.DAY_DISCUSSION]: "请开始讨论昨晚发生的事情。",
   [PHASES.DAY_VOTE]: "讨论结束。请投票放逐玩家。",

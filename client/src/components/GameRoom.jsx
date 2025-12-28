@@ -1,58 +1,27 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect } from "react";
 import { socket } from "../socket";
 import ControlPanel from "./ControlPanel";
 import AvatarCard from "./AvatarCard";
 import { useTranslation } from "react-i18next";
 import GameContext from "../context/GameContext";
 import { useGameState } from "../hooks/useGameState";
+import { useGameActions } from "../hooks/useGameActions";
+import { useVoiceJudge } from "../hooks/useVoiceJudge";
 
 export default function GameRoom({ roomId, myId, onExit, serverIP }) {
   const { t } = useTranslation();
   const { gameState, inspectedPlayers, setInspectedPlayers } =
     useGameState(socket);
   const { phase } = gameState;
+  const { actions, selectedTarget, setSelectedTarget } = useGameActions({
+    socket,
+    roomId,
+    gameState,
+    setInspectedPlayers,
+    t,
+  });
 
-  const [selectedTarget, setSelectedTarget] = useState(null);
-
-  // Voice Judge Effect
-  useEffect(() => {
-    const speak = (text) => {
-      if (gameState.hostId !== myId) return;
-
-      // Cancel any current speaking to avoid overlaps
-      // window.speechSynthesis.cancel(); // FIXED: Do not cancel, let them queue!
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "zh-CN";
-
-      const voices = window.speechSynthesis.getVoices();
-      console.log(`[Voice] Available voices: ${voices.length}. Seeking ZH...`);
-
-      const zhVoice = voices.find(
-        (v) => v.lang.includes("zh") || v.lang.includes("CN")
-      );
-      if (zhVoice) {
-        utterance.voice = zhVoice;
-      } else {
-        console.warn("[Voice] ZH Voice not found, using default.");
-      }
-
-      utterance.rate = 0.9;
-      utterance.pitch = 0.8;
-      window.speechSynthesis.speak(utterance);
-    };
-
-    function onVoiceCue({ text }) {
-      console.log(`[VoiceCue Received] ${text}`);
-      speak(text);
-    }
-
-    // Pre-warm voices
-    window.speechSynthesis.getVoices();
-
-    socket.on("voice_cue", onVoiceCue);
-    return () => socket.off("voice_cue", onVoiceCue);
-  }, [gameState.hostId, myId]);
+  useVoiceJudge(socket, gameState, myId);
 
   const mePlayer = gameState.players[myId] || {
     ...gameState.me,
@@ -62,96 +31,6 @@ export default function GameRoom({ roomId, myId, onExit, serverIP }) {
   };
   const otherPlayers = Object.values(gameState.players).filter(
     (p) => p.id !== myId
-  );
-
-  const actions = useMemo(
-    () => ({
-      onStartGame: (config) => {
-        socket.emit("start_game", { roomId, config });
-        setInspectedPlayers({});
-      },
-      onPlayerReady: () => socket.emit("player_ready", { roomId }),
-      onSelect: (targetId) => {
-        console.log("[Client] Selected Target:", targetId);
-        if (
-          gameState.phase === "NIGHT_WOLVES" &&
-          gameState.me?.role === "WOLF"
-        ) {
-          socket.emit("wolf_propose", { roomId, targetId });
-        }
-        setSelectedTarget(targetId);
-      },
-      onAction: (type, needsTarget) => {
-        console.log(
-          `[Client] Action requested: ${type}, NeedsTarget: ${needsTarget}, Selected: ${selectedTarget}`
-        );
-
-        if (needsTarget && !selectedTarget) {
-          alert(t("select_target_first"));
-          return;
-        }
-        console.log("[Client] Emitting night_action:", {
-          type,
-          targetId: selectedTarget,
-        });
-        socket.emit("night_action", {
-          roomId,
-          action: { type, targetId: selectedTarget },
-        });
-        setSelectedTarget(null);
-      },
-      onNightAction: () => {
-        // ... legacy wrapper
-        if (selectedTarget) {
-          // ...
-        }
-      },
-      onWitchAction: (type) => {
-        console.log(
-          `[Client] Witch Action: ${type}, Target: ${selectedTarget}`
-        );
-        if (type === "poison" && !selectedTarget) {
-          alert(t("select_poison_target"));
-          return;
-        }
-        socket.emit("night_action", {
-          roomId,
-          action: { type, targetId: selectedTarget },
-        });
-        setSelectedTarget(null);
-      },
-      onDayVote: (targetIdOverride) => {
-        // ...
-        // If called directly via onClick={actions.onDayVote}, targetIdOverride is an Event object.
-        // We only want to use targetIdOverride if it's a string (like 'abstain').
-        const targetId =
-          typeof targetIdOverride === "string"
-            ? targetIdOverride
-            : selectedTarget;
-
-        if (targetId) {
-          socket.emit("day_vote", { roomId, targetId });
-          setSelectedTarget(null);
-        } else {
-          alert(t("select_vote_target"));
-        }
-      },
-      onResolvePhase: () => socket.emit("resolve_phase", { roomId }),
-      onSkipTurn: () => setSelectedTarget(null),
-      onEndSpeech: () => socket.emit("end_speech", { roomId }),
-      onPlayAgain: () => {
-        socket.emit("play_again", { roomId });
-        setInspectedPlayers({});
-      },
-    }),
-    [
-      roomId,
-      gameState.phase,
-      gameState.me?.role,
-      selectedTarget,
-      t,
-      setInspectedPlayers,
-    ]
   );
 
   const contextValue = {
