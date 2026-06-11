@@ -2,6 +2,7 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 const path = require("path");
+const fs = require("fs");
 const cors = require("cors");
 const os = require("os");
 const { WerewolfGame, PHASES } = require("./game");
@@ -267,8 +268,55 @@ io.on("connection", (socket) => {
     }
   });
 });
+function listenOnPort(serverInstance, portToTry) {
+  return new Promise((resolve, reject) => {
+    function onError(err) {
+      if (err.code === "EADDRINUSE") {
+        console.log(`Port ${portToTry} is in use, trying ${portToTry + 1}...`);
+        resolve(listenOnPort(serverInstance, portToTry + 1));
+      } else {
+        reject(err);
+      }
+    }
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`Server running on port ${PORT}`);
-});
+    serverInstance.once("error", onError);
+    serverInstance.listen(portToTry, "0.0.0.0", () => {
+      serverInstance.removeListener("error", onError);
+      resolve(portToTry);
+    });
+  });
+}
+
+const PORT = parseInt(process.env.PORT || "3000", 10);
+listenOnPort(server, PORT)
+  .then((actualPort) => {
+    console.log(`Server running on port ${actualPort}`);
+    const portFilePath = path.join(__dirname, "../.port");
+    try {
+      fs.writeFileSync(portFilePath, actualPort.toString());
+
+      const cleanup = () => {
+        try {
+          if (fs.existsSync(portFilePath)) {
+            fs.unlinkSync(portFilePath);
+          }
+        } catch (e) {}
+        process.exit(0);
+      };
+
+      process.on("exit", cleanup);
+      process.on("SIGINT", cleanup);
+      process.on("SIGTERM", cleanup);
+      process.on("SIGUSR1", cleanup);
+      process.on("SIGUSR2", cleanup);
+      process.on("uncaughtException", (err) => {
+        console.error("Uncaught exception:", err);
+        cleanup();
+      });
+    } catch (err) {
+      console.error("Failed to write .port file:", err);
+    }
+  })
+  .catch((err) => {
+    console.error("Failed to start server:", err);
+  });
